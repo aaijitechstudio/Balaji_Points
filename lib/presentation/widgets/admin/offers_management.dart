@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:balaji_points/config/theme.dart';
 import 'package:balaji_points/services/offer_service.dart';
+import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 
 class OffersManagement extends StatefulWidget {
@@ -33,23 +34,24 @@ class _OffersManagementState extends State<OffersManagement> {
   }
 
   Future<void> _deleteOffer(String offerId, String? bannerUrl) async {
+    final l10n = AppLocalizations.of(context)!;
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
-          'Delete Offer',
+          l10n.deleteOffer,
           style: AppTextStyles.nunitoBold.copyWith(fontSize: 20),
         ),
         content: Text(
-          'Are you sure you want to delete this offer? This action cannot be undone.',
+          l10n.deleteOfferConfirmation,
           style: AppTextStyles.nunitoRegular.copyWith(fontSize: 16),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: Text(
-              'Cancel',
+              l10n.cancel,
               style: AppTextStyles.nunitoMedium.copyWith(
                 color: Colors.grey[600],
               ),
@@ -64,7 +66,7 @@ class _OffersManagementState extends State<OffersManagement> {
               ),
             ),
             child: Text(
-              'Delete',
+              l10n.delete,
               style: AppTextStyles.nunitoSemiBold,
             ),
           ),
@@ -76,9 +78,10 @@ class _OffersManagementState extends State<OffersManagement> {
       final success = await _offerService.deleteOffer(offerId, bannerUrl);
 
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(success ? 'Offer deleted successfully' : 'Failed to delete offer'),
+            content: Text(success ? l10n.offerDeletedSuccess : l10n.failedToDeleteOffer),
             backgroundColor: success ? Colors.green : Colors.red,
           ),
         );
@@ -124,6 +127,8 @@ class _OffersManagementState extends State<OffersManagement> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       backgroundColor: AppColors.woodenBackground,
       body: StreamBuilder<QuerySnapshot>(
@@ -140,7 +145,7 @@ class _OffersManagementState extends State<OffersManagement> {
                   Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
                   const SizedBox(height: 16),
                   Text(
-                    'Error loading offers',
+                    l10n.errorLoadingOffers,
                     style: AppTextStyles.nunitoBold.copyWith(fontSize: 18),
                   ),
                   const SizedBox(height: 8),
@@ -177,7 +182,7 @@ class _OffersManagementState extends State<OffersManagement> {
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    'No Offers Created',
+                    l10n.noOffersCreated,
                     style: AppTextStyles.nunitoBold.copyWith(
                       fontSize: 20,
                       color: AppColors.textDark,
@@ -185,7 +190,7 @@ class _OffersManagementState extends State<OffersManagement> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Create your first offer with points and banner',
+                    l10n.createFirstOffer,
                     style: AppTextStyles.nunitoRegular.copyWith(
                       fontSize: 14,
                       color: Colors.grey[600],
@@ -280,7 +285,7 @@ class _OffersManagementState extends State<OffersManagement> {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  isActive ? 'Active' : 'Inactive',
+                                  isActive ? l10n.active : l10n.inactive,
                                   style: AppTextStyles.nunitoSemiBold.copyWith(
                                     fontSize: 12,
                                     color: isActive
@@ -332,7 +337,7 @@ class _OffersManagementState extends State<OffersManagement> {
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  '$points Points',
+                                  l10n.points(points),
                                   style: AppTextStyles.nunitoBold.copyWith(
                                     fontSize: 16,
                                     color: Colors.white,
@@ -352,8 +357,8 @@ class _OffersManagementState extends State<OffersManagement> {
                               const SizedBox(width: 6),
                               Text(
                                 createdAt != null
-                                    ? 'Created: ${DateFormat('dd MMM yyyy').format(createdAt.toDate())}'
-                                    : 'No date',
+                                    ? '${l10n.createdLabel}: ${DateFormat('dd MMM yyyy').format(createdAt.toDate())}'
+                                    : l10n.noDate,
                                 style: AppTextStyles.nunitoRegular.copyWith(
                                   fontSize: 12,
                                   color: Colors.grey[600],
@@ -365,7 +370,7 @@ class _OffersManagementState extends State<OffersManagement> {
                                     size: 14, color: Colors.orange[700]),
                                 const SizedBox(width: 6),
                                 Text(
-                                  'Valid until: ${DateFormat('dd MMM').format(validUntil.toDate())}',
+                                  l10n.validUntilDisplay(DateFormat('dd MMM').format(validUntil.toDate())),
                                   style: AppTextStyles.nunitoRegular.copyWith(
                                     fontSize: 12,
                                     color: Colors.orange[700],
@@ -400,7 +405,7 @@ class _OffersManagementState extends State<OffersManagement> {
                                   ),
                                   icon: const Icon(Icons.edit, size: 18),
                                   label: Text(
-                                    'Edit',
+                                    l10n.edit,
                                     style: AppTextStyles.nunitoSemiBold,
                                   ),
                                 ),
@@ -421,7 +426,7 @@ class _OffersManagementState extends State<OffersManagement> {
                                   ),
                                   icon: const Icon(Icons.delete, size: 18),
                                   label: Text(
-                                    'Delete',
+                                    l10n.delete,
                                     style: AppTextStyles.nunitoSemiBold,
                                   ),
                                 ),
@@ -443,7 +448,7 @@ class _OffersManagementState extends State<OffersManagement> {
         backgroundColor: AppColors.secondary,
         icon: const Icon(Icons.add),
         label: Text(
-          'Create Offer',
+          l10n.createOffer,
           style: AppTextStyles.nunitoBold.copyWith(fontSize: 16),
         ),
       ),
@@ -509,9 +514,10 @@ class _CreateOfferDialogState extends State<CreateOfferDialog> {
       }
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to pick image: ${e.toString()}'),
+            content: Text('${l10n.failedToPickImage}: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -604,27 +610,29 @@ class _CreateOfferDialogState extends State<CreateOfferDialog> {
       }
 
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         if (success) {
           Navigator.of(context).pop();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
                 isEditMode
-                    ? 'Offer updated successfully'
-                    : 'Offer created successfully',
+                    ? l10n.offerUpdatedSuccess
+                    : l10n.offerCreatedSuccess,
               ),
               backgroundColor: Colors.green,
             ),
           );
         } else {
-          throw Exception('Failed to save offer');
+          throw Exception(l10n.failedToSaveOffer);
         }
       }
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: ${e.toString()}'),
+            content: Text('${l10n.error}: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -649,6 +657,8 @@ class _CreateOfferDialogState extends State<CreateOfferDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
@@ -673,7 +683,7 @@ class _CreateOfferDialogState extends State<CreateOfferDialog> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      isEditMode ? 'Edit Offer' : 'Create New Offer',
+                      isEditMode ? l10n.editOffer : l10n.createNewOffer,
                       style: AppTextStyles.nunitoBold.copyWith(
                         fontSize: 20,
                         color: Colors.white,
@@ -732,7 +742,7 @@ class _CreateOfferDialogState extends State<CreateOfferDialog> {
                                             size: 48, color: Colors.grey[400]),
                                         const SizedBox(height: 8),
                                         Text(
-                                          'Tap to upload banner',
+                                          l10n.tapToUploadBanner,
                                           style: AppTextStyles.nunitoMedium
                                               .copyWith(
                                             fontSize: 14,
@@ -751,11 +761,11 @@ class _CreateOfferDialogState extends State<CreateOfferDialog> {
                         controller: _titleController,
                         style: AppTextStyles.nunitoRegular.copyWith(fontSize: 16),
                         decoration: InputDecoration(
-                          labelText: 'Offer Title *',
+                          labelText: l10n.offerTitleLabel,
                           labelStyle: AppTextStyles.nunitoMedium.copyWith(
                             color: AppColors.primary,
                           ),
-                          hintText: 'e.g., Diwali Special Offer',
+                          hintText: l10n.offerTitleHint,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -769,7 +779,7 @@ class _CreateOfferDialogState extends State<CreateOfferDialog> {
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'Please enter offer title';
+                            return l10n.enterOfferTitle;
                           }
                           return null;
                         },
@@ -783,11 +793,11 @@ class _CreateOfferDialogState extends State<CreateOfferDialog> {
                         style: AppTextStyles.nunitoRegular.copyWith(fontSize: 16),
                         maxLines: 3,
                         decoration: InputDecoration(
-                          labelText: 'Description',
+                          labelText: l10n.descriptionLabel,
                           labelStyle: AppTextStyles.nunitoMedium.copyWith(
                             color: AppColors.primary,
                           ),
-                          hintText: 'Brief description of the offer',
+                          hintText: l10n.descriptionHint,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -809,11 +819,11 @@ class _CreateOfferDialogState extends State<CreateOfferDialog> {
                         style: AppTextStyles.nunitoRegular.copyWith(fontSize: 16),
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(
-                          labelText: 'Points Required *',
+                          labelText: l10n.pointsRequiredLabel,
                           labelStyle: AppTextStyles.nunitoMedium.copyWith(
                             color: AppColors.primary,
                           ),
-                          hintText: 'e.g., 100',
+                          hintText: l10n.pointsHint,
                           prefixIcon: const Icon(Icons.stars,
                               color: AppColors.secondary),
                           border: OutlineInputBorder(
@@ -829,10 +839,10 @@ class _CreateOfferDialogState extends State<CreateOfferDialog> {
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'Please enter points';
+                            return l10n.enterPointsError;
                           }
                           if (int.tryParse(value) == null) {
-                            return 'Please enter a valid number';
+                            return l10n.enterValidNumber;
                           }
                           return null;
                         },
@@ -859,8 +869,8 @@ class _CreateOfferDialogState extends State<CreateOfferDialog> {
                               Expanded(
                                 child: Text(
                                   _validUntil != null
-                                      ? 'Valid until: ${DateFormat('dd MMM yyyy').format(_validUntil!)}'
-                                      : 'Set valid until date (optional)',
+                                      ? l10n.validUntilDisplay(DateFormat('dd MMM yyyy').format(_validUntil!))
+                                      : l10n.setValidUntilDate,
                                   style: AppTextStyles.nunitoRegular.copyWith(
                                     fontSize: 16,
                                     color: _validUntil != null
@@ -900,7 +910,7 @@ class _CreateOfferDialogState extends State<CreateOfferDialog> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                'Offer Status',
+                                l10n.offerStatus,
                                 style: AppTextStyles.nunitoMedium.copyWith(
                                   fontSize: 16,
                                 ),
@@ -917,7 +927,7 @@ class _CreateOfferDialogState extends State<CreateOfferDialog> {
                               activeColor: Colors.white,
                             ),
                             Text(
-                              _isActive ? 'Active' : 'Inactive',
+                              _isActive ? l10n.active : l10n.inactive,
                               style: AppTextStyles.nunitoSemiBold.copyWith(
                                 fontSize: 14,
                                 color: _isActive ? Colors.green : Colors.grey,
@@ -948,7 +958,7 @@ class _CreateOfferDialogState extends State<CreateOfferDialog> {
                               ),
                               const SizedBox(width: 12),
                               Text(
-                                'Uploading banner...',
+                                l10n.uploadingBanner,
                                 style: AppTextStyles.nunitoMedium.copyWith(
                                   fontSize: 14,
                                   color: AppColors.primary,
@@ -985,7 +995,7 @@ class _CreateOfferDialogState extends State<CreateOfferDialog> {
                                   ),
                                 )
                               : Text(
-                                  isEditMode ? 'Update Offer' : 'Create Offer',
+                                  isEditMode ? l10n.updateOffer : l10n.createOffer,
                                   style: AppTextStyles.nunitoBold.copyWith(
                                     fontSize: 16,
                                     color: Colors.white,

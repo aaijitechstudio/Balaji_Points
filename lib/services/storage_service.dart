@@ -1,24 +1,20 @@
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../core/logger.dart';
 
 class StorageService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   /// Upload user profile image to Firebase Storage
   /// Returns the download URL of the uploaded image
-  Future<String?> uploadProfileImage(File imageFile) async {
+  Future<String?> uploadProfileImage({
+    required String phoneNumber,
+    required File imageFile,
+  }) async {
     try {
-      final user = _auth.currentUser;
-      if (user == null) {
-        AppLogger.error('No user logged in', 'Cannot upload profile image');
-        throw Exception('No user logged in');
-      }
-
-      // Create a unique filename using user ID and timestamp
-      final String fileName = 'profile_${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      // Create a unique filename using phone number and timestamp
+      final String fileName =
+          'profile_${phoneNumber}_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final String filePath = 'profile_images/$fileName';
 
       AppLogger.info('Uploading profile image: $filePath');
@@ -33,7 +29,7 @@ class StorageService {
         SettableMetadata(
           contentType: 'image/jpeg',
           customMetadata: {
-            'userId': user.uid,
+            'userId': phoneNumber,
             'uploadedAt': DateTime.now().toIso8601String(),
           },
         ),
@@ -48,13 +44,20 @@ class StorageService {
       AppLogger.info('Profile image uploaded successfully: $downloadUrl');
       return downloadUrl;
     } on FirebaseException catch (e) {
-      AppLogger.error('Firebase Storage error', 'Code: ${e.code}, Message: ${e.message}');
+      AppLogger.error(
+        'Firebase Storage error',
+        'Code: ${e.code}, Message: ${e.message}',
+      );
       if (e.code == 'storage/unauthorized') {
-        throw Exception('Storage access denied. Please check Firebase Storage rules.');
+        throw Exception(
+          'Storage access denied. Please check Firebase Storage rules.',
+        );
       } else if (e.code == 'storage/canceled') {
         throw Exception('Upload was cancelled');
       } else if (e.code == 'storage/unknown') {
-        throw Exception('Firebase Storage is not configured. Please enable Storage in Firebase Console.');
+        throw Exception(
+          'Firebase Storage is not configured. Please enable Storage in Firebase Console.',
+        );
       }
       throw Exception('Failed to upload image: ${e.message}');
     } catch (e) {

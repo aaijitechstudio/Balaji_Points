@@ -1,4 +1,5 @@
 import 'package:balaji_points/config/theme.dart';
+import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import '../home/home_page.dart';
 import '../wallet/wallet_page.dart';
@@ -19,7 +20,7 @@ class _DashboardPageState extends State<DashboardPage> {
   final List<Widget> _pages = const [
     HomePage(), // Points summary + offers
     WalletPage(), // Earn Balaji Points via tasks // Redeem points for rewards// Points transactions list
-    ProfilePage(), // Edit info, logout
+    ProfilePage(showBottomNav: false), // Edit info, logout - no bottom nav since DashboardPage has it
   ];
 
   void _onItemTapped(int index) {
@@ -28,6 +29,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: const Color(0xFF001F3F), // Navy blue background
       body: _pages[_selectedIndex],
@@ -38,15 +40,15 @@ class _DashboardPageState extends State<DashboardPage> {
         unselectedItemColor: Colors.white, // Inactive tab color
         backgroundColor: AppColors.primary, // Navy blue background
         type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+        items: [
+          BottomNavigationBarItem(icon: const Icon(Icons.home), label: l10n.home),
           BottomNavigationBarItem(
-            icon: Icon(Icons.monetization_on_outlined),
-            label: "Earn",
+            icon: const Icon(Icons.monetization_on_outlined),
+            label: l10n.earn,
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: "Profile",
+            icon: const Icon(Icons.person_outline),
+            label: l10n.profile,
           ),
         ],
       ),

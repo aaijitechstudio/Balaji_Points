@@ -1,0 +1,16 @@
+{
+  "name": "balaji-points-seeder",
+  "version": "1.0.0",
+  "description": "Firebase database seeder for Balaji Points app",
+  "main": "seed_firebase_data.js",
+  "scripts": {
+    "seed": "node seed_firebase_data.js",
+    "seed:clear": "node seed_firebase_data.js --clear"
+  },
+  "keywords": ["firebase", "seeder", "test-data"],
+  "author": "Balaji Points Team",
+  "license": "MIT",
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  }
+}

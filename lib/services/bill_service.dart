@@ -1,13 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../core/logger.dart';
+import 'session_service.dart';
 
 class BillService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
+  final SessionService _sessionService = SessionService();
 
   /// Upload bill image to Firebase Storage
   Future<String?> uploadBillImage(File imageFile, String billId) async {
@@ -15,7 +16,6 @@ class BillService {
       final ref = _storage.ref().child('bill_images/$billId.jpg');
 
       AppLogger.info('Uploading bill image: bill_images/$billId.jpg');
-      AppLogger.info('Storage bucket: ${_storage.bucket}');
 
       final uploadTask = await ref.putFile(
         imageFile,
@@ -32,22 +32,15 @@ class BillService {
       AppLogger.info('Bill image uploaded: $imageUrl');
       return imageUrl;
     } on FirebaseException catch (e) {
-      AppLogger.error('Firebase Storage error', 'Code: ${e.code}, Message: ${e.message}');
-      if (e.code == 'storage/unauthorized') {
-        throw Exception('Storage access denied. Please check Firebase Storage rules.');
-      } else if (e.code == 'storage/canceled') {
-        throw Exception('Upload was cancelled');
-      } else if (e.code == 'storage/unknown') {
-        throw Exception('Firebase Storage is not configured. Please enable Storage in Firebase Console.');
-      }
-      throw Exception('Failed to upload bill image: ${e.message}');
+      AppLogger.error('Firebase Storage error', '${e.code} - ${e.message}');
+      throw Exception('Storage error: ${e.message}');
     } catch (e) {
       AppLogger.error('Error uploading bill image', e);
       throw Exception('Failed to upload bill image: $e');
     }
   }
 
-  /// Submit a bill for approval (Carpenter action)
+  /// Submit bill
   Future<bool> submitBill({
     required String carpenterId,
     required String carpenterPhone,
@@ -58,79 +51,115 @@ class BillService {
     String? billNumber,
     String? notes,
   }) async {
-    // Use current date if billDate is not provided
-    final effectiveBillDate = billDate ?? DateTime.now();
     try {
-      // Create bill document first to get billId
+      AppLogger.info('BillService: === SUBMITTING BILL ===');
+      AppLogger.info('  carpenterId: $carpenterId');
+      AppLogger.info('  carpenterPhone: $carpenterPhone');
+      AppLogger.info('  amount: $amount');
+      AppLogger.info('  storeName: $storeName');
+      AppLogger.info('  billNumber: $billNumber');
+
       final billRef = _firestore.collection('bills').doc();
       final billId = billRef.id;
+      AppLogger.info('  Generated billId: $billId');
 
-      // Upload image if provided
       String? imageUrl;
       if (imageFile != null) {
+        AppLogger.info('  Uploading bill image...');
         imageUrl = await uploadBillImage(imageFile, billId);
+        AppLogger.info('  Image uploaded: $imageUrl');
       }
 
-      // Calculate points: 1000 rs = 1 point (will be set on approval)
-      final pointsEarned = 0; // Set to 0 initially, calculated on approval
-
-      // Save bill to Firestore with new structure
-      await billRef.set({
+      final billData = {
         'billId': billId,
         'carpenterId': carpenterId,
         'carpenterPhone': carpenterPhone,
         'amount': amount,
         'imageUrl': imageUrl ?? '',
         'status': 'pending',
-        'pointsEarned': pointsEarned,
-        'billDate': Timestamp.fromDate(effectiveBillDate),
+        'pointsEarned': 0,
+        'billDate': Timestamp.fromDate(billDate ?? DateTime.now()),
         'storeName': storeName ?? '',
         'billNumber': billNumber ?? '',
         'notes': notes ?? '',
         'createdAt': FieldValue.serverTimestamp(),
-      });
+      };
 
-      AppLogger.info('Bill submitted: $billId, Amount: $amount');
+      AppLogger.info('  Saving to Firestore: bills/$billId');
+      await billRef.set(billData);
+
+      // Verify the save by reading back
+      final verifyDoc = await billRef.get();
+      if (verifyDoc.exists) {
+        AppLogger.info('BillService: ✅ Bill saved and verified successfully!');
+        AppLogger.info(
+          '  Verified data: carpenterId=${verifyDoc.data()?['carpenterId']}, status=${verifyDoc.data()?['status']}',
+        );
+      } else {
+        AppLogger.error(
+          'BillService: ❌ Bill document not found after save!',
+          null,
+        );
+      }
+
       return true;
     } catch (e) {
-      AppLogger.error('Error submitting bill', e);
+      AppLogger.error('BillService: ❌ Error submitting bill', e);
       return false;
     }
   }
 
-  /// Approve a bill (Admin action)
+  /// Approve bill (Admin)
   Future<bool> approveBill(
     String billId,
     String carpenterId,
     double amount,
   ) async {
     try {
-      AppLogger.info('Starting bill approval: $billId for carpenter: $carpenterId');
-
-      // Calculate points: 1000 rs = 1 point
       final pointsEarned = (amount / 1000).floor();
-      AppLogger.info('Points to be earned: $pointsEarned (Amount: $amount)');
 
-      // Get current user data first
-      final userRef = _firestore.collection('users').doc(carpenterId);
-      final userDoc = await userRef.get();
-
-      if (!userDoc.exists) {
-        AppLogger.error('User not found', 'carpenterId: $carpenterId');
-        throw Exception('Carpenter not found');
+      // Verify bill exists
+      final billRef = _firestore.collection('bills').doc(billId);
+      final billDoc = await billRef.get();
+      if (!billDoc.exists) {
+        AppLogger.error('approveBill: Bill not found', billId);
+        return false;
       }
 
-      final userData = userDoc.data()!;
-      final currentPoints = (userData['totalPoints'] ?? 0) as int;
+      // If carpenterId passed is empty, try to read from bill doc
+      String finalCarpenterId = carpenterId;
+      final billData = billDoc.data();
+      if (finalCarpenterId.isEmpty && billData != null) {
+        finalCarpenterId = billData['carpenterId'] ?? '';
+      }
+
+      // Get admin info from session (phone+pin auth) or fallback to FirebaseAuth
+      final fbUser = FirebaseAuth.instance.currentUser;
+      final adminPhone =
+          (await _sessionService.getPhoneNumber()) ??
+          fbUser?.phoneNumber ??
+          'admin';
+      final adminUserId =
+          (await _sessionService.getUserId()) ?? fbUser?.uid ?? 'admin';
+
+      final userRef = _firestore.collection('users').doc(finalCarpenterId);
+      final userDoc = await userRef.get();
+
+      // Determine current points (0 if user not found)
+      final dynamic currentPointsRaw;
+      if (userDoc.exists) {
+        currentPointsRaw = userDoc.data()?['totalPoints'] ?? 0;
+      } else {
+        currentPointsRaw = 0;
+      }
+      final int currentPoints = currentPointsRaw is num
+          ? currentPointsRaw.toInt()
+          : int.tryParse(currentPointsRaw.toString()) ?? 0;
+
       final newTotalPoints = currentPoints + pointsEarned;
       final newTier = _calculateTier(newTotalPoints);
 
-      AppLogger.info('Current points: $currentPoints, New total: $newTotalPoints, New tier: $newTier');
-
-      // Get user_points document reference
-      final userPointsRef = _firestore.collection('user_points').doc(carpenterId);
-      final userPointsDoc = await userPointsRef.get();
-
+      // Points history entry
       final newHistoryEntry = {
         'points': pointsEarned,
         'reason': 'Bill approval',
@@ -139,26 +168,41 @@ class BillService {
         'amount': amount,
       };
 
-      // Use batch for atomic operations
+      final userPointsRef = _firestore
+          .collection('user_points')
+          .doc(finalCarpenterId);
+      final userPointsDoc = await userPointsRef.get();
+
       final batch = _firestore.batch();
 
-      // 1. Update bill status
-      final billRef = _firestore.collection('bills').doc(billId);
+      AppLogger.info('approveBill: Starting batch write...');
+      AppLogger.info(
+        '  billId=$billId, carpenterId=$finalCarpenterId, pointsEarned=$pointsEarned',
+      );
+
+      // 1. Update bill (always update)
+      AppLogger.info('  Step 1: Update bill doc');
       batch.update(billRef, {
         'status': 'approved',
         'pointsEarned': pointsEarned,
-        'approvedBy': _auth.currentUser?.uid ?? 'admin',
+        'approvedBy': adminUserId,
+        'approvedByPhone': adminPhone,
         'approvedAt': FieldValue.serverTimestamp(),
+        'approvedDate': _getTodayDateString(),
       });
 
-      // 2. Update user points and tier (use set with merge to handle missing fields)
+      // 2. Update or create user account with merged fields
+      AppLogger.info('  Step 2: Update/create users doc');
       batch.set(userRef, {
         'totalPoints': newTotalPoints,
         'tier': newTier,
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      // 3. Update user_points collection
+      // 3. Update user_points
+      AppLogger.info(
+        '  Step 3: Update/create user_points doc (exists=${userPointsDoc.exists})',
+      );
       if (userPointsDoc.exists) {
         batch.update(userPointsRef, {
           'totalPoints': newTotalPoints,
@@ -168,7 +212,7 @@ class BillService {
         });
       } else {
         batch.set(userPointsRef, {
-          'userId': carpenterId,
+          'userId': finalCarpenterId,
           'totalPoints': newTotalPoints,
           'tier': newTier,
           'lastUpdated': FieldValue.serverTimestamp(),
@@ -176,27 +220,40 @@ class BillService {
         });
       }
 
-      // Commit all changes
-      await batch.commit();
+      AppLogger.info('approveBill: Committing batch...');
+      try {
+        await batch.commit();
+        AppLogger.info('approveBill: ✅ Batch committed successfully!');
+      } on FirebaseException catch (fe) {
+        AppLogger.error(
+          'approveBill: 🔥 FirebaseException during batch.commit()',
+          'Code: ${fe.code}, Message: ${fe.message}',
+        );
+        throw Exception('Firebase error: ${fe.code} - ${fe.message}');
+      }
 
-      AppLogger.info('Bill approved successfully: $billId, Points added: $pointsEarned');
+      AppLogger.info(
+        'Bill approved: $billId (Points: $pointsEarned) for user $finalCarpenterId',
+      );
       return true;
-    } on FirebaseException catch (e) {
-      AppLogger.error('Firebase error approving bill', 'Code: ${e.code}, Message: ${e.message}');
-      return false;
-    } catch (e) {
-      AppLogger.error('Error approving bill', e.toString());
+    } catch (e, st) {
+      AppLogger.error('Error approving bill', '$e\nStackTrace:\n$st');
       return false;
     }
   }
 
-  /// Reject a bill (Admin action)
+  /// Reject bill
   Future<bool> rejectBill(String billId) async {
     try {
+      // Get admin info from session (phone+pin auth)
+      final adminPhone = await _sessionService.getPhoneNumber() ?? 'admin';
+      final adminUserId = await _sessionService.getUserId() ?? 'admin';
+
       await _firestore.collection('bills').doc(billId).update({
         'status': 'rejected',
         'rejectedAt': FieldValue.serverTimestamp(),
-        'rejectedBy': _auth.currentUser?.uid ?? 'admin',
+        'rejectedBy': adminUserId,
+        'rejectedByPhone': adminPhone,
       });
 
       AppLogger.info('Bill rejected: $billId');
@@ -207,7 +264,13 @@ class BillService {
     }
   }
 
-  /// Get user's bills
+  /// Get today's date string in YYYY-MM-DD format
+  String _getTodayDateString() {
+    final now = DateTime.now();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  }
+
+  /// User bills
   Future<List<Map<String, dynamic>>> getUserBills(String carpenterId) async {
     try {
       final query = await _firestore
@@ -218,21 +281,16 @@ class BillService {
 
       return query.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
     } catch (e) {
-      AppLogger.error('Error getting user bills', e);
+      AppLogger.error('Error getting bills', e);
       return [];
     }
   }
 
-  /// Calculate tier based on points
+  /// Determine tier
   String _calculateTier(int points) {
-    if (points >= 10000) {
-      return 'Platinum';
-    } else if (points >= 5000) {
-      return 'Gold';
-    } else if (points >= 2000) {
-      return 'Silver';
-    } else {
-      return 'Bronze';
-    }
+    if (points >= 10000) return 'Platinum';
+    if (points >= 5000) return 'Gold';
+    if (points >= 2000) return 'Silver';
+    return 'Bronze';
   }
 }

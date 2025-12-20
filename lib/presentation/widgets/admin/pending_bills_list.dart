@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:balaji_points/config/theme.dart';
 import 'package:balaji_points/services/bill_service.dart';
+import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 
 class PendingBillsList extends StatefulWidget {
@@ -13,172 +14,61 @@ class PendingBillsList extends StatefulWidget {
 
 class _PendingBillsListState extends State<PendingBillsList> {
   final BillService _billService = BillService();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Store expanded state of each card
   final Map<String, bool> _expanded = {};
 
-  Future<void> _approveBill(Map<String, dynamic> bill) async {
-    final shouldApprove = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Approve Bill',
-          style: AppTextStyles.nunitoBold.copyWith(fontSize: 18),
-        ),
-        content: Text(
-          'Approve bill of ₹${bill['amount']} for ${bill['carpenterPhone']}?',
-          style: AppTextStyles.nunitoRegular.copyWith(fontSize: 14),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              'Cancel',
-              style: AppTextStyles.nunitoMedium.copyWith(
-                color: Colors.grey[600],
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text('Approve', style: AppTextStyles.nunitoSemiBold),
-          ),
-        ],
-      ),
-    );
-
-    if (shouldApprove != true) return;
-
-    try {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation(Colors.white),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                const Text("Approving bill..."),
-              ],
-            ),
-            backgroundColor: AppColors.primary,
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-
-      final success = await _billService.approveBill(
-        bill['billId'],
-        bill['carpenterId'],
-        bill['amount'].toDouble(),
-      );
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            success ? "Bill approved!" : "Failed to approve bill. Try again.",
-          ),
-          backgroundColor: success ? Colors.green : Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-
-      if (success) setState(() {});
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Error: ${e.toString()}"),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  Future<void> _rejectBill(String billId) async {
-    final shouldReject = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Reject Bill',
-          style: AppTextStyles.nunitoBold.copyWith(fontSize: 18),
-        ),
-        content: Text(
-          'Are you sure you want to reject this bill?',
-          style: AppTextStyles.nunitoRegular.copyWith(fontSize: 14),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              'Cancel',
-              style: AppTextStyles.nunitoMedium.copyWith(
-                color: Colors.grey[600],
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text('Reject', style: AppTextStyles.nunitoSemiBold),
-          ),
-        ],
-      ),
-    );
-
-    if (shouldReject == true) {
-      final success = await _billService.rejectBill(billId);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(success ? "Bill Rejected" : "Failed to reject"),
-            backgroundColor: success ? Colors.orange : Colors.red,
-          ),
-        );
-        if (success) setState(() {});
-      }
-    }
-  }
-
+  // ---------------- IMAGE VIEWER ----------------
   void _viewBillImage(String imageUrl) {
+    final l10n = AppLocalizations.of(context)!;
+
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.black.withOpacity(0.8),
+      builder: (_) => Dialog(
+        backgroundColor: Colors.black87,
         child: Stack(
           children: [
             Center(
               child: InteractiveViewer(
-                child: Image.network(imageUrl, fit: BoxFit.contain),
+                child: imageUrl.isNotEmpty
+                    ? Image.network(
+                        imageUrl,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.error,
+                              color: Colors.red,
+                              size: 60,
+                            ),
+                            Text(
+                              l10n.failedToLoadImage,
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.image_not_supported,
+                            size: 60,
+                            color: Colors.grey,
+                          ),
+                          Text(
+                            l10n.noImageAvailable,
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ],
+                      ),
               ),
             ),
+
+            // close
             Positioned(
-              top: 30,
+              top: 20,
               right: 20,
               child: IconButton(
                 icon: const Icon(Icons.close, color: Colors.white, size: 30),
@@ -191,17 +81,211 @@ class _PendingBillsListState extends State<PendingBillsList> {
     );
   }
 
+  // ---------------- APPROVE HANDLER ----------------
+  Future<void> _approveBill(Map<String, dynamic> bill) async {
+    final billId = bill['billId'];
+    final carpenterId = bill['carpenterId'];
+    final amount = (bill['amount'] ?? 0).toDouble();
+
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Approve Bill',
+          style: AppTextStyles.nunitoBold.copyWith(
+            fontSize: 20,
+            color: AppColors.primary,
+          ),
+        ),
+        content: Text(
+          'Approve this bill of ₹${amount.toStringAsFixed(0)}?\n\n${(amount / 1000).floor()} points will be added to the carpenter.',
+          style: AppTextStyles.nunitoRegular.copyWith(
+            fontSize: 16,
+            color: AppColors.textDark,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Cancel',
+              style: AppTextStyles.nunitoSemiBold.copyWith(
+                color: AppColors.textDark,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.secondary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(
+              'Approve',
+              style: AppTextStyles.nunitoBold.copyWith(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    _showLoadingDialog();
+
+    try {
+      final success = await _billService.approveBill(
+        billId,
+        carpenterId,
+        amount,
+      );
+
+      Navigator.pop(context); // close loading
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: success ? Colors.green : Colors.red,
+          content: Text(
+            success
+                ? 'Bill approved and points added successfully'
+                : 'Failed to approve bill',
+            style: const TextStyle(color: Colors.white),
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      Navigator.pop(context); // close loading
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red,
+          content: Text(
+            'Error approving bill: ${e.toString()}',
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+    }
+  }
+
+  // ---------------- REJECT HANDLER ----------------
+  Future<void> _rejectBill(String billId) async {
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Reject Bill',
+          style: AppTextStyles.nunitoBold.copyWith(
+            fontSize: 20,
+            color: Colors.red.shade700,
+          ),
+        ),
+        content: Text(
+          'Are you sure you want to reject this bill?',
+          style: AppTextStyles.nunitoRegular.copyWith(
+            fontSize: 16,
+            color: AppColors.textDark,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Cancel',
+              style: AppTextStyles.nunitoSemiBold.copyWith(
+                color: AppColors.textDark,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade700,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(
+              'Reject',
+              style: AppTextStyles.nunitoBold.copyWith(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    _showLoadingDialog();
+
+    try {
+      final success = await _billService.rejectBill(billId);
+
+      Navigator.pop(context); // close loading
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: success ? Colors.orange : Colors.red,
+          content: Text(
+            success ? 'Bill rejected successfully' : 'Failed to reject bill',
+            style: const TextStyle(color: Colors.white),
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      Navigator.pop(context); // close loading
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red,
+          content: Text(
+            'Error rejecting bill: ${e.toString()}',
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+    }
+  }
+
+  // ---------------- LOADING POPUP ----------------
+  void _showLoadingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      ),
+    );
+  }
+
+  // ---------------- UI ----------------
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
+      stream: _firestore
           .collection('bills')
           .where('status', isEqualTo: "pending")
           .orderBy('createdAt', descending: true)
           .snapshots(),
       builder: (context, snap) {
         if (snap.hasError) {
-          return const Center(child: Text("Error loading bills"));
+          return Center(child: Text(l10n.errorLoadingBills));
         }
 
         if (!snap.hasData) {
@@ -213,45 +297,47 @@ class _PendingBillsListState extends State<PendingBillsList> {
         final bills = snap.data!.docs;
 
         if (bills.isEmpty) {
-          return const Center(child: Text("No Pending Bills"));
+          return Center(child: Text(l10n.noPendingBills));
         }
 
         return ListView.builder(
           padding: const EdgeInsets.all(12),
           itemCount: bills.length,
-          itemBuilder: (context, index) {
-            final bill = bills[index].data() as Map<String, dynamic>;
-            bill["billId"] = bills[index].id;
+          itemBuilder: (_, i) {
+            final bill = bills[i].data() as Map<String, dynamic>;
+            bill['billId'] = bills[i].id;
 
-            final billId = bill["billId"];
+            final billId = bill['billId'];
             final isExpanded = _expanded[billId] ?? false;
 
-            final amount = bill["amount"] ?? 0;
-            final phone = bill["carpenterPhone"] ?? "Unknown";
-            final name = bill["carpenterName"] ?? "Carpenter";
-            final imageUrl = bill["imageUrl"] ?? "";
-            final billDate = bill["billDate"] as Timestamp?;
-            final createdAt = bill["createdAt"] as Timestamp?;
+            final amount = bill['amount'] ?? 0;
+            final name = bill['carpenterName'] ?? "Carpenter";
+            final phone = bill['carpenterPhone'] ?? "";
+            final imageUrl = bill['imageUrl'] ?? "";
+            final billDate = bill['billDate'] as Timestamp?;
+            final createdAt = bill['createdAt'] as Timestamp?;
 
-            return GestureDetector(
-              onTap: () {
-                setState(() {
-                  _expanded[billId] = !isExpanded;
-                });
-              },
-              child: Card(
-                elevation: 2,
-                margin: const EdgeInsets.only(bottom: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+            return Card(
+              elevation: 2,
+              margin: const EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () {
+                  setState(() {
+                    _expanded[billId] = !isExpanded;
+                  });
+                },
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // ---------------- HEADER ------------------
+                      // ------------ HEADER -------------
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Container(
                             padding: const EdgeInsets.all(8),
@@ -265,17 +351,33 @@ class _PendingBillsListState extends State<PendingBillsList> {
                               size: 22,
                             ),
                           ),
+
                           const SizedBox(width: 10),
 
+                          // Info
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  "₹${amount.toStringAsFixed(2)}",
-                                  style: AppTextStyles.nunitoBold.copyWith(
-                                    fontSize: 18,
-                                  ),
+                                Row(
+                                  children: [
+                                    Text(
+                                      '${(amount / 1000).floor()} pts',
+                                      style: AppTextStyles.nunitoBold.copyWith(
+                                        fontSize: 18,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '₹${amount.toStringAsFixed(0)}',
+                                      style: AppTextStyles.nunitoRegular
+                                          .copyWith(
+                                            fontSize: 12,
+                                            color: Colors.grey[600],
+                                          ),
+                                    ),
+                                  ],
                                 ),
                                 Text(
                                   name,
@@ -294,51 +396,24 @@ class _PendingBillsListState extends State<PendingBillsList> {
                             ),
                           ),
 
-                          // PENDING + EXPAND ARROW
-                          Column(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange[100],
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  "Pending",
-                                  style: AppTextStyles.nunitoSemiBold.copyWith(
-                                    fontSize: 10,
-                                    color: Colors.orange[900],
-                                  ),
-                                ),
-                              ),
-
-                              IconButton(
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                                icon: Icon(
-                                  isExpanded
-                                      ? Icons.keyboard_arrow_up
-                                      : Icons.keyboard_arrow_down,
-                                  size: 24,
-                                  color: Colors.grey[700],
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _expanded[billId] = !isExpanded;
-                                  });
-                                },
-                              ),
-                            ],
+                          // Expand Arrow
+                          IconButton(
+                            icon: Icon(
+                              isExpanded
+                                  ? Icons.keyboard_arrow_up
+                                  : Icons.keyboard_arrow_down,
+                              size: 24,
+                            ),
+                            onPressed: () {
+                              setState(() => _expanded[billId] = !isExpanded);
+                            },
                           ),
                         ],
                       ),
 
                       const SizedBox(height: 6),
 
-                      // ---------------- DATE ROW ------------------
+                      // ------------ DATE ROW -------------
                       Row(
                         children: [
                           Icon(
@@ -352,7 +427,7 @@ class _PendingBillsListState extends State<PendingBillsList> {
                                 ? DateFormat(
                                     'dd MMM yyyy',
                                   ).format(billDate.toDate())
-                                : "No date",
+                                : l10n.noDate,
                             style: TextStyle(
                               fontSize: 11,
                               color: Colors.grey[600],
@@ -373,47 +448,38 @@ class _PendingBillsListState extends State<PendingBillsList> {
                         ],
                       ),
 
-                      // ---------------- IMAGE EXPANDED ------------------
                       if (isExpanded && imageUrl.isNotEmpty) ...[
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
                         GestureDetector(
                           onTap: () => _viewBillImage(imageUrl),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(10),
                             child: Image.network(
                               imageUrl,
-                              height: 180,
+                              height: 170,
                               width: double.infinity,
                               fit: BoxFit.cover,
                             ),
                           ),
                         ),
-                        const SizedBox(height: 12),
                       ],
 
-                      // ---------------- ACTION BUTTONS ------------------
+                      const SizedBox(height: 12),
+
+                      // ------------ ACTION BUTTONS -------------
                       Row(
                         children: [
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: () => _rejectBill(billId.toString()),
+                              onPressed: () => _rejectBill(billId),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.red[50],
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8,
-                                ),
+                                elevation: 0,
                               ),
-                              icon: const Icon(
-                                Icons.close,
-                                size: 18,
-                                color: Colors.red,
-                              ),
+                              icon: const Icon(Icons.close, color: Colors.red),
                               label: Text(
-                                "Reject",
-                                style: AppTextStyles.nunitoSemiBold.copyWith(
-                                  fontSize: 13,
-                                  color: Colors.red,
-                                ),
+                                l10n.reject,
+                                style: const TextStyle(color: Colors.red),
                               ),
                             ),
                           ),
@@ -424,17 +490,10 @@ class _PendingBillsListState extends State<PendingBillsList> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.green,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8,
-                                ),
+                                elevation: 0,
                               ),
-                              icon: const Icon(Icons.check, size: 18),
-                              label: Text(
-                                "Approve",
-                                style: AppTextStyles.nunitoSemiBold.copyWith(
-                                  fontSize: 13,
-                                ),
-                              ),
+                              icon: const Icon(Icons.check),
+                              label: Text(l10n.approve),
                             ),
                           ),
                         ],

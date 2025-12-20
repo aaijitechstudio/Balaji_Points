@@ -111,6 +111,10 @@ class _BillManagementWidgetState extends State<BillManagementWidget> {
                     final billNumber = data['billNumber'] ?? '';
                     final notes = data['notes'] ?? '';
 
+                    // compute points from amount and prepare both displays
+                    final int pointsFromAmount = (amount / 1000).floor();
+                    final String rupeeText = '₹${amount.toStringAsFixed(0)}';
+
                     return Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
@@ -154,12 +158,24 @@ class _BillManagementWidgetState extends State<BillManagementWidget> {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            Text(
-                              '₹${amount.toStringAsFixed(0)}',
-                              style: AppTextStyles.nunitoSemiBold.copyWith(
-                                fontSize: 18,
-                                color: AppColors.primary,
-                              ),
+                            Row(
+                              children: [
+                                Text(
+                                  '$pointsFromAmount pts',
+                                  style: AppTextStyles.nunitoSemiBold.copyWith(
+                                    fontSize: 18,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  rupeeText,
+                                  style: AppTextStyles.nunitoRegular.copyWith(
+                                    fontSize: 14,
+                                    color: AppColors.textDark.withOpacity(0.6),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -459,7 +475,7 @@ class _BillManagementWidgetState extends State<BillManagementWidget> {
     if (confirm != true) return;
 
     try {
-      await _billService.approveBill(billId, userId, points.toDouble());
+      await _billService.approveBill(billId, userId, amount);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

@@ -2,9 +2,8 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:balaji_points/config/theme.dart';
-import 'package:balaji_points/services/user_service.dart';
+import 'package:balaji_points/services/session_service.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -14,7 +13,7 @@ class SplashPage extends StatefulWidget {
 }
 
 class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
-  final UserService _userService = UserService();
+  final _sessionService = SessionService();
   late AnimationController _logoController;
   late AnimationController _backgroundController;
   late Animation<double> _fade;
@@ -80,37 +79,28 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     if (!mounted) return;
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
-
-      if (user == null) {
-        // Not logged in - go to login
-        if (mounted) {
-          context.go('/login');
-        }
-        return;
-      }
-
-      // User is logged in - check profile completion and role
-      final userData = await _userService.getCurrentUserData();
+      // Check if user has an active session
+      final isLoggedIn = await _sessionService.isLoggedIn();
 
       if (!mounted) return;
 
-      // Check if profile is incomplete
-      final firstName = userData?['firstName'] as String? ?? '';
-      if (firstName.trim().isEmpty || firstName == 'User') {
-        context.go('/edit-profile?firstTime=true');
-        return;
-      }
+      if (isLoggedIn) {
+        // User is logged in - check role and navigate accordingly
+        final role = await _sessionService.getUserRole();
 
-      // Check if user is admin
-      final role = (userData?['role'] as String?)?.toLowerCase();
-      if (role == 'admin') {
-        context.go('/admin');
+        if (!mounted) return;
+
+        if (role?.toLowerCase() == 'admin') {
+          context.go('/admin');
+        } else {
+          context.go('/');
+        }
       } else {
-        context.go('/');
+        // No active session - navigate to login
+        context.go('/login');
       }
     } catch (e) {
-      // On error, go to login
+      // On error, navigate to login
       if (mounted) {
         context.go('/login');
       }

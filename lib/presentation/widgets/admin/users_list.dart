@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:balaji_points/config/theme.dart';
+import 'package:balaji_points/l10n/app_localizations.dart';
+import 'package:balaji_points/services/pin_auth_service.dart';
 import 'package:intl/intl.dart';
 
 /// Full single-file implementation:
@@ -39,6 +40,8 @@ class _UsersListState extends State<UsersList> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Column(
       children: [
         // Search + Add button
@@ -58,7 +61,7 @@ class _UsersListState extends State<UsersList> {
                       },
                       style: AppTextStyles.nunitoRegular.copyWith(fontSize: 16),
                       decoration: InputDecoration(
-                        hintText: 'Search by name or phone...',
+                        hintText: l10n.searchByNameOrPhone,
                         hintStyle: AppTextStyles.nunitoRegular.copyWith(
                           color: Colors.grey[400],
                         ),
@@ -83,7 +86,7 @@ class _UsersListState extends State<UsersList> {
                   ElevatedButton.icon(
                     onPressed: _showAddCarpenterDialog,
                     icon: const Icon(Icons.add),
-                    label: const Text('Add'),
+                    label: Text(l10n.add),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       shape: RoundedRectangleBorder(
@@ -100,11 +103,20 @@ class _UsersListState extends State<UsersList> {
                 child: Row(
                   children: _tiers.map((tier) {
                     final isSelected = _selectedTier == tier;
+                    final tierLabel = tier == 'All'
+                        ? l10n.all
+                        : tier == 'Platinum'
+                        ? l10n.platinum
+                        : tier == 'Gold'
+                        ? l10n.gold
+                        : tier == 'Silver'
+                        ? l10n.silver
+                        : l10n.bronze;
                     return Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: FilterChip(
                         selected: isSelected,
-                        label: Text(tier),
+                        label: Text(tierLabel),
                         labelStyle: AppTextStyles.nunitoSemiBold.copyWith(
                           fontSize: 14,
                           color: isSelected ? Colors.white : AppColors.textDark,
@@ -134,6 +146,7 @@ class _UsersListState extends State<UsersList> {
                 .snapshots(),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
+                final l10n = AppLocalizations.of(context)!;
                 return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -145,7 +158,7 @@ class _UsersListState extends State<UsersList> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Error loading users',
+                        l10n.errorLoadingUsers,
                         style: AppTextStyles.nunitoBold.copyWith(fontSize: 18),
                       ),
                       const SizedBox(height: 8),
@@ -204,6 +217,7 @@ class _UsersListState extends State<UsersList> {
               });
 
               if (users.isEmpty) {
+                final l10n = AppLocalizations.of(context)!;
                 return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -215,7 +229,7 @@ class _UsersListState extends State<UsersList> {
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        'No Users Found',
+                        l10n.noUsersFound,
                         style: AppTextStyles.nunitoBold.copyWith(
                           fontSize: 20,
                           color: AppColors.textDark,
@@ -224,8 +238,8 @@ class _UsersListState extends State<UsersList> {
                       const SizedBox(height: 8),
                       Text(
                         _searchQuery.isNotEmpty
-                            ? 'Try a different search term'
-                            : 'No carpenters registered yet',
+                            ? l10n.tryDifferentSearch
+                            : l10n.noCarpentersYet,
                         style: AppTextStyles.nunitoRegular.copyWith(
                           fontSize: 14,
                           color: Colors.grey[600],
@@ -360,7 +374,11 @@ class _UsersListState extends State<UsersList> {
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
-                                          'Joined ${DateFormat('dd MMM yyyy').format(createdAt)}',
+                                          l10n.joinedLabel(
+                                            DateFormat(
+                                              'dd MMM yyyy',
+                                            ).format(createdAt),
+                                          ),
                                           style: AppTextStyles.nunitoRegular
                                               .copyWith(
                                                 fontSize: 11,
@@ -427,31 +445,13 @@ class _UsersListState extends State<UsersList> {
       ],
     );
   }
-
-  Color _getTierColor(String tier) {
-    switch (tier) {
-      case 'Platinum':
-        return const Color(0xFF00D4FF);
-      case 'Gold':
-        return const Color(0xFFFFD700);
-      case 'Silver':
-        return const Color(0xFFC0C0C0);
-      case 'Bronze':
-      default:
-        return const Color(0xFFCD7F32);
-    }
-  }
 }
 
 /// ---------------------------
-/// Add Carpenter Dialog (Phone + OTP)
+/// Add Carpenter Dialog (Phone + PIN)
 /// ---------------------------
-/// This dialog sends OTP and verifies it. After verification it creates:
-/// - FirebaseAuth sign-in with the phone (this will temporarily sign the app in
-///   as that phone user)
-/// - Firestore users/{uid} doc
-/// - Firestore user_points/{uid} doc
-/// Then it signs out the newly-signed-in user. IMPORTANT: this signs out the admin too.
+/// This dialog creates a new carpenter with phone + PIN authentication
+/// Uses PinAuthService to create user without signing out admin
 
 class AddCarpenterDialog extends StatefulWidget {
   const AddCarpenterDialog({super.key});
@@ -462,192 +462,99 @@ class AddCarpenterDialog extends StatefulWidget {
 
 class _AddCarpenterDialogState extends State<AddCarpenterDialog> {
   final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _otpController = TextEditingController();
-  String _verificationId = '';
-  bool _codeSent = false;
-  bool _verifying = false;
+  final TextEditingController _pinController = TextEditingController();
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _lastNameController = TextEditingController();
   bool _creating = false;
 
-  final _auth = FirebaseAuth.instance;
+  final _pinAuthService = PinAuthService();
 
-  void _showSnack(String s) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s)));
+  void _showSnack(String s, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(s),
+        backgroundColor: isError ? Colors.red : Colors.green,
+      ),
+    );
   }
 
   Future<bool> _phoneExists(String phone) async {
+    final normalized = _pinAuthService.normalizePhone(phone);
     final q = await FirebaseFirestore.instance
         .collection('users')
-        .where('phone', isEqualTo: phone)
+        .where('phone', isEqualTo: normalized)
+        .limit(1)
         .get();
     return q.docs.isNotEmpty;
   }
 
-  Future<void> _sendCode() async {
+  Future<void> _createCarpenter() async {
+    final l10n = AppLocalizations.of(context)!;
     final phoneRaw = _phoneController.text.trim();
-    if (phoneRaw.isEmpty || phoneRaw.length < 6) {
-      _showSnack('Enter a valid phone number');
+    final pin = _pinController.text.trim();
+    final firstName = _firstNameController.text.trim();
+    final lastName = _lastNameController.text.trim();
+
+    if (phoneRaw.isEmpty || phoneRaw.length < 10) {
+      _showSnack(l10n.enterValidPhone, isError: true);
       return;
     }
 
-    // Normalize: assuming Indian numbers; accept with or without leading 0
-    String phone = phoneRaw;
-    if (phone.startsWith('0')) phone = phone.substring(1);
-    if (!phone.startsWith('+')) phone = '+91$phone'; // change if multi-country
+    if (pin.isEmpty || pin.length < 4) {
+      _showSnack('PIN must be at least 4 digits', isError: true);
+      return;
+    }
 
-    // check duplicate
-    final exists = await _phoneExists(phone);
+    // Check duplicate
+    final exists = await _phoneExists(phoneRaw);
     if (exists) {
-      _showSnack('Phone number already exists');
+      _showSnack(l10n.phoneAlreadyExists, isError: true);
       return;
     }
 
-    setState(() => _verifying = true);
+    setState(() => _creating = true);
 
-    await _auth.verifyPhoneNumber(
-      phoneNumber: phone,
-      verificationCompleted: (PhoneAuthCredential credential) {
-        // NOTE: automatic verification on Android may call this.
-        // We'll try to sign in (and then create user) automatically if possible.
-        _signInWithCredential(credential);
-      },
-      verificationFailed: (FirebaseAuthException e) {
-        setState(() => _verifying = false);
-        _showSnack('Verification failed: ${e.message}');
-      },
-      codeSent: (String verificationId, int? resendToken) {
-        setState(() {
-          _verificationId = verificationId;
-          _codeSent = true;
-          _verifying = false;
-        });
-        _showSnack('OTP sent');
-      },
-      codeAutoRetrievalTimeout: (String verificationId) {
-        _verificationId = verificationId;
-      },
-      timeout: const Duration(seconds: 60),
-    );
-  }
-
-  Future<void> _verifyCodeManually() async {
-    final sms = _otpController.text.trim();
-    if (sms.isEmpty) {
-      _showSnack('Enter OTP');
-      return;
-    }
-
-    final credential = PhoneAuthProvider.credential(
-      verificationId: _verificationId,
-      smsCode: sms,
-    );
-
-    await _signInWithCredential(credential);
-  }
-
-  Future<void> _signInWithCredential(PhoneAuthCredential credential) async {
     try {
-      setState(() {
-        _verifying = true;
-      });
+      final success = await _pinAuthService.setPinForPhone(
+        phone: phoneRaw,
+        pin: pin,
+        firstName: firstName.isNotEmpty ? firstName : null,
+        lastName: lastName.isNotEmpty ? lastName : null,
+      );
 
-      final userCred = await _auth.signInWithCredential(credential);
-      final user = userCred.user;
-      if (user == null) {
-        setState(() => _verifying = false);
-        _showSnack('Failed to sign in with OTP');
-        return;
+      setState(() => _creating = false);
+
+      if (success) {
+        if (mounted) {
+          _showSnack('Carpenter created successfully!');
+          Navigator.of(context).pop();
+        }
+      } else {
+        if (mounted) {
+          _showSnack('Failed to create carpenter', isError: true);
+        }
       }
-
-      // Create Firestore user document (if not exists)
-      final uid = user.uid;
-      final phone = user.phoneNumber ?? _phoneController.text.trim();
-
-      final userDocRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid);
-      final doc = await userDocRef.get();
-      if (!doc.exists) {
-        await userDocRef.set({
-          'userId': uid,
-          'firstName': '',
-          'lastName': '',
-          'phone': phone,
-          'profileImage': '',
-          'role': 'carpenter',
-          'totalPoints': 0,
-          'tier': 'Bronze',
-          'createdAt': Timestamp.now(),
-        });
-      }
-
-      // create empty points doc if not exists
-      final pointsRef = FirebaseFirestore.instance
-          .collection('user_points')
-          .doc(uid);
-      final ptsDoc = await pointsRef.get();
-      if (!ptsDoc.exists) {
-        await pointsRef.set({'pointsHistory': []});
-      }
-
-      setState(() {
-        _verifying = false;
-        _creating = true;
-      });
-
-      // Sign out the newly created carpenter (this will sign out the app)
-      await _auth.signOut();
-
-      setState(() {
-        _creating = false;
-      });
-
-      // Inform admin (they will have been signed out) and close dialog
-      _showAdminSignedOutDialog();
-    } on FirebaseAuthException catch (e) {
-      setState(() {
-        _verifying = false;
-      });
-      _showSnack('Auth error: ${e.message}');
     } catch (e) {
-      setState(() {
-        _verifying = false;
-      });
-      _showSnack('Error: $e');
+      setState(() => _creating = false);
+      if (mounted) {
+        _showSnack('Error: $e', isError: true);
+      }
     }
-  }
-
-  void _showAdminSignedOutDialog() {
-    // After signOut, admin will be signed out too. Let them know to sign back in.
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('Carpenter created'),
-        content: const Text(
-          'Carpenter account created successfully. The app has signed in as that carpenter during verification and has now signed out. You will need to sign in again as admin.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(); // close this alert
-              Navigator.of(context).pop(); // close add dialog
-            },
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
   void dispose() {
     _phoneController.dispose();
-    _otpController.dispose();
+    _pinController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: SingleChildScrollView(
@@ -656,85 +563,77 @@ class _AddCarpenterDialogState extends State<AddCarpenterDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Add Carpenter',
+              l10n.addCarpenter,
               style: AppTextStyles.nunitoBold.copyWith(fontSize: 18),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             TextField(
               controller: _phoneController,
               keyboardType: TextInputType.phone,
+              decoration: InputDecoration(
+                labelText: l10n.phoneNumberLabel,
+                hintText: l10n.phoneNumberHint,
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.phone),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _pinController,
+              keyboardType: TextInputType.number,
+              obscureText: true,
+              maxLength: 6,
               decoration: const InputDecoration(
-                labelText: 'Phone number',
-                hintText: 'e.g. 9876543210 (no +91)',
+                labelText: 'PIN (4-6 digits)',
+                hintText: 'Enter PIN',
                 border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.lock),
               ),
             ),
             const SizedBox(height: 12),
-            if (!_codeSent)
+            TextField(
+              controller: _firstNameController,
+              decoration: const InputDecoration(
+                labelText: 'First Name (Optional)',
+                hintText: 'Enter first name',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.person),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _lastNameController,
+              decoration: const InputDecoration(
+                labelText: 'Last Name (Optional)',
+                hintText: 'Enter last name',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.person_outline),
+              ),
+            ),
+            const SizedBox(height: 20),
+            if (_creating)
+              const CircularProgressIndicator()
+            else
               Row(
                 children: [
                   Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text(l10n.cancel),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
                     child: ElevatedButton(
-                      onPressed: _verifying ? null : _sendCode,
-                      child: _verifying
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Text('Send OTP'),
+                      onPressed: _createCarpenter,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                      ),
+                      child: const Text('Create'),
                     ),
                   ),
                 ],
               ),
-            if (_codeSent) ...[
-              TextField(
-                controller: _otpController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Enter OTP',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _verifying ? null : _verifyCodeManually,
-                      child: _verifying
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Text('Verify & Create'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-            const SizedBox(height: 12),
-            if (_creating) const CircularProgressIndicator(),
-            const SizedBox(height: 8),
-            Text(
-              'Note: The app will sign in as the verified carpenter temporarily during OTP verification and then sign out. The admin must sign in again.',
-              style: AppTextStyles.nunitoRegular.copyWith(
-                fontSize: 12,
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
           ],
         ),
       ),
@@ -752,6 +651,7 @@ class UserDetailsDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final firstName = user['firstName'] ?? '';
     final lastName = user['lastName'] ?? '';
     final phone = user['phone'] ?? '';
@@ -875,7 +775,7 @@ class UserDetailsDialog extends StatelessWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Total Points',
+                            l10n.totalPointsLabel,
                             style: AppTextStyles.nunitoRegular.copyWith(
                               fontSize: 14,
                               color: Colors.grey[600],
@@ -892,7 +792,7 @@ class UserDetailsDialog extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              '$tier Tier',
+                              l10n.tierLabel(tier),
                               style: AppTextStyles.nunitoBold.copyWith(
                                 fontSize: 16,
                                 color: Colors.white,
@@ -905,7 +805,7 @@ class UserDetailsDialog extends StatelessWidget {
 
                     const SizedBox(height: 24),
                     Text(
-                      'Recent Activity',
+                      l10n.recentActivity,
                       style: AppTextStyles.nunitoBold.copyWith(
                         fontSize: 18,
                         color: AppColors.textDark,
@@ -932,6 +832,7 @@ class UserDetailsDialog extends StatelessWidget {
                         }
 
                         if (!snapshot.hasData || !snapshot.data!.exists) {
+                          final l10n = AppLocalizations.of(context)!;
                           return Container(
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
@@ -939,7 +840,7 @@ class UserDetailsDialog extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              'No activity yet',
+                              l10n.noActivityYet,
                               style: AppTextStyles.nunitoRegular.copyWith(
                                 fontSize: 14,
                                 color: Colors.grey[600],
@@ -954,6 +855,7 @@ class UserDetailsDialog extends StatelessWidget {
                         final history = (data['pointsHistory'] ?? []) as List;
 
                         if (history.isEmpty) {
+                          final l10n = AppLocalizations.of(context)!;
                           return Container(
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
@@ -961,7 +863,7 @@ class UserDetailsDialog extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              'No activity yet',
+                              l10n.noActivityYet,
                               style: AppTextStyles.nunitoRegular.copyWith(
                                 fontSize: 14,
                                 color: Colors.grey[600],

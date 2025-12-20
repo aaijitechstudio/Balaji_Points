@@ -119,6 +119,7 @@ lib/generated_plugin_registrant.dart
 # **/google-services.json
 # **/GoogleService-Info.plist
 # **/serviceAccountKey.json
+**/serviceAccountKey.json.json
 # **/firebase_options.dart
 
 # Coverage

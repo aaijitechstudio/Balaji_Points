@@ -1,0 +1,41 @@
+rules_version = '2';
+
+// Firebase Storage Security Rules for PIN-based Authentication
+// Since we're not using Firebase Auth, we allow uploads based on file path validation
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Profile images - allow anyone to read, upload, and delete their own images
+    match /profile_images/{fileName} {
+      // Allow anyone to read profile images
+      allow read: if true;
+
+      // Allow uploads for profile images
+      // Security: File size limit (5MB) and content type validation
+      allow write: if request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+
+      // Allow deletion of profile images
+      allow delete: if true;
+    }
+
+    // Bill images - allow anyone to read, upload, and delete
+    match /bill_images/{fileName} {
+      // Allow anyone to read bill images
+      allow read: if true;
+
+      // Allow uploads for bill images
+      // Security: File size limit (10MB) and content type validation
+      allow write: if request.resource.size < 10 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+
+      // Allow deletion of bill images
+      allow delete: if true;
+    }
+
+    // Deny all other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

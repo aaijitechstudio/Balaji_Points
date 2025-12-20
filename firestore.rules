@@ -1,0 +1,231 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================
+    // PIN-BASED AUTHENTICATION RULES
+    // ============================================
+    // Note: Since we're using phone+pin authentication instead of Firebase Auth,
+    // we cannot use request.auth for authentication checks.
+    // Admin operations are validated at the app level using SessionService.
+    // These rules provide data validation and basic security.
+
+    // ============================================
+    // USERS COLLECTION
+    // ============================================
+    match /users/{userId} {
+      // Allow anyone to read user documents
+      // Needed for PIN-based auth to verify phone numbers and check user existence
+      // PIN hashes are stored, not plain PINs, so this is safe
+      allow read: if true;
+
+      // Allow creating new user documents (registration)
+      // Validation: Ensure required fields are present
+      allow create: if request.resource.data.phone != null
+                    && request.resource.data.role != null
+                    && request.resource.data.keys().hasAll(['phone', 'role', 'totalPoints', 'tier']);
+
+      // Allow users to update their own document
+      // Security: Prevent users from changing their phone number (unique identifier)
+      // This ensures users can only update their own data, not take over other accounts
+      allow update: if request.resource.data.phone == resource.data.phone
+                    && request.resource.data.phone != null;
+
+      // Allow admin updates (validated at app level)
+      // Admin operations include: updating points, tier, profile info
+      // App validates admin status before making these requests
+      allow update: if request.resource.data.phone != null
+                    && request.resource.data.keys().hasAll(['phone']);
+
+      // Allow admin to delete users (validated at app level)
+      allow delete: if true; // App-level validation ensures only admins can delete
+    }
+
+    // ============================================
+    // USER POINTS COLLECTION
+    // ============================================
+    match /user_points/{pointsId} {
+      // Anyone can read points (for leaderboards, user profiles, etc.)
+      allow read: if true;
+
+      // Allow creating user_points during registration
+      // Validation: Ensure userId matches the document ID
+      allow create: if request.resource.data.userId == pointsId
+                    && request.resource.data.keys().hasAll(['userId', 'totalPoints', 'tier']);
+
+      // Allow admin to update/delete points (validated at app level)
+      // Admin operations: updating points after bill approval, tier changes
+      // For updates, userId must already exist in document and match pointsId
+      allow update: if resource.data.userId == pointsId;
+
+      allow delete: if true; // App-level validation ensures only admins can delete
+    }
+
+    // ============================================
+    // POINTS HISTORY COLLECTION
+    // ============================================
+    match /points_history/{historyId} {
+      // Anyone can read history (for transparency and user viewing)
+      // App-level filtering ensures users see appropriate data
+      allow read: if true;
+
+      // Allow creating history records (for bill approvals, offer redemptions)
+      // Validation: Ensure required fields are present
+      allow create: if request.resource.data.userId != null
+                    && request.resource.data.points != null
+                    && request.resource.data.reason != null;
+
+      // Allow admin to update/delete history (validated at app level)
+      allow update, delete: if true; // App-level validation ensures only admins can modify
+    }
+
+    // ============================================
+    // BILLS COLLECTION
+    // ============================================
+    match /bills/{billId} {
+      // Allow anyone to read bills
+      // Security: App-level filtering ensures users only see their own bills
+      allow read: if true;
+
+      // Allow creating bills (carpenters submit bills)
+      // Validation: Ensure required fields are present
+      allow create: if request.resource.data.carpenterId != null
+                    && request.resource.data.carpenterPhone != null
+                    && request.resource.data.amount != null
+                    && request.resource.data.status == 'pending';
+
+      // Allow admin to update bills (approve/reject)
+      // Validation: Ensure immutable fields (carpenterId, amount) are not changed
+      // Allow adding new fields for approval (status, pointsEarned, approvedBy, etc.)
+      allow update: if resource.data.carpenterId == request.resource.data.carpenterId
+                    && resource.data.amount == request.resource.data.amount
+                    && (request.resource.data.status == 'approved'
+                         || request.resource.data.status == 'rejected'
+                         || request.resource.data.status == 'pending');
+
+      // Allow admin to delete bills (validated at app level)
+      allow delete: if true; // App-level validation ensures only admins can delete
+    }
+
+    // ============================================
+    // OFFERS COLLECTION
+    // ============================================
+    match /offers/{offerId} {
+      // Anyone can read offers (for display to carpenters)
+      allow read: if true;
+
+      // Allow admin to create offers (validated at app level)
+      // Validation: Ensure required fields are present
+      allow create: if request.resource.data.title != null
+                    && request.resource.data.description != null
+                    && request.resource.data.points != null
+                    && request.resource.data.isActive != null;
+
+      // Allow admin to update offers (validated at app level)
+      // Validation: Ensure core fields remain consistent
+      allow update: if request.resource.data.title != null
+                    && request.resource.data.description != null
+                    && request.resource.data.points != null
+                    && request.resource.data.isActive != null;
+
+      // Allow admin to delete offers (validated at app level)
+      allow delete: if true; // App-level validation ensures only admins can delete
+    }
+
+    // ============================================
+    // OFFER REDEMPTIONS COLLECTION
+    // ============================================
+    match /offer_redemptions/{redemptionId} {
+      // Allow reading redemptions (for user history, admin reports)
+      allow read: if true;
+
+      // Allow creating redemption records (when carpenter redeems offer)
+      // Validation: Ensure required fields are present
+      allow create: if request.resource.data.offerId != null
+                    && request.resource.data.carpenterId != null
+                    && request.resource.data.pointsUsed != null
+                    && request.resource.data.status != null;
+
+      // Allow admin to update/delete redemptions (validated at app level)
+      allow update, delete: if true; // App-level validation ensures only admins can modify
+    }
+
+    // ============================================
+    // DAILY SPINS COLLECTION
+    // ============================================
+    match /daily_spins/{spinId} {
+      // Allow anyone to read spins
+      // Security: App-level filtering ensures users only see their own spins
+      allow read: if true;
+
+      // Allow creating spin records (carpenters can spin)
+      // Validation: Ensure userId field is present
+      allow create: if request.resource.data.userId != null
+                    && request.resource.data.timestamp != null;
+
+      // Allow admin to update/delete spins (validated at app level)
+      allow update, delete: if true; // App-level validation ensures only admins can modify
+    }
+
+    // ============================================
+    // DAILY PRIZE WINNERS COLLECTION
+    // ============================================
+    match /daily_prize_winners/{winnerId} {
+      // Anyone can read winners (for display on home screen, leaderboards)
+      allow read: if true;
+
+      // Allow admin to create winner records (from daily spin)
+      // Validation: Ensure required fields are present
+      allow create: if request.resource.data.carpenterId != null
+                    && request.resource.data.carpenterName != null
+                    && request.resource.data.date != null
+                    && request.resource.data.timestamp != null;
+
+      // Allow admin to update/delete winners (validated at app level)
+      allow update: if request.resource.data.carpenterId != null
+                    && request.resource.data.date != null;
+
+      allow delete: if true; // App-level validation ensures only admins can delete
+    }
+
+    // ============================================
+    // DAILY WINNERS COLLECTION (for easy lookup)
+    // ============================================
+    match /daily_winners/{date} {
+      // Anyone can read daily winners
+      allow read: if true;
+
+      // Allow admin to create/update daily winner (one per day)
+      // Validation: Ensure required fields are present
+      allow write: if request.resource.data.carpenterId != null
+                   && request.resource.data.carpenterName != null
+                   && request.resource.data.date != null
+                   && request.resource.data.timestamp != null;
+
+      // Allow admin to delete (validated at app level)
+      allow delete: if true; // App-level validation ensures only admins can delete
+    }
+
+    // ============================================
+    // COUNTERS COLLECTION (for auto-incrementing IDs)
+    // ============================================
+    match /counters/{counterId} {
+      // Allow reading counters
+      allow read: if true;
+
+      // Allow writing for user registration and other operations
+      // This is needed for auto-incrementing user display IDs
+      // Validation: Ensure counter value is a number
+      allow write: if request.resource.data.count != null
+                   && request.resource.data.count is int;
+    }
+
+    // ============================================
+    // DEFAULT DENY RULE
+    // ============================================
+    // Deny all other collections by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

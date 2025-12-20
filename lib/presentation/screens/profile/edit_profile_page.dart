@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:balaji_points/config/theme.dart';
 import 'package:balaji_points/services/user_service.dart';
 import 'package:balaji_points/services/storage_service.dart';
+import 'package:balaji_points/services/session_service.dart';
 
 class EditProfilePage extends ConsumerStatefulWidget {
   final bool isFirstTime;
@@ -24,6 +24,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   final _lastNameController = TextEditingController();
   final UserService _userService = UserService();
   final StorageService _storageService = StorageService();
+  final SessionService _sessionService = SessionService();
 
   File? _imageFile;
   String? _existingImageUrl;
@@ -39,7 +40,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
   Future<void> _loadUserData() async {
     try {
-      final userData = await _userService.getCurrentUserData();
+      debugPrint('EditProfilePage: Loading user data from server...');
+      // Force refresh from server to get latest data
+      final userData = await _userService.getCurrentUserData(forceRefresh: true);
       if (userData != null && mounted) {
         setState(() {
           _firstNameController.text = userData['firstName'] as String? ?? '';
@@ -47,12 +50,19 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
           _existingImageUrl = userData['profileImage'] as String?;
           _isLoading = false;
         });
+        // Debug: Log loaded data
+        debugPrint('EditProfilePage: User data loaded successfully');
+        debugPrint('  firstName: ${userData['firstName']}');
+        debugPrint('  lastName: ${userData['lastName']}');
+        debugPrint('  profileImage: ${userData['profileImage']}');
       } else {
+        debugPrint('EditProfilePage: No user data available');
         setState(() {
           _isLoading = false;
         });
       }
     } catch (e) {
+      debugPrint('EditProfilePage: Error loading user data: $e');
       setState(() {
         _isLoading = false;
       });
@@ -96,8 +106,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     });
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
+      // Get phone number from session (used as user ID in PIN-based auth)
+      final phoneNumber = await _sessionService.getPhoneNumber();
+      if (phoneNumber == null) {
         throw Exception('No user logged in');
       }
 
@@ -112,15 +123,22 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
           _isUploadingImage = true;
         });
 
+        debugPrint('EditProfilePage: Uploading new profile image...');
+
         // Delete old image if exists
         await _storageService.deleteOldProfileImageIfExists(_existingImageUrl);
 
-        // Upload new image
-        profileImageUrl = await _storageService.uploadProfileImage(_imageFile!);
+        // Upload new image with phone number
+        profileImageUrl = await _storageService.uploadProfileImage(
+          phoneNumber: phoneNumber,
+          imageFile: _imageFile!,
+        );
 
         if (profileImageUrl == null) {
           throw Exception('Failed to upload profile image');
         }
+
+        debugPrint('EditProfilePage: Profile image uploaded successfully: $profileImageUrl');
 
         setState(() {
           _isUploadingImage = false;
@@ -132,20 +150,48 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         'firstName': firstName,
         'lastName': lastName,
         'updatedAt': FieldValue.serverTimestamp(),
-        // Ensure basic fields exist
-        'uid': user.uid,
-        'phone': user.phoneNumber ?? '',
+        // Ensure phone field exists (used as unique identifier)
+        'phone': phoneNumber,
       };
 
       // Add profile image URL if available
       if (profileImageUrl != null && profileImageUrl.isNotEmpty) {
         updateData['profileImage'] = profileImageUrl;
+        debugPrint('EditProfilePage: Saving profileImage to Firestore: $profileImageUrl');
+      } else {
+        debugPrint('EditProfilePage: No profile image to save');
       }
 
+      debugPrint('EditProfilePage: === SAVING USER DATA ===');
+      debugPrint('  User ID (phone): $phoneNumber');
+      debugPrint('  First Name: "$firstName"');
+      debugPrint('  Last Name: "$lastName"');
+      debugPrint('  Profile Image: ${profileImageUrl ?? "none"}');
+      debugPrint('  Update Data: $updateData');
+
+      // Save to Firestore
       await FirebaseFirestore.instance
           .collection('users')
-          .doc(user.uid)
+          .doc(phoneNumber)
           .set(updateData, SetOptions(merge: true));
+
+      debugPrint('EditProfilePage: ✅ Data saved successfully to Firestore!');
+
+      // Verify the save by reading back
+      final verifyDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(phoneNumber)
+          .get();
+      debugPrint('EditProfilePage: Verified saved data:');
+      debugPrint('  firstName: "${verifyDoc.data()?['firstName']}"');
+      debugPrint('  lastName: "${verifyDoc.data()?['lastName']}"');
+      debugPrint('  profileImage: ${verifyDoc.data()?['profileImage']}');
+
+      // Update session with new profile data
+      await _sessionService.updateProfile(
+        firstName: firstName,
+        lastName: lastName.isNotEmpty ? lastName : null,
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -212,338 +258,402 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.primary,
-      body: Column(
-        children: [
-          // Top Safe Area with Primary Color
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  if (!widget.isFirstTime)
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => context.pop(),
-                    ),
-                  const SizedBox(width: 8),
-                  Text(
-                    widget.isFirstTime ? 'Complete Your Profile' : 'Edit Profile',
-                    style: AppTextStyles.nunitoBold.copyWith(
-                      fontSize: 22,
-                      color: Colors.white,
-                    ),
+  Widget _buildContent() {
+    return Column(
+      children: [
+        // Top Safe Area with Primary Color
+        SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                if (!widget.isFirstTime)
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => context.pop(),
                   ),
-                ],
-              ),
+                const SizedBox(width: 8),
+                Text(
+                  widget.isFirstTime ? 'Complete Your Profile' : 'Edit Profile',
+                  style: AppTextStyles.nunitoBold.copyWith(
+                    fontSize: 22,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
             ),
           ),
-          // Content
-          Expanded(
-            child: Container(
-              color: AppColors.woodenBackground,
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary,
-                      ),
-                    )
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 24),
+        ),
+        // Content
+        Expanded(
+          child: Container(
+            color: AppColors.woodenBackground,
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.primary,
+                    ),
+                  )
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 24),
 
-                            // Profile Image Picker
-                            GestureDetector(
-                              onTap: _pickImage,
-                              child: Stack(
-                                children: [
-                                  Container(
-                                    width: 120,
-                                    height: 120,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.white,
-                                      border: Border.all(
-                                        color: AppColors.primary,
-                                        width: 3,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.1),
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ],
+                          // Profile Image Picker
+                          GestureDetector(
+                            onTap: _pickImage,
+                            child: Stack(
+                              children: [
+                                Container(
+                                  width: 120,
+                                  height: 120,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white,
+                                    border: Border.all(
+                                      color: AppColors.primary,
+                                      width: 3,
                                     ),
-                                    child: ClipOval(
-                                      child: _imageFile != null
-                                          ? Image.file(
-                                              _imageFile!,
-                                              fit: BoxFit.cover,
-                                            )
-                                          : _existingImageUrl != null
-                                              ? Image.network(
-                                                  _existingImageUrl!,
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (context, error, stackTrace) {
-                                                    return const Icon(
-                                                      Icons.person,
-                                                      size: 60,
-                                                      color: AppColors.secondary,
-                                                    );
-                                                  },
-                                                )
-                                              : const Icon(
-                                                  Icons.person,
-                                                  size: 60,
-                                                  color: AppColors.secondary,
-                                                ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.1),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: ClipOval(
+                                    child: _imageFile != null
+                                        ? Image.file(
+                                            _imageFile!,
+                                            fit: BoxFit.cover,
+                                          )
+                                        : _existingImageUrl != null && _existingImageUrl!.isNotEmpty
+                                            ? Image.network(
+                                                _existingImageUrl!,
+                                                fit: BoxFit.cover,
+                                                loadingBuilder: (context, child, loadingProgress) {
+                                                  if (loadingProgress == null) return child;
+                                                  return Container(
+                                                    color: AppColors.secondary.withValues(alpha: 0.2),
+                                                    child: Center(
+                                                      child: CircularProgressIndicator(
+                                                        value: loadingProgress.expectedTotalBytes != null
+                                                            ? loadingProgress.cumulativeBytesLoaded /
+                                                                loadingProgress.expectedTotalBytes!
+                                                            : null,
+                                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                                          AppColors.primary,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                                errorBuilder: (context, error, stackTrace) {
+                                                  debugPrint('EditProfilePage: Error loading profile image: $error');
+                                                  return const Icon(
+                                                    Icons.person,
+                                                    size: 60,
+                                                    color: AppColors.secondary,
+                                                  );
+                                                },
+                                              )
+                                            : const Icon(
+                                                Icons.person,
+                                                size: 60,
+                                                color: AppColors.secondary,
+                                              ),
+                                  ),
+                                ),
+                                Positioned(
+                                  bottom: 0,
+                                  right: 0,
+                                  child: Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.secondary,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.white,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Icons.camera_alt,
+                                      size: 18,
+                                      color: Colors.white,
                                     ),
                                   ),
-                                  Positioned(
-                                    bottom: 0,
-                                    right: 0,
-                                    child: Container(
-                                      width: 36,
-                                      height: 36,
-                                      decoration: BoxDecoration(
-                                        color: AppColors.secondary,
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: Colors.white,
-                                          width: 2,
-                                        ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          Text(
+                            'Tap to change photo',
+                            style: AppTextStyles.nunitoRegular.copyWith(
+                              fontSize: 14,
+                              color: AppColors.textDark.withOpacity(0.6),
+                            ),
+                          ),
+
+                          const SizedBox(height: 40),
+
+                          // First Name Field
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: TextFormField(
+                              controller: _firstNameController,
+                              style: AppTextStyles.nunitoRegular.copyWith(
+                                fontSize: 16,
+                                color: AppColors.textDark,
+                              ),
+                              decoration: InputDecoration(
+                                labelText: 'First Name *',
+                                labelStyle: AppTextStyles.nunitoMedium.copyWith(
+                                  color: AppColors.primary,
+                                ),
+                                hintText: 'Enter your first name',
+                                hintStyle: AppTextStyles.nunitoRegular.copyWith(
+                                  color: Colors.grey[400],
+                                ),
+                                prefixIcon: Icon(
+                                  Icons.person_outline,
+                                  color: AppColors.primary,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide.none,
+                                ),
+                                filled: true,
+                                fillColor: Colors.white,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 18,
+                                ),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Please enter your first name';
+                                }
+                                if (value.trim().length < 2) {
+                                  return 'First name must be at least 2 characters';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // Last Name Field
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: TextFormField(
+                              controller: _lastNameController,
+                              style: AppTextStyles.nunitoRegular.copyWith(
+                                fontSize: 16,
+                                color: AppColors.textDark,
+                              ),
+                              decoration: InputDecoration(
+                                labelText: 'Last Name',
+                                labelStyle: AppTextStyles.nunitoMedium.copyWith(
+                                  color: AppColors.primary,
+                                ),
+                                hintText: 'Enter your last name',
+                                hintStyle: AppTextStyles.nunitoRegular.copyWith(
+                                  color: Colors.grey[400],
+                                ),
+                                prefixIcon: Icon(
+                                  Icons.person_outline,
+                                  color: AppColors.primary,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide.none,
+                                ),
+                                filled: true,
+                                fillColor: Colors.white,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 18,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 40),
+
+                          // Upload Status
+                          if (_isUploadingImage)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        AppColors.primary,
                                       ),
-                                      child: const Icon(
-                                        Icons.camera_alt,
-                                        size: 18,
-                                        color: Colors.white,
-                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    'Uploading image...',
+                                    style: AppTextStyles.nunitoMedium.copyWith(
+                                      fontSize: 14,
+                                      color: AppColors.primary,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
 
-                            const SizedBox(height: 12),
+                          // Save Button
+                          Container(
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.secondary.withOpacity(0.3),
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
+                            ),
+                            child: ElevatedButton(
+                              onPressed: (_isSaving || _isUploadingImage) ? null : _saveProfile,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.secondary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 18,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: _isSaving
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                          Colors.white,
+                                        ),
+                                      ),
+                                    )
+                                  : Text(
+                                      widget.isFirstTime ? 'Complete Profile' : 'Save Changes',
+                                      style: AppTextStyles.nunitoBold.copyWith(
+                                        fontSize: 18,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                            ),
+                          ),
 
+                          if (widget.isFirstTime) ...[
+                            const SizedBox(height: 16),
                             Text(
-                              'Tap to change photo',
+                              'You need to complete your profile to continue',
+                              textAlign: TextAlign.center,
                               style: AppTextStyles.nunitoRegular.copyWith(
                                 fontSize: 14,
                                 color: AppColors.textDark.withOpacity(0.6),
                               ),
                             ),
-
-                            const SizedBox(height: 40),
-
-                            // First Name Field
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: TextFormField(
-                                controller: _firstNameController,
-                                style: AppTextStyles.nunitoRegular.copyWith(
-                                  fontSize: 16,
-                                  color: AppColors.textDark,
-                                ),
-                                decoration: InputDecoration(
-                                  labelText: 'First Name *',
-                                  labelStyle: AppTextStyles.nunitoMedium.copyWith(
-                                    color: AppColors.primary,
-                                  ),
-                                  hintText: 'Enter your first name',
-                                  hintStyle: AppTextStyles.nunitoRegular.copyWith(
-                                    color: Colors.grey[400],
-                                  ),
-                                  prefixIcon: Icon(
-                                    Icons.person_outline,
-                                    color: AppColors.primary,
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.white,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                    vertical: 18,
-                                  ),
-                                ),
-                                validator: (value) {
-                                  if (value == null || value.trim().isEmpty) {
-                                    return 'Please enter your first name';
-                                  }
-                                  if (value.trim().length < 2) {
-                                    return 'First name must be at least 2 characters';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-
-                            const SizedBox(height: 20),
-
-                            // Last Name Field
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: TextFormField(
-                                controller: _lastNameController,
-                                style: AppTextStyles.nunitoRegular.copyWith(
-                                  fontSize: 16,
-                                  color: AppColors.textDark,
-                                ),
-                                decoration: InputDecoration(
-                                  labelText: 'Last Name',
-                                  labelStyle: AppTextStyles.nunitoMedium.copyWith(
-                                    color: AppColors.primary,
-                                  ),
-                                  hintText: 'Enter your last name',
-                                  hintStyle: AppTextStyles.nunitoRegular.copyWith(
-                                    color: Colors.grey[400],
-                                  ),
-                                  prefixIcon: Icon(
-                                    Icons.person_outline,
-                                    color: AppColors.primary,
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.white,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                    vertical: 18,
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                            const SizedBox(height: 40),
-
-                            // Upload Status
-                            if (_isUploadingImage)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 16),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(
-                                          AppColors.primary,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      'Uploading image...',
-                                      style: AppTextStyles.nunitoMedium.copyWith(
-                                        fontSize: 14,
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                            // Save Button
-                            Container(
-                              width: double.infinity,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.secondary.withOpacity(0.3),
-                                    blurRadius: 15,
-                                    offset: const Offset(0, 6),
-                                  ),
-                                ],
-                              ),
-                              child: ElevatedButton(
-                                onPressed: (_isSaving || _isUploadingImage) ? null : _saveProfile,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.secondary,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 18,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  elevation: 0,
-                                ),
-                                child: _isSaving
-                                    ? const SizedBox(
-                                        height: 20,
-                                        width: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation<Color>(
-                                            Colors.white,
-                                          ),
-                                        ),
-                                      )
-                                    : Text(
-                                        widget.isFirstTime ? 'Complete Profile' : 'Save Changes',
-                                        style: AppTextStyles.nunitoBold.copyWith(
-                                          fontSize: 18,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                              ),
-                            ),
-
-                            if (widget.isFirstTime) ...[
-                              const SizedBox(height: 16),
-                              Text(
-                                'You need to complete your profile to continue',
-                                textAlign: TextAlign.center,
-                                style: AppTextStyles.nunitoRegular.copyWith(
-                                  fontSize: 14,
-                                  color: AppColors.textDark.withOpacity(0.6),
-                                ),
-                              ),
-                            ],
-
-                            const SizedBox(height: 20),
                           ],
-                        ),
+
+                          const SizedBox(height: 80), // Extra padding for bottom nav
+                        ],
                       ),
                     ),
-            ),
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _onBottomNavTapped(int index) {
+    switch (index) {
+      case 0:
+        context.go('/');
+        break;
+      case 1:
+        context.go('/');
+        break;
+      case 2:
+        context.go('/profile');
+        break;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Don't show bottom nav when it's first time profile completion
+    if (widget.isFirstTime) {
+      return Scaffold(
+        backgroundColor: AppColors.primary,
+        body: _buildContent(),
+      );
+    }
+
+    // Show bottom navigation for edit profile
+    return Scaffold(
+      backgroundColor: AppColors.primary,
+      body: _buildContent(),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: 2, // Profile tab selected
+        onTap: _onBottomNavTapped,
+        selectedItemColor: AppColors.secondary,
+        unselectedItemColor: Colors.white,
+        backgroundColor: AppColors.primary,
+        type: BottomNavigationBarType.fixed,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.monetization_on_outlined),
+            label: "Earn",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            label: "Profile",
           ),
         ],
       ),

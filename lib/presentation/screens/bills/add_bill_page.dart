@@ -1,12 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:balaji_points/config/theme.dart';
-import '../../../services/bill_service.dart';
-import '../../../services/user_service.dart';
-import '../../../core/logger.dart';
+import 'package:balaji_points/services/bill_service.dart';
+import 'package:balaji_points/services/user_service.dart';
+import 'package:balaji_points/services/session_service.dart';
+import 'package:balaji_points/core/logger.dart';
 
 class AddBillPage extends StatefulWidget {
   const AddBillPage({super.key});
@@ -24,10 +24,113 @@ class _AddBillPageState extends State<AddBillPage> {
   final ImagePicker _picker = ImagePicker();
   final BillService _billService = BillService();
   final UserService _userService = UserService();
+  final SessionService _sessionService = SessionService();
 
   File? _selectedImage;
   DateTime? _billDate;
   bool _isSubmitting = false;
+  Map<String, dynamic>? _userData;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkProfileCompletion();
+  }
+
+  /// Check if profile is complete, redirect to edit profile if not
+  Future<void> _checkProfileCompletion() async {
+    try {
+      _userData = await _userService.getCurrentUserData();
+
+      final firstName = (_userData?['firstName'] as String? ?? '').trim();
+      final lastName = (_userData?['lastName'] as String? ?? '').trim();
+      final profileImage = (_userData?['profileImage'] as String? ?? '').trim();
+
+      if (firstName.isEmpty || lastName.isEmpty || profileImage.isEmpty) {
+        if (mounted) {
+          // Show dialog and redirect to edit profile
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _showProfileIncompleteDialog();
+          });
+        }
+      }
+    } catch (e) {
+      AppLogger.error('Error checking profile completion', e);
+    }
+  }
+
+  void _showProfileIncompleteDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.person_add_alt_1,
+                color: Colors.orange.shade700,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Profile Incomplete',
+                style: AppTextStyles.nunitoBold.copyWith(fontSize: 20),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Please complete your profile (first name, last name, and profile picture) to add bills and earn points.',
+          style: AppTextStyles.nunitoRegular.copyWith(fontSize: 16),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.go('/'); // Go back to home
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.grey.shade600,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(
+              'Go Back',
+              style: AppTextStyles.nunitoSemiBold.copyWith(fontSize: 16),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.push('/edit-profile');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange.shade600,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(
+              'Complete Profile',
+              style: AppTextStyles.nunitoSemiBold.copyWith(fontSize: 16),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -183,8 +286,9 @@ class _AddBillPageState extends State<AddBillPage> {
     });
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
+      // Get user phone number from session (PIN-based auth)
+      final phoneNumber = await _sessionService.getPhoneNumber();
+      if (phoneNumber == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -196,13 +300,9 @@ class _AddBillPageState extends State<AddBillPage> {
         return;
       }
 
-      // Get user phone number
-      final userData = await _userService.getCurrentUserData();
-      final phone = userData?['phone'] as String? ?? user.phoneNumber ?? '';
-
       final success = await _billService.submitBill(
-        carpenterId: user.uid,
-        carpenterPhone: phone,
+        carpenterId: phoneNumber,  // Use phone number as user ID
+        carpenterPhone: phoneNumber,
         amount: amount,
         imageFile: _selectedImage,
         billDate: billDate,
@@ -261,6 +361,20 @@ class _AddBillPageState extends State<AddBillPage> {
           ),
         );
       }
+    }
+  }
+
+  void _onBottomNavTapped(int index) {
+    switch (index) {
+      case 0:
+        context.go('/');
+        break;
+      case 1:
+        context.go('/');
+        break;
+      case 2:
+        context.go('/profile');
+        break;
     }
   }
 
@@ -654,36 +768,6 @@ class _AddBillPageState extends State<AddBillPage> {
                     const SizedBox(height: 24),
 
                     // Info Text
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: AppColors.primary.withOpacity(0.3),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            color: AppColors.primary,
-                            size: 24,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              '1000 ₹ = 1 Point. Points will be added after admin approval.',
-                              style: AppTextStyles.nunitoRegular.copyWith(
-                                fontSize: 13,
-                                color: AppColors.textDark.withOpacity(0.8),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
                     const SizedBox(height: 24),
                   ],
                 ),
@@ -752,6 +836,25 @@ class _AddBillPageState extends State<AddBillPage> {
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: 1, // Earn tab selected (bills are related to earning)
+        onTap: _onBottomNavTapped,
+        selectedItemColor: AppColors.secondary,
+        unselectedItemColor: Colors.white,
+        backgroundColor: AppColors.primary,
+        type: BottomNavigationBarType.fixed,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.monetization_on_outlined),
+            label: "Earn",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            label: "Profile",
           ),
         ],
       ),

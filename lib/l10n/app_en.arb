@@ -1,0 +1,504 @@
+{
+  "@@locale": "en",
+
+  
+  "appName": "Balaji Points",
+  "loading": "Loading...",
+  "error": "Error",
+  "success": "Success",
+  "ok": "OK",
+  "cancel": "Cancel",
+  "save": "Save",
+  "delete": "Delete",
+  "edit": "Edit",
+  "submit": "Submit",
+  "back": "Back",
+  "next": "Next",
+  "done": "Done",
+  "retry": "Retry",
+  "refresh": "Refresh",
+
+  
+  "loginWithPhone": "Login with Phone Number",
+  "enterPhoneNumber": "Enter your registered phone number",
+  "phoneNumber": "Phone Number",
+  "enterPhoneHint": "Enter 10 digit phone number",
+  "sendOTP": "Send OTP",
+  "verifyOTP": "Verify OTP",
+  "enterOTPCode": "Enter the 6-digit code sent to",
+  "didntReceiveOTP": "Didn't receive OTP? ",
+  "resend": "Resend",
+  "resendIn": "Resend in {seconds}s",
+  "@resendIn": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "invalidPhone": "Please enter your phone number",
+  "invalidPhoneLength": "Phone number must be 10 digits",
+  "invalidPhoneFormat": "Phone number must contain only digits",
+  "invalidOTP": "Please enter a valid 6-digit OTP",
+  "selectRole": "Select Your Role",
+  "carpenter": "Carpenter",
+  "admin": "Admin",
+  "welcomeBack": "Welcome Back",
+  "createAccount": "Create Account",
+  "continueWithPhone": "Continue with Phone",
+  "continueWithPin": "Continue with PIN",
+  "loginInfo": "Login using your registered phone number. You will receive an OTP to verify.",
+  "poweredBy": "Powered by",
+  "companyName": "Shree Balaji Plywood & Hardware",
+
+
+  "enterPinPageTitle": "Enter your 4-digit PIN",
+  "enter4DigitPin": "Enter your 4-digit PIN",
+  "pinLabel": "PIN",
+  "fourDigitPin": "4-digit PIN",
+  "login": "Login",
+  "forgotPin": "Forgot PIN?",
+  "newUserSetPin": "New user? Set PIN",
+  "invalidPin": "Invalid PIN",
+  "createPinTitle": "Create your 4-digit PIN",
+  "createPinSubtitle": "This PIN will be used for login",
+  "mobileNumber": "Mobile Number",
+  "firstName": "First Name",
+  "firstNameRequired": "First Name *",
+  "lastName": "Last Name",
+  "confirmPin": "Confirm PIN",
+  "savePin": "Save PIN",
+  "pinCreatedSuccess": "PIN created successfully",
+  "failedToSavePin": "Failed to save PIN",
+  "pinsDoNotMatch": "PIN and Confirm PIN do not match",
+  "resetPinTitle": "Reset PIN",
+  "resetPinSubtitle": "Enter your registered mobile number to reset your PIN.",
+  "newPinLabel": "New 4-digit PIN",
+  "checkNumber": "Check Number",
+  "verified": "Verified",
+  "pleaseVerifyMobile": "Please verify mobile number first",
+  "noAccountFound": "No account found for this number",
+  "pinResetSuccess": "PIN reset successfully. Please login again.",
+  "failedToResetPin": "Failed to reset PIN. Try again.",
+  "enterValidTenDigit": "Enter valid 10-digit number",
+  "enter4Digits": "Enter 4 digits",
+  "enterValidFirstName": "Enter valid first name",
+  "imageError": "Image error",
+  "resetPin": "Reset PIN",
+  "changePin": "Change PIN",
+  "rememberMe": "Remember Me",
+  "accountExistsUseReset": "Account already exists. Please use Reset PIN to change your PIN.",
+
+
+  "home": "Home",
+  "addPoints": "Add Points",
+  "latestOffers": "Latest Offers",
+  "topCarpenters": "Top 3 Carpenters",
+  "todaysWinner": "Today's Winner",
+  "yourPosition": "Your Position",
+  "rank": "Rank #{rank}",
+  "@rank": {
+    "placeholders": {
+      "rank": {
+        "type": "int"
+      }
+    }
+  },
+  "points": "{points} Points",
+  "@points": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "noOffersAvailable": "No offers available at the moment",
+  "dailySpinWinner": "🎉 Daily Spin Winner",
+  "congratulations": "Congratulations!",
+  "won": "Won {points} points!",
+  "@won": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+
+  
+  "profile": "Profile",
+  "editProfile": "Edit Profile",
+  "completeProfile": "Complete Your Profile",
+  "profileIncomplete": "Profile Incomplete",
+  "completeProfileMessage": "Please complete your profile to start adding bills and earning points",
+  "completeProfileDetails": "Add your first name, last name, and profile picture to continue",
+  "completeNow": "Complete Now",
+  "helpSupport": "Help & Support",
+  "contactUs": "Contact Us",
+  "darkMode": "Dark Mode",
+  "logout": "Logout",
+  "logoutConfirmation": "Are you sure you want to logout?",
+  "name": "Name",
+  "email": "Email",
+  "phone": "Phone",
+  "role": "Role",
+  "memberSince": "Member Since",
+  "totalPoints": "Total Points",
+  "verified": "Verified",
+  "notVerified": "Not Verified",
+  "needHelp": "Need Help?",
+  "contactSupport": "Contact our support team for any queries or issues.",
+  "supportPhone1": "96006 - 09121",
+  "supportPhone2": "0424 - 3557187",
+  "callNow": "Call Now",
+  "getInTouch": "Get in touch with us",
+  "mobile": "Mobile",
+  "landline": "Landline",
+
+  
+  "addBill": "Add Bill",
+  "billDetails": "Bill Details",
+  "billNumber": "Bill Number",
+  "billAmount": "Bill Amount",
+  "billDate": "Bill Date",
+  "uploadBillImage": "Upload Bill Image",
+  "selectImage": "Select Image",
+  "changeImage": "Change Image",
+  "pointsConversion": "1000 ₹ = 1 Point",
+  "estimatedPoints": "Estimated Points",
+  "youWillEarn": "You will earn approximately {points} points",
+  "@youWillEarn": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "enterBillNumber": "Please enter bill number",
+  "enterBillAmount": "Please enter bill amount",
+  "enterValidAmount": "Please enter a valid amount",
+  "selectBillDate": "Please select bill date",
+  "uploadBillPhoto": "Please upload bill photo",
+  "billSubmitted": "Bill submitted successfully",
+  "billSubmitError": "Failed to submit bill",
+
+  
+  "wallet": "Wallet",
+  "availablePoints": "Available Points",
+  "redeemPoints": "Redeem Points",
+  "transactionHistory": "Transaction History",
+  "noTransactions": "No transactions yet",
+  "earned": "Earned",
+  "spent": "Spent",
+  "pending": "Pending",
+
+  
+  "offers": "Offers",
+  "viewDetails": "View Details",
+  "redeemNow": "Redeem Now",
+  "pointsRequired": "{points} Points Required",
+  "@pointsRequired": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "offerRedeemed": "Offer redeemed successfully",
+  "insufficientPoints": "Insufficient points",
+  "offerExpired": "This offer has expired",
+  "validUntil": "Valid until {date}",
+  "@validUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+
+  
+  "dailySpin": "Daily Spin",
+  "spinNow": "SPIN NOW",
+  "spinning": "Spinning...",
+  "spinWheel": "Spin the Wheel",
+  "dailySpinCompleted": "You have already spun today",
+  "comeBackTomorrow": "Come back tomorrow for another chance to win!",
+  "nextSpinIn": "Next spin in: {hours}h {minutes}m",
+  "@nextSpinIn": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "winner": "Winner: {name}",
+  "@winner": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "prizePoints": "🎁 {points} Points",
+  "@prizePoints": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+
+  
+  "adminPanel": "Admin Panel",
+  "adminSubtitle": "Manage Bills, Offers, Users & Daily Spin",
+  "dashboard": "Dashboard",
+  "users": "Users",
+  "manageUsers": "Manage Users",
+  "manageBills": "Manage Bills",
+  "manageOffers": "Manage Offers",
+  "manageDailySpin": "Manage Daily Spin",
+  "pendingBills": "Pending Bills",
+  "approvedBills": "Approved Bills",
+  "rejectedBills": "Rejected Bills",
+  "pendingUsers": "Pending Users",
+  "verifiedUsers": "Verified Users",
+  "approve": "Approve",
+  "reject": "Reject",
+  "userApproved": "User approved successfully",
+  "userRejected": "User rejected successfully",
+  "billApproved": "Bill approved successfully",
+  "billRejected": "Bill rejected successfully",
+  "createOffer": "Create Offer",
+  "offerTitle": "Offer Title",
+  "offerDescription": "Offer Description",
+  "offerCreated": "Offer created successfully",
+  "logoutFailed": "Logout failed",
+
+  
+  "errorOccurred": "An error occurred",
+  "networkError": "Network error. Please check your internet connection.",
+  "permissionDenied": "Permission denied",
+  "sessionExpired": "Session expired. Please login again.",
+  "invalidCredentials": "Invalid credentials",
+  "userNotFound": "User not found",
+  "phoneAuthFailed": "Phone authentication failed",
+  "configError": "Configuration error",
+  "missingClientId": "SHA-1 fingerprint missing in Firebase. Please run: scripts/get_sha1.sh",
+  "tooManyRequests": "Too many requests. Please wait a few minutes.",
+  "invalidVerificationCode": "Invalid OTP code. Please check and try again.",
+  "verificationExpired": "Verification expired. Please request a new OTP.",
+  "userDisabled": "This account has been disabled. Please contact support.",
+
+  
+  "fieldRequired": "This field is required",
+  "invalidEmail": "Please enter a valid email",
+  "invalidName": "Please enter a valid name",
+  "nameTooShort": "Name must be at least 2 characters",
+  "invalidAmount": "Please enter a valid amount",
+  "amountTooLow": "Amount must be greater than 0",
+
+  
+  "searchHint": "Search...",
+  "noResultsFound": "No results found",
+  "noDataAvailable": "No data available",
+  "pullToRefresh": "Pull to refresh",
+  "releaseToRefresh": "Release to refresh",
+  "refreshing": "Refreshing...",
+  "loadMore": "Load more",
+  "seeAll": "See All",
+  "close": "Close",
+  "confirm": "Confirm",
+  "areYouSure": "Are you sure?",
+  "cannotUndo": "This action cannot be undone.",
+  "yes": "Yes",
+  "no": "No",
+
+  
+  "today": "Today",
+  "yesterday": "Yesterday",
+  "tomorrow": "Tomorrow",
+  "january": "January",
+  "february": "February",
+  "march": "March",
+  "april": "April",
+  "may": "May",
+  "june": "June",
+  "july": "July",
+  "august": "August",
+  "september": "September",
+  "october": "October",
+  "november": "November",
+  "december": "December",
+  "jan": "Jan",
+  "feb": "Feb",
+  "mar": "Mar",
+  "apr": "Apr",
+  "jun": "Jun",
+  "jul": "Jul",
+  "aug": "Aug",
+  "sep": "Sep",
+  "oct": "Oct",
+  "nov": "Nov",
+  "dec": "Dec",
+
+
+  "approveBill": "Approve Bill",
+  "approveBillConfirmation": "Approve bill of ₹{amount} for {phone}?",
+  "@approveBillConfirmation": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "approvingBill": "Approving bill...",
+  "billApprovedSuccess": "Bill approved!",
+  "failedToApproveBill": "Failed to approve bill. Try again.",
+  "rejectBill": "Reject Bill",
+  "rejectBillConfirmation": "Are you sure you want to reject this bill?",
+  "billRejectedSuccess": "Bill Rejected",
+  "failedToRejectBill": "Failed to reject",
+  "failedToLoadImage": "Failed to load image",
+  "noImageAvailable": "No image available",
+  "errorLoadingBills": "Error loading bills",
+  "noPendingBills": "No Pending Bills",
+  "pendingStatus": "Pending",
+  "noDate": "No date",
+
+
+  "deleteOffer": "Delete Offer",
+  "deleteOfferConfirmation": "Are you sure you want to delete this offer? This action cannot be undone.",
+  "offerDeletedSuccess": "Offer deleted successfully",
+  "failedToDeleteOffer": "Failed to delete offer",
+  "errorLoadingOffers": "Error loading offers",
+  "noOffersCreated": "No Offers Created",
+  "createFirstOffer": "Create your first offer with points and banner",
+  "active": "Active",
+  "inactive": "Inactive",
+  "createdLabel": "Created",
+  "editOffer": "Edit Offer",
+  "createNewOffer": "Create New Offer",
+  "tapToUploadBanner": "Tap to upload banner",
+  "offerTitleLabel": "Offer Title *",
+  "offerTitleHint": "e.g., Diwali Special Offer",
+  "enterOfferTitle": "Please enter offer title",
+  "descriptionLabel": "Description",
+  "descriptionHint": "Brief description of the offer",
+  "pointsRequiredLabel": "Points Required *",
+  "pointsHint": "e.g., 100",
+  "enterPointsError": "Please enter points",
+  "enterValidNumber": "Please enter a valid number",
+  "setValidUntilDate": "Set valid until date (optional)",
+  "validUntilDisplay": "Valid until: {date}",
+  "@validUntilDisplay": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "offerStatus": "Offer Status",
+  "uploadingBanner": "Uploading banner...",
+  "updateOffer": "Update Offer",
+  "offerUpdatedSuccess": "Offer updated successfully",
+  "offerCreatedSuccess": "Offer created successfully",
+  "failedToSaveOffer": "Failed to save offer",
+  "failedToPickImage": "Failed to pick image",
+
+
+  "searchByNameOrPhone": "Search by name or phone...",
+  "add": "Add",
+  "all": "All",
+  "platinum": "Platinum",
+  "gold": "Gold",
+  "silver": "Silver",
+  "bronze": "Bronze",
+  "errorLoadingUsers": "Error loading users",
+  "noUsersFound": "No Users Found",
+  "tryDifferentSearch": "Try a different search term",
+  "noCarpentersYet": "No carpenters registered yet",
+  "joinedLabel": "Joined {date}",
+  "@joinedLabel": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "addCarpenter": "Add Carpenter",
+  "phoneNumberLabel": "Phone number",
+  "phoneNumberHint": "e.g. 9876543210 (no +91)",
+  "sendOTP": "Send OTP",
+  "enterOTP": "Enter OTP",
+  "verifyAndCreate": "Verify & Create",
+  "adminSignOutNote": "Note: The app will sign in as the verified carpenter temporarily during OTP verification and then sign out. The admin must sign in again.",
+  "carpenterCreated": "Carpenter created",
+  "carpenterCreatedMessage": "Carpenter account created successfully. The app has signed in as that carpenter during verification and has now signed out. You will need to sign in again as admin.",
+  "enterValidPhone": "Enter a valid phone number",
+  "phoneAlreadyExists": "Phone number already exists",
+  "verificationFailed": "Verification failed",
+  "otpSent": "OTP sent",
+  "failedToSignIn": "Failed to sign in with OTP",
+  "authError": "Auth error",
+  "totalPointsLabel": "Total Points",
+  "tierLabel": "{tier} Tier",
+  "@tierLabel": {
+    "placeholders": {
+      "tier": {
+        "type": "String"
+      }
+    }
+  },
+  "recentActivity": "Recent Activity",
+  "noActivityYet": "No activity yet",
+
+
+  "noWinnerYetToday": "No winner yet today",
+  "youWonPrize": "🎉 You Won!",
+  "todaysWinnerLabel": "🏆 Today's Winner",
+  "myPoints": "My Points",
+  "redeemRewards": "Redeem Rewards",
+  "leaderboard": "Leaderboard",
+  "settings": "Settings",
+  "rankShort": "Rank",
+  "earn": "Earn",
+  "approved": "Approved",
+  "addNewBill": "Add New Bill",
+  "recentBills": "Recent Bills",
+  "noBillsYet": "No bills yet",
+  "submitFirstBill": "Submit your first bill to earn points",
+  "justNow": "Just now",
+  "minutesAgo": "{minutes}m ago",
+  "@minutesAgo": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "hoursAgo": "{hours}h ago",
+  "@hoursAgo": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "daysAgo": "{days}d ago",
+  "@daysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "billLabel": "Bill",
+  "statusApproved": "APPROVED",
+  "statusPending": "PENDING",
+  "statusRejected": "REJECTED"
+}

@@ -7,12 +7,17 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:53571317085:android:524e4e01d035d9b0158cb4",
+        "mobilesdk_app_id": "1:53571317085:android:9a0a2f059605eb97158cb4",
         "android_client_info": {
-          "package_name": "com.example.balaji_points"
+          "package_name": "com.balaji.points"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "53571317085-i0f9v256m44jelpcqp2pte765igl2k2h.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyC1sfFB_qTXzIGaI0QonxGEZo8MICouGzU"
@@ -20,7 +25,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "53571317085-i0f9v256m44jelpcqp2pte765igl2k2h.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "53571317085-bm7q09ghmav5te41ad3ncufjvs6pmh9l.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.balajiPoints"
+              }
+            }
+          ]
         }
       }
     }

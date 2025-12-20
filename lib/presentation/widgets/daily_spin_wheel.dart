@@ -1,11 +1,14 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:balaji_points/presentation/providers/daily_spin_provider.dart';
 import 'package:balaji_points/config/theme.dart';
 
 class DailySpinWheel extends ConsumerStatefulWidget {
-  const DailySpinWheel({super.key});
+  final VoidCallback? onSpinComplete;
+
+  const DailySpinWheel({super.key, this.onSpinComplete});
 
   @override
   ConsumerState<DailySpinWheel> createState() => _DailySpinWheelState();
@@ -56,17 +59,60 @@ class _DailySpinWheelState extends ConsumerState<DailySpinWheel>
       _isSpinning = true;
     });
 
-    // Random rotation between 5-8 full rotations plus random angle
+    // Wheel has 8 segments with values: [10, 20, 30, 40, 50, 60, 70, 80]
+    final pointValues = [10, 20, 30, 40, 50, 60, 70, 80];
+    final segments = 8;
+    final segmentAngle = (2 * math.pi) / segments;
+
+    // First, randomly select which segment to land on (this ensures valid points)
     final random = math.Random();
-    final rotations = 5 + random.nextDouble() * 3;
-    final randomAngle = random.nextDouble() * 2 * math.pi;
-    _totalRotation = (rotations * 2 * math.pi) + randomAngle;
+    final selectedSegmentIndex = random.nextInt(segments);
+    final pointsWon = pointValues[selectedSegmentIndex];
+
+    debugPrint(
+      'Selected segment: index=$selectedSegmentIndex, points=$pointsWon',
+    );
+
+    // Now calculate rotation to land on this segment
+    // The pointer is at top (-pi/2), segments start at -pi/2
+    // We want the selected segment's center to end up at the top pointer
+    final segmentCenterAngle =
+        -math.pi / 2 +
+        (selectedSegmentIndex * segmentAngle) +
+        (segmentAngle / 2);
+
+    // Calculate rotation needed: we want segmentCenterAngle + rotation = -pi/2 (mod 2pi)
+    // So rotation = -pi/2 - segmentCenterAngle (mod 2pi)
+    var targetRotation = (-math.pi / 2 - segmentCenterAngle) % (2 * math.pi);
+    if (targetRotation < 0) targetRotation += 2 * math.pi;
+
+    // Add multiple full rotations for visual effect (5-8 rotations)
+    final fullRotations = 5 + random.nextDouble() * 3;
+    _totalRotation = (fullRotations * 2 * math.pi) + targetRotation;
+
+    debugPrint(
+      'Rotation calculation: segmentCenterAngle=$segmentCenterAngle, targetRotation=$targetRotation, totalRotation=$_totalRotation',
+    );
 
     _controller.reset();
     _controller.forward();
 
-    // Perform the spin and get points
-    final points = await ref.read(dailySpinProvider.notifier).performSpin();
+    // Perform the spin with calculated points - pass points BEFORE animation completes
+    final pointsReturned = await ref
+        .read(dailySpinProvider.notifier)
+        .performSpin(pointsWon);
+
+    debugPrint(
+      'Points passed to provider: $pointsWon, Points returned: $pointsReturned',
+    );
+
+    // Use the points we calculated, not what provider returns (unless provider returned valid points)
+    // This ensures we always show the correct points even if provider has issues
+    final finalPoints = (pointsReturned > 0) ? pointsReturned : pointsWon;
+
+    debugPrint(
+      'Final points to display: $finalPoints (calculated: $pointsWon, returned: $pointsReturned)',
+    );
 
     // Wait for animation to complete
     await Future.delayed(const Duration(seconds: 3));
@@ -75,16 +121,19 @@ class _DailySpinWheelState extends ConsumerState<DailySpinWheel>
       _isSpinning = false;
     });
 
-    // Show result dialog
+    // Show result dialog with the correct points
     if (mounted) {
-      _showResultDialog(points);
+      _showResultDialog(finalPoints, () {
+        // Callback to refresh home page data after dialog is closed
+        widget.onSpinComplete?.call();
+      });
     }
 
     // Refresh state
     ref.read(dailySpinProvider.notifier).refresh();
   }
 
-  void _showResultDialog(int points) {
+  void _showResultDialog(int points, VoidCallback? onClose) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -108,7 +157,7 @@ class _DailySpinWheelState extends ConsumerState<DailySpinWheel>
             ),
             const SizedBox(height: 10),
             Text(
-              '$points Points!',
+              '${points > 0 ? points : "10"} Points!',
               style: const TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
@@ -117,7 +166,7 @@ class _DailySpinWheelState extends ConsumerState<DailySpinWheel>
             ),
             const SizedBox(height: 20),
             Text(
-              'Points have been added to your account.',
+              'Points have been added to your account!',
               style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),
@@ -127,7 +176,14 @@ class _DailySpinWheelState extends ConsumerState<DailySpinWheel>
           Center(
             child: ElevatedButton(
               onPressed: () {
+                debugPrint('Dialog closed, calling onClose callback');
                 Navigator.of(context).pop();
+                if (onClose != null) {
+                  debugPrint('Executing onClose callback');
+                  onClose();
+                } else {
+                  debugPrint('WARNING: onClose callback is null!');
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.secondary,

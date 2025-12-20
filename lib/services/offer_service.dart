@@ -1,13 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 import '../core/logger.dart';
+import 'session_service.dart';
 
 class OfferService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
+  final SessionService _sessionService = SessionService();
 
   /// Upload offer banner to Firebase Storage
   Future<String?> uploadOfferBanner(File imageFile) async {
@@ -32,13 +32,20 @@ class OfferService {
       AppLogger.info('Offer banner uploaded: $imageUrl');
       return imageUrl;
     } on FirebaseException catch (e) {
-      AppLogger.error('Firebase Storage error', 'Code: ${e.code}, Message: ${e.message}');
+      AppLogger.error(
+        'Firebase Storage error',
+        'Code: ${e.code}, Message: ${e.message}',
+      );
       if (e.code == 'storage/unauthorized') {
-        throw Exception('Storage access denied. Please check Firebase Storage rules.');
+        throw Exception(
+          'Storage access denied. Please check Firebase Storage rules.',
+        );
       } else if (e.code == 'storage/canceled') {
         throw Exception('Upload was cancelled');
       } else if (e.code == 'storage/unknown') {
-        throw Exception('Firebase Storage is not configured. Please enable Storage in Firebase Console.');
+        throw Exception(
+          'Firebase Storage is not configured. Please enable Storage in Firebase Console.',
+        );
       }
       throw Exception('Failed to upload banner: ${e.message}');
     } catch (e) {
@@ -75,23 +82,35 @@ class OfferService {
       AppLogger.info('Creating offer: $title with $points points');
 
       final offerRef = _firestore.collection('offers').doc();
+      final offerId = offerRef.id;
+
+      // Get admin info from session (phone+pin auth)
+      final adminPhone = await _sessionService.getPhoneNumber() ?? 'admin';
+      final adminUserId = await _sessionService.getUserId() ?? 'admin';
 
       await offerRef.set({
+        'offerId': offerId, // Add offerId field for consistency
         'title': title,
         'description': description,
         'points': points,
         'bannerUrl': bannerUrl ?? '',
         'isActive': isActive,
-        'validUntil': validUntil != null ? Timestamp.fromDate(validUntil) : null,
-        'createdBy': _auth.currentUser?.uid ?? 'admin',
+        'validUntil': validUntil != null
+            ? Timestamp.fromDate(validUntil)
+            : null,
+        'createdBy': adminUserId,
+        'createdByPhone': adminPhone,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      AppLogger.info('Offer created successfully: ${offerRef.id}');
+      AppLogger.info('Offer created successfully: $offerId');
       return true;
     } on FirebaseException catch (e) {
-      AppLogger.error('Firebase error creating offer', 'Code: ${e.code}, Message: ${e.message}');
+      AppLogger.error(
+        'Firebase error creating offer',
+        'Code: ${e.code}, Message: ${e.message}',
+      );
       return false;
     } catch (e) {
       AppLogger.error('Error creating offer', e.toString());
@@ -122,13 +141,18 @@ class OfferService {
 
       final offerRef = _firestore.collection('offers').doc(offerId);
 
+      // Get admin info from session (phone+pin auth)
+      final adminPhone = await _sessionService.getPhoneNumber() ?? 'admin';
+      final adminUserId = await _sessionService.getUserId() ?? 'admin';
+
       final updateData = <String, dynamic>{
         'title': title,
         'description': description,
         'points': points,
         'isActive': isActive,
         'updatedAt': FieldValue.serverTimestamp(),
-        'updatedBy': _auth.currentUser?.uid ?? 'admin',
+        'updatedBy': adminUserId,
+        'updatedByPhone': adminPhone,
       };
 
       // Only update bannerUrl if provided
@@ -148,7 +172,10 @@ class OfferService {
       AppLogger.info('Offer updated successfully: $offerId');
       return true;
     } on FirebaseException catch (e) {
-      AppLogger.error('Firebase error updating offer', 'Code: ${e.code}, Message: ${e.message}');
+      AppLogger.error(
+        'Firebase error updating offer',
+        'Code: ${e.code}, Message: ${e.message}',
+      );
       return false;
     } catch (e) {
       AppLogger.error('Error updating offer', e.toString());
@@ -170,7 +197,10 @@ class OfferService {
       AppLogger.info('Offer deleted successfully: $offerId');
       return true;
     } on FirebaseException catch (e) {
-      AppLogger.error('Firebase error deleting offer', 'Code: ${e.code}, Message: ${e.message}');
+      AppLogger.error(
+        'Firebase error deleting offer',
+        'Code: ${e.code}, Message: ${e.message}',
+      );
       return false;
     } catch (e) {
       AppLogger.error('Error deleting offer', e.toString());
@@ -243,7 +273,10 @@ class OfferService {
       final currentPoints = (userData['totalPoints'] ?? 0) as int;
 
       if (currentPoints < pointsRequired) {
-        AppLogger.error('Insufficient points', 'Required: $pointsRequired, Available: $currentPoints');
+        AppLogger.error(
+          'Insufficient points',
+          'Required: $pointsRequired, Available: $currentPoints',
+        );
         throw Exception('Insufficient points');
       }
 
@@ -269,7 +302,9 @@ class OfferService {
       });
 
       // 3. Update user_points collection
-      final userPointsRef = _firestore.collection('user_points').doc(carpenterId);
+      final userPointsRef = _firestore
+          .collection('user_points')
+          .doc(carpenterId);
       final newHistoryEntry = {
         'points': -pointsRequired,
         'reason': 'Offer redemption',
@@ -298,7 +333,10 @@ class OfferService {
       AppLogger.info('Offer redeemed successfully: $offerId');
       return true;
     } on FirebaseException catch (e) {
-      AppLogger.error('Firebase error redeeming offer', 'Code: ${e.code}, Message: ${e.message}');
+      AppLogger.error(
+        'Firebase error redeeming offer',
+        'Code: ${e.code}, Message: ${e.message}',
+      );
       return false;
     } catch (e) {
       AppLogger.error('Error redeeming offer', e.toString());
@@ -307,7 +345,9 @@ class OfferService {
   }
 
   /// Get carpenter's redemption history
-  Future<List<Map<String, dynamic>>> getRedemptionHistory(String carpenterId) async {
+  Future<List<Map<String, dynamic>>> getRedemptionHistory(
+    String carpenterId,
+  ) async {
     try {
       final query = await _firestore
           .collection('offer_redemptions')

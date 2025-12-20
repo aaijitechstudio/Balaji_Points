@@ -52,7 +52,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyC1sfFB_qTXzIGaI0QonxGEZo8MICouGzU',
-    appId: '1:53571317085:android:524e4e01d035d9b0158cb4',
+    appId: '1:53571317085:android:9a0a2f059605eb97158cb4',
     messagingSenderId: '53571317085',
     projectId: 'balajipoints',
     storageBucket: 'balajipoints.firebasestorage.app',
@@ -60,20 +60,20 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyD8VLmXUSOFNyPHdNhi1gYTnLvQSY8zbnI',
-    appId: '1:53571317085:ios:1557b5bfab2a53b0158cb4',
+    appId: '1:53571317085:ios:4149180898927b5f158cb4',
     messagingSenderId: '53571317085',
     projectId: 'balajipoints',
     storageBucket: 'balajipoints.firebasestorage.app',
-    iosBundleId: 'com.example.balajiPoints',
+    iosBundleId: 'com.balaji.points',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyD8VLmXUSOFNyPHdNhi1gYTnLvQSY8zbnI',
-    appId: '1:53571317085:ios:1557b5bfab2a53b0158cb4',
+    appId: '1:53571317085:ios:4149180898927b5f158cb4',
     messagingSenderId: '53571317085',
     projectId: 'balajipoints',
     storageBucket: 'balajipoints.firebasestorage.app',
-    iosBundleId: 'com.example.balajiPoints',
+    iosBundleId: 'com.balaji.points',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
@@ -85,5 +85,4 @@ class DefaultFirebaseOptions {
     storageBucket: 'balajipoints.firebasestorage.app',
     measurementId: 'G-1DYKJ23TN0',
   );
-
 }

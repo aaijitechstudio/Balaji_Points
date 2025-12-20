@@ -1,8 +1,11 @@
 import 'dart:math' as math;
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:balaji_points/config/theme.dart';
+import 'package:balaji_points/l10n/app_localizations.dart';
+import '../../providers/locale_provider.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -13,16 +16,16 @@ class LoginPage extends ConsumerStatefulWidget {
 
 class _LoginPageState extends ConsumerState<LoginPage>
     with TickerProviderStateMixin {
-  // Removed email/password fields - using phone + OTP only
-
   late AnimationController _animationController;
   late List<FloatingElement> _floatingElements;
+
+  final _phoneController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
     super.initState();
-    // Create floating elements first (before animation controller)
-    // Use a seeded random for consistent behavior
+
     final random = math.Random(42);
     _floatingElements = List.generate(
       12,
@@ -40,280 +43,295 @@ class _LoginPageState extends ConsumerState<LoginPage>
       ),
     );
 
-    // Initialize animation controller after elements
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 20),
-    );
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Start animation after dependencies are resolved and widget is fully mounted
-    Future.microtask(() {
-      if (mounted && !_animationController.isAnimating) {
-        _animationController.repeat();
-      }
-    });
+    )..repeat();
   }
 
   @override
   void dispose() {
-    if (_animationController.isAnimating) {
-      _animationController.stop();
-    }
     _animationController.dispose();
+    _phoneController.dispose();
     super.dispose();
+  }
+
+  void _goToPinLogin() {
+    if (!_formKey.currentState!.validate()) return;
+
+    final phone = _phoneController.text.trim();
+    context.push('/pin-login?phone=$phone');
   }
 
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       backgroundColor: AppColors.woodenBackground,
       body: Column(
         children: [
-          // Top Safe Area (no background color)
-          SafeArea(
-            bottom: false,
-            child: Container(), // Empty container, no color
-          ),
+          SafeArea(bottom: false, child: Container()),
 
-          // Main Content
           Expanded(
-            child: Container(
-              color: AppColors.woodenBackground,
-              child: Stack(
-                children: [
-                  // Animated Background Elements
-                  IgnorePointer(
-                    child: RepaintBoundary(
-                      child: ListenableBuilder(
-                        listenable: _animationController,
-                        builder: (context, child) {
-                          return CustomPaint(
-                            size: Size.infinite,
-                            painter: CelebrationPainter(
-                              animationValue: _animationController.value,
-                              elements: _floatingElements,
-                            ),
-                          );
-                        },
-                      ),
+            child: Stack(
+              children: [
+                // Animated Background Elements
+                IgnorePointer(
+                  child: RepaintBoundary(
+                    child: ListenableBuilder(
+                      listenable: _animationController,
+                      builder: (context, child) {
+                        return CustomPaint(
+                          size: Size.infinite,
+                          painter: CelebrationPainter(
+                            animationValue: _animationController.value,
+                            elements: _floatingElements,
+                          ),
+                        );
+                      },
                     ),
                   ),
+                ),
 
-                  // Login Content
-                  SingleChildScrollView(
-                    padding: EdgeInsets.only(bottom: bottomInset + 20),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                SingleChildScrollView(
+                  padding: EdgeInsets.only(bottom: bottomInset + 20),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Form(
+                      key: _formKey,
                       child: Column(
                         children: [
-                          const SizedBox(height: 40),
+                          const SizedBox(height: 20),
 
-                          // Logo Section with "Balaji Points" Brand Name
-                          Column(
-                            children: [
-                              // Logo with rounded corners
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
-                                child: Image.asset(
-                                  'assets/images/balaji_point_logo.png',
-                                  width: 100,
-                                  height: 100,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Container(
-                                      width: 100,
-                                      height: 100,
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primary,
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: const Icon(
-                                        Icons.star,
-                                        color: Colors.white,
-                                        size: 50,
-                                      ),
-                                    );
+                          // Language switcher
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: AppColors.primary.withOpacity(0.3),
+                                ),
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<Locale>(
+                                  value: ref.watch(localeProvider),
+                                  onChanged: (Locale? newLocale) {
+                                    if (newLocale != null) {
+                                      ref
+                                          .read(localeProvider.notifier)
+                                          .setLocale(newLocale);
+                                    }
                                   },
+                                  items: const [
+                                    DropdownMenuItem(
+                                      value: Locale('en'),
+                                      child: Text("English"),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: Locale('hi'),
+                                      child: Text("हिंदी"),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: Locale('ta'),
+                                      child: Text("தமிழ்"),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 16),
-                              // Brand Name
-                              Text(
-                                'Balaji Points',
-                                style: AppTextStyles.nunitoBold.copyWith(
-                                  fontSize: 30,
-                                  color: AppColors.primary,
-                                  letterSpacing: 1,
-                                ),
-                              ),
-                            ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // Logo + name
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.asset(
+                              'assets/images/balaji_point_logo.png',
+                              width: 100,
+                              height: 100,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            "Balaji Points",
+                            style: AppTextStyles.nunitoBold.copyWith(
+                              fontSize: 30,
+                              color: AppColors.primary,
+                            ),
                           ),
 
                           const SizedBox(height: 24),
 
-                          // Welcome Text
                           Text(
-                            'Welcome Back',
-                            style: AppTextStyles.nunitoBold.copyWith(
-                              fontSize: 22,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Sign in with your phone number',
+                            l10n.enterPhoneNumber,
                             style: AppTextStyles.nunitoRegular.copyWith(
                               fontSize: 16,
                               color: AppColors.textDark.withOpacity(0.9),
                             ),
                           ),
 
-                          const SizedBox(height: 40),
+                          const SizedBox(height: 30),
 
-                          // Phone Login Card
-                          Container(
-                            padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.08),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                // Info Text
-                                Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primary.withOpacity(0.05),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: AppColors.primary.withOpacity(0.2),
-                                      width: 1,
+                          // Glass Card with phone + button
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(24),
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                              child: Container(
+                                padding: const EdgeInsets.all(28),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Colors.white.withOpacity(0.9),
+                                      Colors.white.withOpacity(0.7),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(24),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.5),
+                                    width: 1.5,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.primary.withOpacity(0.1),
+                                      blurRadius: 20,
+                                      offset: const Offset(0, 10),
                                     ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.info_outline,
-                                        color: AppColors.primary,
-                                        size: 24,
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Text(
-                                          'Login using your registered phone number. You will receive an OTP to verify.',
-                                          style: AppTextStyles.nunitoRegular
-                                              .copyWith(
-                                                fontSize: 13,
-                                                color: AppColors.textDark
-                                                    .withOpacity(0.8),
-                                              ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                  ],
                                 ),
-
-                                const SizedBox(height: 24),
-
-                                // Phone Login Button (Primary)
-                                Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(16),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: AppColors.secondary.withOpacity(
-                                          0.3,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    TextFormField(
+                                      controller: _phoneController,
+                                      maxLength: 10,
+                                      keyboardType: TextInputType.phone,
+                                      style: AppTextStyles.nunitoSemiBold.copyWith(
+                                        fontSize: 18,
+                                        color: AppColors.textDark,
+                                      ),
+                                      decoration: InputDecoration(
+                                        labelText: l10n.mobileNumber,
+                                        labelStyle: AppTextStyles.nunitoMedium.copyWith(
+                                          fontSize: 16,
                                         ),
-                                        blurRadius: 15,
-                                        offset: const Offset(0, 6),
+                                        prefixText: "+91 ",
+                                        prefixStyle: AppTextStyles.nunitoSemiBold.copyWith(
+                                          fontSize: 18,
+                                          color: AppColors.primary,
+                                        ),
+                                        counterText: "",
+                                        filled: true,
+                                        fillColor: AppColors.primary.withOpacity(0.05),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(16),
+                                          borderSide: BorderSide(
+                                            color: AppColors.primary.withOpacity(0.3),
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(16),
+                                          borderSide: BorderSide(
+                                            color: AppColors.primary.withOpacity(0.2),
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(16),
+                                          borderSide: BorderSide(
+                                            color: AppColors.primary,
+                                            width: 2,
+                                          ),
+                                        ),
                                       ),
-                                    ],
-                                  ),
-                                  child: ElevatedButton(
-                                    onPressed: () => context.go('/phone-login'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.secondary,
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 18,
-                                      ),
-                                      shape: RoundedRectangleBorder(
+                                      validator: (value) {
+                                        final v = value?.trim() ?? "";
+                                        if (v.length != 10 ||
+                                            !RegExp(r'^[0-9]+$').hasMatch(v)) {
+                                          return l10n.enterValidTenDigit;
+                                        }
+                                        return null;
+                                      },
+                                    ),
+
+                                    const SizedBox(height: 24),
+
+                                    // Gradient Button
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            AppColors.secondary,
+                                            AppColors.secondary.withOpacity(0.8),
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
                                         borderRadius: BorderRadius.circular(16),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: AppColors.secondary.withOpacity(0.4),
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 6),
+                                          ),
+                                        ],
                                       ),
-                                      elevation: 0,
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        const Icon(
-                                          Icons.phone,
-                                          size: 24,
-                                          color: Colors.white,
+                                      child: ElevatedButton(
+                                        onPressed: _goToPinLogin,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.transparent,
+                                          shadowColor: Colors.transparent,
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 18,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(16),
+                                          ),
                                         ),
-                                        const SizedBox(width: 12),
-                                        Text(
-                                          "Continue with Phone",
-                                          style: AppTextStyles.nunitoBold
-                                              .copyWith(
-                                                fontSize: 18,
-                                                color: Colors.white,
-                                              ),
+                                        child: Text(
+                                          l10n.continueWithPin,
+                                          style: AppTextStyles.nunitoBold.copyWith(
+                                            fontSize: 18,
+                                            color: Colors.white,
+                                            letterSpacing: 0.5,
+                                          ),
                                         ),
-                                      ],
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
                           ),
 
                           const SizedBox(height: 24),
-
-                          const SizedBox(height: 8),
-
-                          // Footer
-                          Text.rich(
-                            TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: 'Powered by ',
-                                  style: AppTextStyles.nunitoMedium.copyWith(
-                                    fontSize: 14,
-                                    color: AppColors.textDark.withOpacity(0.6),
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: 'Shree Balaji Plywood & Hardware',
-                                  style: AppTextStyles.nunitoSemiBold.copyWith(
-                                    fontSize: 14,
-                                    color: AppColors.secondary,
-                                  ),
-                                ),
-                              ],
+                          Text(
+                            "${l10n.poweredBy} ${l10n.companyName}",
+                            style: const TextStyle(
+                              color: AppColors.secondary,
+                              fontWeight: FontWeight.w600,
                             ),
-                            textAlign: TextAlign.center,
                           ),
-
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 30),
                         ],
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],

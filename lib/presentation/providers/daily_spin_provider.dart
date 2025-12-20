@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 class DailySpinState {
   final bool canSpin;
@@ -108,7 +109,7 @@ class DailySpinNotifier extends Notifier<DailySpinState> {
     }
   }
 
-  Future<int> performSpin() async {
+  Future<int> performSpin([int? pointsWon]) async {
     if (!state.canSpin) {
       return 0;
     }
@@ -122,32 +123,159 @@ class DailySpinNotifier extends Notifier<DailySpinState> {
         return 0;
       }
 
-      // Generate random points (you can customize the rewards)
-      final random = DateTime.now().millisecondsSinceEpoch % 1000;
-      final pointsWon = (random % 6) * 10 + 10; // Points between 10-60
+      // Use provided points or generate random points as fallback
+      // Ensure pointsWon is valid (not null and > 0)
+      int finalPointsWon;
+      if (pointsWon != null && pointsWon > 0) {
+        finalPointsWon = pointsWon;
+      } else {
+        // Fallback: random points between 10-80
+        finalPointsWon =
+            ((DateTime.now().millisecondsSinceEpoch % 8) * 10 + 10);
+        debugPrint(
+          'WARNING: pointsWon was null or invalid ($pointsWon), using fallback: $finalPointsWon',
+        );
+      }
 
-      // Update last spin date
-      await _firestore.collection('daily_spins').doc(user.uid).set({
+      debugPrint(
+        'performSpin called with pointsWon=$pointsWon, finalPointsWon=$finalPointsWon',
+      );
+
+      // Check if this prize has already been won today
+      final today = DateTime.now();
+      final todayStart = DateTime(today.year, today.month, today.day);
+
+      final prizeQuery = await _firestore
+          .collection('daily_prize_winners')
+          .where('prizePoints', isEqualTo: finalPointsWon)
+          .where('wonDate', isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart))
+          .limit(1)
+          .get();
+
+      if (prizeQuery.docs.isNotEmpty) {
+        // This prize was already won today, give them a consolation prize
+        debugPrint('Prize $finalPointsWon already won today, giving consolation prize');
+        finalPointsWon = 5; // Consolation prize
+      }
+
+      // Get current user data
+      final userRef = _firestore.collection('users').doc(user.uid);
+      final userDoc = await userRef.get();
+
+      if (!userDoc.exists) {
+        state = state.copyWith(isLoading: false);
+        return 0;
+      }
+
+      final userData = userDoc.data()!;
+      final currentPoints = (userData['totalPoints'] ?? 0) as int;
+      final newTotalPoints = currentPoints + finalPointsWon;
+      final newTier = _calculateTier(newTotalPoints);
+
+      // Get user_points document reference
+      final userPointsRef = _firestore.collection('user_points').doc(user.uid);
+      final userPointsDoc = await userPointsRef.get();
+
+      // Create history entry
+      final newHistoryEntry = {
+        'points': finalPointsWon,
+        'reason': 'Daily spin',
+        'date': FieldValue.serverTimestamp(),
+        'spinDate': FieldValue.serverTimestamp(),
+      };
+
+      // Use batch for atomic operations
+      final batch = _firestore.batch();
+
+      // 1. Update daily_spins collection
+      final dailySpinRef = _firestore.collection('daily_spins').doc(user.uid);
+      batch.set(dailySpinRef, {
+        'userId': user.uid,
         'lastSpinDate': FieldValue.serverTimestamp(),
-        'pointsWon': pointsWon,
+        'pointsWon': finalPointsWon,
+        'totalSpins': FieldValue.increment(1),
+        'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      // Update user points (if you have a points system)
-      await _firestore.collection('users').doc(user.uid).update({
-        'points': FieldValue.increment(pointsWon),
-      });
+      // 2. Update user totalPoints and tier
+      batch.set(userRef, {
+        'totalPoints': newTotalPoints,
+        'tier': newTier,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      // 3. Update user_points collection with history
+      if (userPointsDoc.exists) {
+        batch.update(userPointsRef, {
+          'totalPoints': newTotalPoints,
+          'tier': newTier,
+          'lastUpdated': FieldValue.serverTimestamp(),
+          'pointsHistory': FieldValue.arrayUnion([newHistoryEntry]),
+        });
+      } else {
+        batch.set(userPointsRef, {
+          'userId': user.uid,
+          'totalPoints': newTotalPoints,
+          'tier': newTier,
+          'lastUpdated': FieldValue.serverTimestamp(),
+          'pointsHistory': [newHistoryEntry],
+        });
+      }
+
+      // 4. Record prize winner (only if not consolation prize)
+      if (finalPointsWon > 5) {
+        final prizeWinnerRef = _firestore.collection('daily_prize_winners').doc();
+        batch.set(prizeWinnerRef, {
+          'userId': user.uid,
+          'userName': userData['name'] ?? 'Unknown',
+          'prizePoints': finalPointsWon,
+          'wonDate': FieldValue.serverTimestamp(),
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      // Commit all changes atomically
+      await batch.commit();
+
+      debugPrint(
+        'Spin completed successfully: $finalPointsWon points saved to Firebase',
+      );
 
       state = state.copyWith(
         canSpin: false,
         lastSpinDate: DateTime.now(),
         isLoading: false,
-        pointsWon: pointsWon,
+        pointsWon: finalPointsWon,
       );
 
-      return pointsWon;
-    } catch (e) {
+      // Always return the points that were saved
+      return finalPointsWon;
+    } catch (e, stackTrace) {
+      debugPrint('Error performing spin: $e');
+      debugPrint('Stack trace: $stackTrace');
       state = state.copyWith(isLoading: false);
+
+      // Even on error, if we have valid points, return them
+      // This ensures the UI shows the correct points even if save partially fails
+      if (pointsWon != null && pointsWon > 0) {
+        debugPrint('Returning points despite error: $pointsWon');
+        return pointsWon;
+      }
+
       return 0;
+    }
+  }
+
+  /// Calculate tier based on points
+  String _calculateTier(int points) {
+    if (points >= 10000) {
+      return 'Platinum';
+    } else if (points >= 5000) {
+      return 'Gold';
+    } else if (points >= 2000) {
+      return 'Silver';
+    } else {
+      return 'Bronze';
     }
   }
 

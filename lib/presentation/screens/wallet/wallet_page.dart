@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/config/theme.dart';
+import 'package:balaji_points/services/session_service.dart';
+import '../../widgets/home_nav_bar.dart';
 
 class WalletPage extends StatefulWidget {
   const WalletPage({super.key});
@@ -12,215 +14,196 @@ class WalletPage extends StatefulWidget {
 }
 
 class _WalletPageState extends State<WalletPage> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final SessionService _sessionService = SessionService();
+  int _refreshKey = 0;
+  String? _userId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserId();
+  }
+
+  Future<void> _loadUserId() async {
+    final phoneNumber = await _sessionService.getPhoneNumber();
+    if (mounted) {
+      setState(() {
+        _userId = phoneNumber;
+      });
+    }
+  }
+
+  Future<void> _handleRefresh() async {
+    setState(() {
+      _refreshKey++; // Force rebuild of StreamBuilders
+    });
+    // Add a small delay to show the refresh indicator
+    await Future.delayed(const Duration(milliseconds: 500));
+  }
 
   @override
   Widget build(BuildContext context) {
-    final user = _auth.currentUser;
-    // Use mock UID for demo if no user logged in
-    final userId = user?.uid ?? 'demo_user_id';
+    final l10n = AppLocalizations.of(context)!;
+
+    // Use phone number from session (PIN-based auth)
+    final userId = _userId ?? 'loading';
 
     return Scaffold(
-      backgroundColor: AppColors.woodenBackground,
+      backgroundColor: AppColors.primary,
       body: Column(
         children: [
-          // Navigation Bar
-          SafeArea(
-            bottom: false,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.primary,
-                    AppColors.primary.withOpacity(0.9),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.monetization_on,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Flexible(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Earn Points',
-                          style: AppTextStyles.nunitoBold.copyWith(
-                            fontSize: 20,
-                            color: Colors.white,
-                            letterSpacing: 0.5,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Track earnings & bills',
-                          style: AppTextStyles.nunitoRegular.copyWith(
-                            fontSize: 12,
-                            color: Colors.white.withOpacity(0.8),
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          // Standard Navigation Bar - Material Design kToolbarHeight (56dp)
+          HomeNavBar(
+            title: l10n.wallet,
+            showLogo: false,
+            showProfileButton: false,
           ),
-          // Content
+          // Content with wooden background
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 8),
-
-                  // Total Points Card
-                  _buildTotalPointsCard(userId),
-
-                  const SizedBox(height: 20),
-
-                  // Stats Cards Row
-                  Row(
+            child: Container(
+              color: AppColors.woodenBackground,
+              child: RefreshIndicator(
+                key: ValueKey(_refreshKey),
+                onRefresh: _handleRefresh,
+                color: AppColors.primary,
+                backgroundColor: Colors.white,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          icon: Icons.pending_actions,
-                          label: 'Pending',
-                          value: _buildPendingCount(userId),
-                          color: Colors.orange,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildStatCard(
-                          icon: Icons.check_circle,
-                          label: 'Approved',
-                          value: _buildApprovedCount(userId),
-                          color: Colors.green,
-                        ),
-                      ),
-                    ],
-                  ),
+                      const SizedBox(height: 8),
 
-                  const SizedBox(height: 20),
+                      // Total Points Card
+                      _buildTotalPointsCard(userId),
 
-                  // Quick Action Button
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.blue.shade600,
-                          Colors.purple.shade500,
-                          AppColors.secondary,
+                      const SizedBox(height: 20),
+
+                      // Stats Cards Row
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildStatCard(
+                              icon: Icons.pending_actions,
+                              label: l10n.pending,
+                              value: _buildPendingCount(userId),
+                              color: Colors.orange,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildStatCard(
+                              icon: Icons.check_circle,
+                              label: l10n.approved,
+                              value: _buildApprovedCount(userId),
+                              color: Colors.green,
+                            ),
+                          ),
                         ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
                       ),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.secondary.withOpacity(0.3),
-                          blurRadius: 15,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () => context.push('/add-bill'),
-                        borderRadius: BorderRadius.circular(20),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 20,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.add_circle_outline,
-                                  color: Colors.white,
-                                  size: 28,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Text(
-                                'Add New Bill',
-                                style: AppTextStyles.nunitoBold.copyWith(
-                                  fontSize: 18,
-                                  color: Colors.white,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
 
-                  const SizedBox(height: 24),
+                      const SizedBox(height: 20),
 
-                  // Recent Bills Section
-                  Row(
-                    children: [
+                      // Quick Action Button
                       Container(
-                        padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.blue.shade600,
+                              Colors.purple.shade500,
+                              AppColors.secondary,
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.secondary.withOpacity(0.3),
+                              blurRadius: 15,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
                         ),
-                        child: Icon(
-                          Icons.receipt_long,
-                          color: AppColors.primary,
-                          size: 18,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => context.push('/add-bill'),
+                            borderRadius: BorderRadius.circular(20),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 20,
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.add_circle_outline,
+                                      color: Colors.white,
+                                      size: 28,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Text(
+                                    l10n.addNewBill,
+                                    style: AppTextStyles.nunitoBold.copyWith(
+                                      fontSize: 18,
+                                      color: Colors.white,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Recent Bills',
-                        style: AppTextStyles.nunitoBold.copyWith(
-                          fontSize: 20,
-                          color: AppColors.textDark,
-                        ),
+
+                      const SizedBox(height: 24),
+
+                      // Recent Bills Section
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.receipt_long,
+                              color: AppColors.primary,
+                              size: 18,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            l10n.recentBills,
+                            style: AppTextStyles.nunitoBold.copyWith(
+                              fontSize: 20,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                        ],
                       ),
+
+                      const SizedBox(height: 16),
+
+                      // Bills List
+                      _buildBillsList(userId),
+
+                      const SizedBox(height: 20),
                     ],
                   ),
-
-                  const SizedBox(height: 16),
-
-                  // Bills List
-                  _buildBillsList(userId),
-
-                  const SizedBox(height: 20),
-                ],
+                ),
               ),
             ),
           ),
@@ -230,8 +213,9 @@ class _WalletPageState extends State<WalletPage> {
   }
 
   Widget _buildTotalPointsCard(String userId) {
-    if (_auth.currentUser == null) {
-      // Show mock data when not logged in
+    final l10n = AppLocalizations.of(context)!;
+    if (userId == 'loading' || _userId == null) {
+      // Show loading state
       return Container(
         padding: const EdgeInsets.all(28),
         decoration: BoxDecoration(
@@ -314,13 +298,6 @@ class _WalletPageState extends State<WalletPage> {
                     size: 18,
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    '1000 ₹ = 1 Point',
-                    style: AppTextStyles.nunitoRegular.copyWith(
-                      fontSize: 13,
-                      color: Colors.white.withOpacity(0.9),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -371,7 +348,7 @@ class _WalletPageState extends State<WalletPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Total Points',
+                        l10n.totalPoints,
                         style: AppTextStyles.nunitoRegular.copyWith(
                           fontSize: 14,
                           color: Colors.white.withOpacity(0.9),
@@ -407,31 +384,6 @@ class _WalletPageState extends State<WalletPage> {
                 ],
               ),
               const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.info_outline,
-                      color: Colors.white.withOpacity(0.9),
-                      size: 18,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '1000 ₹ = 1 Point',
-                      style: AppTextStyles.nunitoRegular.copyWith(
-                        fontSize: 13,
-                        color: Colors.white.withOpacity(0.9),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ],
           ),
         );
@@ -490,10 +442,10 @@ class _WalletPageState extends State<WalletPage> {
   }
 
   Widget _buildPendingCount(String userId) {
-    if (_auth.currentUser == null) {
-      // Show mock data
+    if (userId == 'loading' || _userId == null) {
+      // Show loading state
       return Text(
-        '3',
+        '...',
         style: AppTextStyles.nunitoBold.copyWith(
           fontSize: 24,
           color: AppColors.textDark,
@@ -521,10 +473,10 @@ class _WalletPageState extends State<WalletPage> {
   }
 
   Widget _buildApprovedCount(String userId) {
-    if (_auth.currentUser == null) {
-      // Show mock data
+    if (userId == 'loading' || _userId == null) {
+      // Show loading state
       return Text(
-        '12',
+        '...',
         style: AppTextStyles.nunitoBold.copyWith(
           fontSize: 24,
           color: AppColors.textDark,
@@ -564,6 +516,20 @@ class _WalletPageState extends State<WalletPage> {
     }
   }
 
+  String _getStatusLabel(String status, BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (status.toLowerCase()) {
+      case 'approved':
+        return l10n.statusApproved;
+      case 'pending':
+        return l10n.statusPending;
+      case 'rejected':
+        return l10n.statusRejected;
+      default:
+        return status.toUpperCase();
+    }
+  }
+
   IconData _getStatusIcon(String status) {
     switch (status.toLowerCase()) {
       case 'approved':
@@ -578,8 +544,8 @@ class _WalletPageState extends State<WalletPage> {
   }
 
   Widget _buildBillsList(String userId) {
-    if (_auth.currentUser == null) {
-      // Show mock bills when not logged in
+    if (userId == 'loading' || _userId == null) {
+      // Show loading state
       final mockBills = [
         {
           'storeName': 'Sri Balaji Hardware',
@@ -708,7 +674,7 @@ class _WalletPageState extends State<WalletPage> {
                     ),
                   ),
                   child: Text(
-                    status.toUpperCase(),
+                    _getStatusLabel(status, context),
                     style: AppTextStyles.nunitoSemiBold.copyWith(
                       fontSize: 11,
                       color: _getStatusColor(status),
@@ -723,6 +689,9 @@ class _WalletPageState extends State<WalletPage> {
     }
 
     // Show real bills when logged in
+    debugPrint('WalletPage: === LOADING BILLS ===');
+    debugPrint('  User ID (carpenterId): $userId');
+
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('bills')
@@ -731,6 +700,45 @@ class _WalletPageState extends State<WalletPage> {
           .limit(10)
           .snapshots(),
       builder: (context, snapshot) {
+        debugPrint(
+          'WalletPage: StreamBuilder state: ${snapshot.connectionState}',
+        );
+        debugPrint('  Has data: ${snapshot.hasData}');
+        debugPrint('  Docs count: ${snapshot.data?.docs.length ?? 0}');
+
+        if (snapshot.hasError) {
+          debugPrint('WalletPage: ❌ ERROR loading bills: ${snapshot.error}');
+          return Container(
+            padding: const EdgeInsets.all(40),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: [
+                const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                const SizedBox(height: 16),
+                Text(
+                  'Error loading bills',
+                  style: AppTextStyles.nunitoSemiBold.copyWith(
+                    fontSize: 16,
+                    color: Colors.red,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${snapshot.error}',
+                  style: AppTextStyles.nunitoRegular.copyWith(
+                    fontSize: 12,
+                    color: AppColors.textDark.withOpacity(0.5),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        }
+
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
             child: Padding(
@@ -741,6 +749,7 @@ class _WalletPageState extends State<WalletPage> {
         }
 
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          debugPrint('WalletPage: No bills found for user $userId');
           return Container(
             padding: const EdgeInsets.all(40),
             decoration: BoxDecoration(
@@ -756,7 +765,7 @@ class _WalletPageState extends State<WalletPage> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'No bills yet',
+                  AppLocalizations.of(context)!.noBillsYet,
                   style: AppTextStyles.nunitoSemiBold.copyWith(
                     fontSize: 16,
                     color: AppColors.textDark.withOpacity(0.6),
@@ -764,7 +773,7 @@ class _WalletPageState extends State<WalletPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Submit your first bill to earn points',
+                  AppLocalizations.of(context)!.submitFirstBill,
                   style: AppTextStyles.nunitoRegular.copyWith(
                     fontSize: 14,
                     color: AppColors.textDark.withOpacity(0.5),
@@ -777,6 +786,7 @@ class _WalletPageState extends State<WalletPage> {
         }
 
         final bills = snapshot.data!.docs;
+        debugPrint('WalletPage: ✅ Found ${bills.length} bills');
 
         return ListView.separated(
           shrinkWrap: true,
@@ -790,6 +800,10 @@ class _WalletPageState extends State<WalletPage> {
             final pointsEarned = bill['pointsEarned'] ?? 0;
             final createdAt = bill['createdAt'] as Timestamp?;
             final storeName = bill['storeName'] ?? '';
+
+            debugPrint(
+              '  Bill[$index]: amount=$amount, status=$status, carpenterId=${bill['carpenterId']}, createdAt=$createdAt',
+            );
 
             return Container(
               padding: const EdgeInsets.all(18),
@@ -830,7 +844,9 @@ class _WalletPageState extends State<WalletPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          storeName.isNotEmpty ? storeName : 'Bill',
+                          storeName.isNotEmpty
+                              ? storeName
+                              : AppLocalizations.of(context)!.billLabel,
                           style: AppTextStyles.nunitoBold.copyWith(
                             fontSize: 16,
                             color: AppColors.textDark,
@@ -901,21 +917,22 @@ class _WalletPageState extends State<WalletPage> {
   }
 
   String _formatDate(DateTime date) {
+    final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
     final difference = now.difference(date);
 
     if (difference.inDays == 0) {
       if (difference.inHours == 0) {
         if (difference.inMinutes == 0) {
-          return 'Just now';
+          return l10n.justNow;
         }
-        return '${difference.inMinutes}m ago';
+        return l10n.minutesAgo(difference.inMinutes);
       }
-      return '${difference.inHours}h ago';
+      return l10n.hoursAgo(difference.inHours);
     } else if (difference.inDays == 1) {
-      return 'Yesterday';
+      return l10n.yesterday;
     } else if (difference.inDays < 7) {
-      return '${difference.inDays}d ago';
+      return l10n.daysAgo(difference.inDays);
     } else {
       return '${date.day}/${date.month}/${date.year}';
     }

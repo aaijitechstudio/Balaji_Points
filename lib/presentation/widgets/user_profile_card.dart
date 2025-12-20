@@ -39,6 +39,13 @@ class _UserProfileCardState extends State<UserProfileCard>
     ).animate(CurvedAnimation(parent: _coinController, curve: Curves.linear));
   }
 
+  /// Check if URL is valid for NetworkImage (http or https)
+  bool _isValidImageUrl(String? url) {
+    if (url == null || url.isEmpty) return false;
+    final trimmed = url.trim();
+    return trimmed.startsWith('http://') || trimmed.startsWith('https://');
+  }
+
   @override
   void dispose() {
     _coinController.dispose();
@@ -85,10 +92,10 @@ class _UserProfileCardState extends State<UserProfileCard>
             child: CircleAvatar(
               radius: 24,
               backgroundColor: Colors.white,
-              backgroundImage: widget.userImageUrl?.isNotEmpty == true
+              backgroundImage: _isValidImageUrl(widget.userImageUrl)
                   ? NetworkImage(widget.userImageUrl!)
                   : null,
-              child: widget.userImageUrl?.isEmpty != false
+              child: !_isValidImageUrl(widget.userImageUrl)
                   ? const Icon(Icons.person, size: 28, color: AppColors.secondary)
                   : null,
             ),

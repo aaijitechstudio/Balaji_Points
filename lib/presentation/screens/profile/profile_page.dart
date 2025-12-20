@@ -1,28 +1,62 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/config/theme.dart';
 import 'package:balaji_points/services/user_service.dart';
+import 'package:balaji_points/services/session_service.dart';
+import 'package:balaji_points/presentation/providers/theme_provider.dart';
+import 'package:balaji_points/presentation/providers/locale_provider.dart';
+import 'package:balaji_points/presentation/widgets/home_nav_bar.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
-  const ProfilePage({super.key});
+  final bool showBottomNav;
+
+  const ProfilePage({super.key, this.showBottomNav = true});
 
   @override
   ConsumerState<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends ConsumerState<ProfilePage> with WidgetsBindingObserver {
+class _ProfilePageState extends ConsumerState<ProfilePage>
+    with WidgetsBindingObserver {
   final UserService _userService = UserService();
+  final SessionService _sessionService = SessionService();
   Map<String, dynamic>? _userData;
   bool _isLoading = true;
+  String _appVersion = '';
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadUserData();
+    _loadAppVersion();
+  }
+
+  Future<void> _handleRefresh() async {
+    await _loadUserData();
+  }
+
+  Future<void> _loadAppVersion() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      if (mounted) {
+        setState(() {
+          _appVersion =
+              'Version ${packageInfo.version} (${packageInfo.buildNumber})';
+        });
+      }
+    } catch (e) {
+      debugPrint('ProfilePage: Error loading app version: $e');
+      if (mounted) {
+        setState(() {
+          _appVersion = 'Version 1.0.0';
+        });
+      }
+    }
   }
 
   @override
@@ -40,16 +74,27 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with WidgetsBindingOb
     super.dispose();
   }
 
-  Future<void> _loadUserData() async {
+  Future<void> _loadUserData({bool forceRefresh = false}) async {
     try {
-      final data = await _userService.getCurrentUserData();
+      debugPrint(
+        'ProfilePage: Loading user data (forceRefresh: $forceRefresh)',
+      );
+      final data = await _userService.getCurrentUserData(
+        forceRefresh: forceRefresh,
+      );
       if (mounted) {
         setState(() {
           _userData = data;
           _isLoading = false;
         });
+        // Debug: Log loaded data
+        debugPrint('ProfilePage: User data loaded successfully');
+        debugPrint('  firstName: ${data?['firstName']}');
+        debugPrint('  lastName: ${data?['lastName']}');
+        debugPrint('  profileImage: ${data?['profileImage']}');
       }
     } catch (e) {
+      debugPrint('ProfilePage: Error loading user data: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -62,7 +107,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with WidgetsBindingOb
     if (_userData == null) return 'User';
     final firstName = _userData!['firstName'] as String? ?? '';
     final lastName = _userData!['lastName'] as String? ?? '';
-    return '$firstName $lastName'.trim().isEmpty ? 'User' : '$firstName $lastName'.trim();
+    return '$firstName $lastName'.trim().isEmpty
+        ? 'User'
+        : '$firstName $lastName'.trim();
   }
 
   String _getUserTier() {
@@ -74,24 +121,26 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with WidgetsBindingOb
   }
 
   Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
+
     // Show confirmation dialog
     final shouldLogout = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
-          'Logout',
+          l10n.logout,
           style: AppTextStyles.nunitoBold.copyWith(fontSize: 22),
         ),
         content: Text(
-          'Are you sure want to logout?',
+          l10n.logoutConfirmation,
           style: AppTextStyles.nunitoRegular.copyWith(fontSize: 16),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: Text(
-              'No',
+              l10n.no,
               style: AppTextStyles.nunitoMedium.copyWith(
                 color: Colors.grey[600],
                 fontSize: 16,
@@ -108,7 +157,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with WidgetsBindingOb
               ),
             ),
             child: Text(
-              'Yes',
+              l10n.yes,
               style: AppTextStyles.nunitoSemiBold.copyWith(fontSize: 16),
             ),
           ),
@@ -119,8 +168,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with WidgetsBindingOb
     // If user confirmed logout
     if (shouldLogout == true && context.mounted) {
       try {
-        // Sign out from Firebase
-        await FirebaseAuth.instance.signOut();
+        // Clear session (logout)
+        await _sessionService.clearSession();
 
         // Navigate to login screen
         if (context.mounted) {
@@ -131,7 +180,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with WidgetsBindingOb
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Logout failed: ${e.toString()}'),
+              content: Text('${l10n.logoutFailed}: ${e.toString()}'),
               backgroundColor: Colors.red,
             ),
           );
@@ -140,15 +189,36 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with WidgetsBindingOb
     }
   }
 
+  void _onBottomNavTapped(int index) {
+    switch (index) {
+      case 0:
+        context.go('/');
+        break;
+      case 1:
+        context.go('/');
+        break;
+      case 2:
+        // Already on profile page
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       backgroundColor: AppColors.primary,
       body: Column(
         children: [
-          // Top Safe Area with Primary Color
-          SafeArea(bottom: false, child: Container(color: AppColors.primary)),
-          // Content
+          // Modern Navigation Bar - Consistent height
+          HomeNavBar(
+            title: l10n.profile,
+            showLogo: false,
+            showProfileButton:
+                false, // Don't show profile button on profile screen
+          ),
+          // Content with wooden background
           Expanded(
             child: Container(
               color: AppColors.woodenBackground,
@@ -158,314 +228,338 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with WidgetsBindingOb
                         color: AppColors.primary,
                       ),
                     )
-                  : SingleChildScrollView(
-                      child: Column(
-                        children: [
-                          const SizedBox(height: 8),
-                          // Compact Profile Info Card
-                          Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 16,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withOpacity(0.3),
-                            blurRadius: 15,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          // Profile Avatar
-                          Stack(
-                            children: [
-                              Container(
-                                width: 60,
-                                height: 60,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 2,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.1),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: CircleAvatar(
-                                  radius: 28,
-                                  backgroundColor: Colors.white,
-                                  backgroundImage: _userData?['profileImage'] != null
-                                      ? NetworkImage(_userData!['profileImage'] as String)
-                                      : null,
-                                  child: _userData?['profileImage'] == null
-                                      ? const Icon(
-                                          Icons.person,
-                                          color: AppColors.secondary,
-                                          size: 32,
-                                        )
-                                      : null,
-                                ),
-                              ),
-                              // Edit Button
-                              Positioned(
-                                bottom: 0,
-                                right: 0,
-                                child: Container(
-                                  width: 24,
-                                  height: 24,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: AppColors.secondary,
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  child: Icon(
-                                    Icons.edit,
-                                    size: 12,
-                                    color: AppColors.secondary,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(width: 16),
+                  : RefreshIndicator(
+                      onRefresh: _handleRefresh,
+                      color: AppColors.primary,
+                      backgroundColor: Colors.white,
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: Column(
+                          children: [
+                            const SizedBox(height: 24),
 
-                          // User Info
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  _getUserDisplayName(),
-                                  style: AppTextStyles.nunitoBold.copyWith(
-                                    fontSize: 18,
-                                    color: Colors.white,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.star,
-                                      color: Colors.amber.shade300,
-                                      size: 14,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '${_getUserTier()} Tier',
-                                      style: AppTextStyles.nunitoMedium
-                                          .copyWith(
-                                            fontSize: 12,
-                                            color: Colors.white.withOpacity(
-                                              0.9,
-                                            ),
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          const SizedBox(width: 12),
-
-                          // Points Display
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.3),
-                                width: 1,
+                            // Simple Profile Card
+                            Container(
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 20,
                               ),
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.monetization_on,
-                                      color: Colors.amber.shade300,
-                                      size: 16,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      _getUserPoints().toString().replaceAllMapped(
-                                            RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-                                            (Match m) => '${m[1]},',
-                                          ),
-                                      style: AppTextStyles.nunitoBold.copyWith(
-                                        fontSize: 16,
-                                        color: Colors.white,
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                children: [
+                                  // Profile Image
+                                  Container(
+                                    width: 80,
+                                    height: 80,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: AppColors.primary,
+                                        width: 3,
                                       ),
                                     ),
-                                  ],
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Points',
-                                  style: AppTextStyles.nunitoRegular.copyWith(
-                                    fontSize: 10,
-                                    color: Colors.white.withOpacity(0.8),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Content Section
-                    Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Section Title
-                          Text(
-                            'Account',
-                            style: AppTextStyles.nunitoBold.copyWith(
-                              fontSize: 20,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // My Details
-                          _buildModernProfileTile(
-                            icon: Icons.person_outline,
-                            title: 'My Details',
-                            subtitle: 'View and edit profile information',
-                            iconColor: AppColors.primary,
-                            onTap: () {
-                              context.push('/edit-profile');
-                            },
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Reward History
-                          _buildModernProfileTile(
-                            icon: Icons.history_rounded,
-                            title: 'Reward History',
-                            subtitle: 'View all your rewards and transactions',
-                            iconColor: Colors.orange.shade600,
-                            onTap: () {},
-              ),
-              const SizedBox(height: 12),
-
-                          // Settings
-                          _buildModernProfileTile(
-                            icon: Icons.settings_outlined,
-                            title: 'Settings',
-                            subtitle: 'App preferences and notifications',
-                            iconColor: Colors.grey.shade700,
-                            onTap: () {},
-                          ),
-
-                          const SizedBox(height: 32),
-
-                          // Section Title
-                          Text(
-                            'Support',
-                            style: AppTextStyles.nunitoBold.copyWith(
-                              fontSize: 20,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Help & Support
-                          _buildModernProfileTile(
-                            icon: Icons.help_outline_rounded,
-                            title: 'Help & Support',
-                            subtitle: 'Get help and contact support',
-                            iconColor: Colors.blue.shade600,
-                            onTap: () {
-                              _showSupportDialog(context);
-                            },
-                          ),
-
-                          const SizedBox(height: 32),
-
-                          // Logout Button
-                          Container(
-                            width: double.infinity,
-                            margin: const EdgeInsets.only(top: 8),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.red.withOpacity(0.2),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: ElevatedButton(
-                              onPressed: () => _handleLogout(context, ref),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red.shade600,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 18,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                elevation: 0,
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.logout, size: 22),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    'Logout',
-                                    style: AppTextStyles.nunitoBold.copyWith(
-                                      fontSize: 18,
-                                      color: Colors.white,
+                                    child: ClipOval(
+                                      child:
+                                          _userData?['profileImage'] != null &&
+                                              (_userData!['profileImage']
+                                                      as String)
+                                                  .isNotEmpty
+                                          ? Image.network(
+                                              _userData!['profileImage']
+                                                  as String,
+                                              fit: BoxFit.cover,
+                                              loadingBuilder: (context, child, loadingProgress) {
+                                                if (loadingProgress == null)
+                                                  return child;
+                                                return Container(
+                                                  color: AppColors.secondary
+                                                      .withValues(alpha: 0.3),
+                                                  child: Center(
+                                                    child: CircularProgressIndicator(
+                                                      value:
+                                                          loadingProgress
+                                                                  .expectedTotalBytes !=
+                                                              null
+                                                          ? loadingProgress
+                                                                    .cumulativeBytesLoaded /
+                                                                loadingProgress
+                                                                    .expectedTotalBytes!
+                                                          : null,
+                                                      strokeWidth: 3,
+                                                      valueColor:
+                                                          AlwaysStoppedAnimation<
+                                                            Color
+                                                          >(AppColors.primary),
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                              errorBuilder:
+                                                  (context, error, stackTrace) {
+                                                    debugPrint(
+                                                      'ProfilePage: Error loading profile image: $error',
+                                                    );
+                                                    return Container(
+                                                      color:
+                                                          AppColors.secondary,
+                                                      child: const Icon(
+                                                        Icons.person,
+                                                        color: Colors.white,
+                                                        size: 40,
+                                                      ),
+                                                    );
+                                                  },
+                                            )
+                                          : Container(
+                                              color: AppColors.secondary,
+                                              child: const Icon(
+                                                Icons.person,
+                                                color: Colors.white,
+                                                size: 40,
+                                              ),
+                                            ),
                                     ),
+                                  ),
+                                  const SizedBox(height: 16),
+
+                                  // User Name
+                                  Text(
+                                    _getUserDisplayName(),
+                                    style: AppTextStyles.nunitoBold.copyWith(
+                                      fontSize: 20,
+                                      color: AppColors.textDark,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 4),
+
+                                  // User Display ID
+                                  if (_userData?['userDisplayId'] != null)
+                                    Text(
+                                      '#BP${_userData!['userDisplayId']}',
+                                      style: AppTextStyles.nunitoMedium.copyWith(
+                                        fontSize: 14,
+                                        color: AppColors.primary.withValues(alpha: 0.7),
+                                        letterSpacing: 0.5,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  const SizedBox(height: 8),
+
+                                  // Points and Tier
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.monetization_on,
+                                        color: Colors.amber.shade700,
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        l10n.points(_getUserPoints()),
+                                        style: AppTextStyles.nunitoSemiBold
+                                            .copyWith(
+                                              fontSize: 16,
+                                              color: AppColors.primary,
+                                            ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.secondary
+                                              .withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          _getUserTier(),
+                                          style: AppTextStyles.nunitoSemiBold
+                                              .copyWith(
+                                                fontSize: 14,
+                                                color: AppColors.secondary,
+                                              ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
                             ),
-                          ),
 
-                          const SizedBox(height: 20),
-                        ],
+                            const SizedBox(height: 24),
+
+                            // Simple Menu Items
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  // Edit Profile Button
+                                  _buildSimpleButton(
+                                    icon: Icons.edit,
+                                    title: l10n.editProfile,
+                                    onTap: () async {
+                                      // Navigate to edit profile and wait for return
+                                      await context.push('/edit-profile');
+                                      // Force refresh user data from server when returning
+                                      debugPrint(
+                                        'ProfilePage: Returned from edit profile, force refreshing data',
+                                      );
+                                      await _loadUserData(forceRefresh: true);
+                                    },
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // Change PIN Button
+                                  _buildSimpleButton(
+                                    icon: Icons.lock_reset,
+                                    title: l10n.changePin,
+                                    onTap: () async {
+                                      // Get current phone number from session
+                                      final phoneNumber = await _sessionService.getPhoneNumber();
+                                      if (phoneNumber != null && context.mounted) {
+                                        context.push('/pin-reset?phone=$phoneNumber');
+                                      }
+                                    },
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // Help & Support Button
+                                  _buildSimpleButton(
+                                    icon: Icons.phone,
+                                    title: l10n.helpSupport,
+                                    onTap: () => _showSupportDialog(context),
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // Language Selection Button
+                                  _buildLanguageSelector(ref),
+                                  const SizedBox(height: 12),
+
+                                  // Theme Toggle Button
+                                  _buildThemeToggleButton(ref),
+
+                                  const SizedBox(height: 24),
+
+                                  // Logout Button
+                                  Container(
+                                    width: double.infinity,
+                                    margin: const EdgeInsets.only(top: 8),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.red.withOpacity(0.2),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: ElevatedButton(
+                                      onPressed: () =>
+                                          _handleLogout(context, ref),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.red.shade600,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 18,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                        ),
+                                        elevation: 0,
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(Icons.logout, size: 22),
+                                          const SizedBox(width: 12),
+                                          Text(
+                                            l10n.logout,
+                                            style: AppTextStyles.nunitoBold
+                                                .copyWith(
+                                                  fontSize: 18,
+                                                  color: Colors.white,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 20),
+
+                                  // App Version
+                                  if (_appVersion.isNotEmpty)
+                                    Center(
+                                      child: Text(
+                                        _appVersion,
+                                        style: AppTextStyles.nunitoRegular
+                                            .copyWith(
+                                              fontSize: 13,
+                                              color: AppColors.textDark
+                                                  .withOpacity(0.5),
+                                            ),
+                                      ),
+                                    ),
+
+                                  const SizedBox(height: 20),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ],
-                ),
-              ),
             ),
           ),
         ],
       ),
+      bottomNavigationBar: widget.showBottomNav
+          ? BottomNavigationBar(
+              currentIndex: 2, // Profile tab selected
+              onTap: _onBottomNavTapped,
+              selectedItemColor: AppColors.secondary,
+              unselectedItemColor: Colors.white,
+              backgroundColor: AppColors.primary,
+              type: BottomNavigationBarType.fixed,
+              items: [
+                BottomNavigationBarItem(
+                  icon: const Icon(Icons.home),
+                  label: l10n.home,
+                ),
+                BottomNavigationBarItem(
+                  icon: const Icon(Icons.monetization_on_outlined),
+                  label: l10n.addPoints,
+                ),
+                BottomNavigationBarItem(
+                  icon: const Icon(Icons.person_outline),
+                  label: l10n.profile,
+                ),
+              ],
+            )
+          : null,
     );
   }
 
@@ -490,6 +584,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with WidgetsBindingOb
   }
 
   void _showSupportDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     showDialog(
       context: context,
       barrierColor: Colors.black.withOpacity(0.5),
@@ -546,7 +642,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with WidgetsBindingOb
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Help & Support',
+                              l10n.helpSupport,
                               style: AppTextStyles.nunitoBold.copyWith(
                                 fontSize: 22,
                                 color: Colors.white,
@@ -554,7 +650,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with WidgetsBindingOb
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Get in touch with us',
+                              l10n.getInTouch,
                               style: AppTextStyles.nunitoRegular.copyWith(
                                 fontSize: 14,
                                 color: Colors.white.withOpacity(0.9),
@@ -583,15 +679,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with WidgetsBindingOb
                     children: [
                       // Phone Numbers Section with Action Buttons
                       _buildModernContactSection(
-                        title: 'Contact Us',
+                        title: l10n.contactUs,
                         icon: Icons.phone_rounded,
                         iconColor: Colors.green.shade600,
                         children: [
                           _buildActionableContactItem(
                             context: context,
                             icon: Icons.phone_android_rounded,
-                            label: 'Mobile',
-                            value: '96006 - 09121',
+                            label: l10n.mobile,
+                            value: l10n.supportPhone1,
                             phoneNumber: '9600609121',
                             onTap: () => _makePhoneCall(context, '9600609121'),
                           ),
@@ -599,8 +695,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with WidgetsBindingOb
                           _buildActionableContactItem(
                             context: context,
                             icon: Icons.phone_rounded,
-                            label: 'Landline',
-                            value: '0424 - 3557187',
+                            label: l10n.landline,
+                            value: l10n.supportPhone2,
                             phoneNumber: '04243557187',
                             onTap: () => _makePhoneCall(context, '04243557187'),
                           ),
@@ -753,21 +849,19 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with WidgetsBindingOb
     );
   }
 
-  Widget _buildModernProfileTile({
+  Widget _buildSimpleButton({
     required IconData icon,
     required String title,
-    required String subtitle,
-    required Color iconColor,
     required VoidCallback onTap,
   }) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
@@ -775,55 +869,148 @@ class _ProfilePageState extends ConsumerState<ProfilePage> with WidgetsBindingOb
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
             child: Row(
               children: [
-                // Icon Container
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: iconColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(icon, color: iconColor, size: 24),
-                ),
+                Icon(icon, color: AppColors.primary, size: 24),
                 const SizedBox(width: 16),
-                // Title and Subtitle
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: AppTextStyles.nunitoSemiBold.copyWith(
-                          fontSize: 16,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        subtitle,
-                        style: AppTextStyles.nunitoRegular.copyWith(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
+                Text(
+                  title,
+                  style: AppTextStyles.nunitoSemiBold.copyWith(
+                    fontSize: 16,
+                    color: AppColors.textDark,
                   ),
                 ),
-                // Arrow Icon
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: Colors.grey[400],
-                  size: 24,
-                ),
+                const Spacer(),
+                Icon(Icons.chevron_right, color: Colors.grey[400]),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLanguageSelector(WidgetRef ref) {
+    final locale = ref.watch(localeProvider);
+    final isHindi = locale.languageCode == 'hi';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+        child: Row(
+          children: [
+            const Icon(Icons.language, color: AppColors.primary, size: 24),
+            const SizedBox(width: 16),
+            Text(
+              isHindi ? 'भाषा' : 'Language',
+              style: AppTextStyles.nunitoSemiBold.copyWith(
+                fontSize: 16,
+                color: AppColors.textDark,
+              ),
+            ),
+            const Spacer(),
+            // Language Dropdown
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<Locale>(
+                  value: locale,
+                  isDense: true,
+                  icon: Icon(
+                    Icons.arrow_drop_down,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
+                  style: AppTextStyles.nunitoSemiBold.copyWith(
+                    fontSize: 14,
+                    color: AppColors.primary,
+                  ),
+                  dropdownColor: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  onChanged: (Locale? newLocale) {
+                    if (newLocale != null) {
+                      ref.read(localeProvider.notifier).setLocale(newLocale);
+                    }
+                  },
+                  items: const [
+                    DropdownMenuItem(
+                      value: Locale('en'),
+                      child: Text('English'),
+                    ),
+                    DropdownMenuItem(value: Locale('hi'), child: Text('हिंदी')),
+                    DropdownMenuItem(value: Locale('ta'), child: Text('தமிழ்')),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildThemeToggleButton(WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+    final isDark = themeMode == ThemeMode.dark;
+    final l10n = AppLocalizations.of(context)!;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+        child: Row(
+          children: [
+            Icon(
+              isDark ? Icons.dark_mode : Icons.light_mode,
+              color: AppColors.primary,
+              size: 24,
+            ),
+            const SizedBox(width: 16),
+            Text(
+              l10n.darkMode,
+              style: AppTextStyles.nunitoSemiBold.copyWith(
+                fontSize: 16,
+                color: AppColors.textDark,
+              ),
+            ),
+            const Spacer(),
+            Switch(
+              value: isDark,
+              onChanged: (value) {
+                ref.read(themeModeProvider.notifier).toggleTheme();
+              },
+              activeTrackColor: AppColors.primary,
+            ),
+          ],
         ),
       ),
     );

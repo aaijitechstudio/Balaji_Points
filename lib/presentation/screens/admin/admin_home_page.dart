@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:balaji_points/config/theme.dart';
+import 'package:balaji_points/l10n/app_localizations.dart';
 import '../../widgets/admin/pending_bills_list.dart';
 import '../../widgets/admin/offers_management.dart';
 import '../../widgets/admin/users_list.dart';
+import '../../widgets/admin/daily_spin_management.dart';
+import '../../widgets/home_nav_bar.dart';
 
 class AdminHomePage extends ConsumerStatefulWidget {
   const AdminHomePage({super.key});
@@ -21,7 +24,7 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -31,23 +34,24 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
   }
 
   Future<void> _handleLogout() async {
+    final l10n = AppLocalizations.of(context)!;
     final shouldLogout = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
-          'Logout',
+          l10n.logout,
           style: AppTextStyles.nunitoBold.copyWith(fontSize: 22),
         ),
         content: Text(
-          'Are you sure you want to logout?',
+          l10n.logoutConfirmation,
           style: AppTextStyles.nunitoRegular.copyWith(fontSize: 16),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: Text(
-              'Cancel',
+              l10n.cancel,
               style: AppTextStyles.nunitoMedium.copyWith(
                 color: Colors.grey[600],
                 fontSize: 16,
@@ -64,7 +68,7 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
               ),
             ),
             child: Text(
-              'Logout',
+              l10n.logout,
               style: AppTextStyles.nunitoSemiBold.copyWith(fontSize: 16),
             ),
           ),
@@ -80,9 +84,10 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
         }
       } catch (e) {
         if (mounted) {
+          final l10n = AppLocalizations.of(context)!;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Logout failed: ${e.toString()}'),
+              content: Text('${l10n.logoutFailed}: ${e.toString()}'),
               backgroundColor: Colors.red,
             ),
           );
@@ -93,71 +98,25 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       backgroundColor: AppColors.primary,
       body: Column(
         children: [
-          // Top Safe Area with Primary Color
-          SafeArea(
-            bottom: false,
-            child: Container(
-              color: AppColors.primary,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  // App Logo
-                  Image.asset(
-                    'assets/images/balaji_point_logo.png',
-                    width: 32,
-                    height: 32,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: AppColors.secondary,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.star,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 12),
-                  // Admin Title
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Admin Panel',
-                          style: AppTextStyles.nunitoBold.copyWith(
-                            fontSize: 20,
-                            color: Colors.white,
-                          ),
-                        ),
-                        Text(
-                          'Manage Bills, Offers & Users',
-                          style: AppTextStyles.nunitoRegular.copyWith(
-                            fontSize: 12,
-                            color: Colors.white.withOpacity(0.9),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Logout Button
-                  IconButton(
-                    icon: const Icon(Icons.logout, color: Colors.white),
-                    onPressed: _handleLogout,
-                  ),
-                ],
+          // Unified Navigation Bar - Consistent 64px height
+          HomeNavBar(
+            title: l10n.adminPanel,
+            subtitle: l10n.adminSubtitle,
+            showLogo: true,
+            showProfileButton: false,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.logout, color: Colors.white, size: 22),
+                onPressed: _handleLogout,
+                tooltip: l10n.logout,
               ),
-            ),
+            ],
           ),
 
           // Tabs
@@ -168,23 +127,27 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
               indicatorColor: Colors.white,
               indicatorWeight: 3,
               labelColor: Colors.white,
-              unselectedLabelColor: Colors.white.withOpacity(0.7),
+              unselectedLabelColor: Colors.white.withValues(alpha: 0.7),
               labelStyle: AppTextStyles.nunitoSemiBold.copyWith(fontSize: 14),
               unselectedLabelStyle: AppTextStyles.nunitoRegular.copyWith(
                 fontSize: 14,
               ),
-              tabs: const [
+              tabs: [
                 Tab(
-                  icon: Icon(Icons.receipt_long),
-                  text: 'Pending Bills',
+                  icon: const Icon(Icons.receipt_long),
+                  text: l10n.pendingBills,
                 ),
                 Tab(
-                  icon: Icon(Icons.local_offer),
-                  text: 'Offers',
+                  icon: const Icon(Icons.local_offer),
+                  text: l10n.offers,
                 ),
                 Tab(
-                  icon: Icon(Icons.people),
-                  text: 'Users',
+                  icon: const Icon(Icons.people),
+                  text: l10n.users,
+                ),
+                Tab(
+                  icon: const Icon(Icons.casino),
+                  text: l10n.dailySpin,
                 ),
               ],
             ),
@@ -200,6 +163,7 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
                   PendingBillsList(),
                   OffersManagement(),
                   UsersList(),
+                  DailySpinManagement(),
                 ],
               ),
             ),
