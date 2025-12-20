@@ -193,6 +193,42 @@ class AppLocalizationsEn extends AppLocalizations {
       'Enter your registered mobile number to reset your PIN.';
 
   @override
+  String get mustBeLoggedInToResetPin =>
+      'You must be logged in to reset your PIN. Please login first.';
+
+  @override
+  String get canOnlyResetOwnPin =>
+      'You can only reset your own PIN. Phone number must match your logged-in account.';
+
+  @override
+  String get enterCurrentPin =>
+      'Please enter your current PIN to verify ownership.';
+
+  @override
+  String get currentPinLabel => 'Current PIN';
+
+  @override
+  String get newPinMustBeDifferent =>
+      'New PIN must be different from your current PIN.';
+
+  @override
+  String get contactAdminForPinReset =>
+      'You must be logged in to reset your PIN. If you forgot your PIN, please contact admin for assistance.';
+
+  @override
+  String get forgotCurrentPin => 'Forgot your current PIN?';
+
+  @override
+  String get forgotPinHelp =>
+      'If you don\'t remember your current PIN, please contact our support team for assistance.';
+
+  @override
+  String get adminSupportInfo => 'Admin Support';
+
+  @override
+  String get callSupport => 'Call Support';
+
+  @override
   String get newPinLabel => 'New 4-digit PIN';
 
   @override
@@ -945,6 +981,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get addCarpenter => 'Add Carpenter';
+
+  @override
+  String get deleteCarpenter => 'Delete Carpenter';
+
+  @override
+  String get deleteCarpenterConfirmation =>
+      'Are you sure you want to delete this carpenter? This will permanently delete:\n\n• User account\n• All points and transaction history\n• All submitted bills\n• All offer redemptions\n\nThis action cannot be undone.';
+
+  @override
+  String get deleteCarpenterWarning =>
+      'Deleting a carpenter will permanently remove all their data from the system. This action cannot be undone.';
+
+  @override
+  String get carpenterDeletedSuccess => 'Carpenter deleted successfully';
+
+  @override
+  String get failedToDeleteCarpenter => 'Failed to delete carpenter';
+
+  @override
+  String get dangerZone => 'Danger Zone';
 
   @override
   String get phoneNumberLabel => 'Phone number';

@@ -460,6 +460,66 @@ abstract class AppLocalizations {
   /// **'Enter your registered mobile number to reset your PIN.'**
   String get resetPinSubtitle;
 
+  /// No description provided for @mustBeLoggedInToResetPin.
+  ///
+  /// In en, this message translates to:
+  /// **'You must be logged in to reset your PIN. Please login first.'**
+  String get mustBeLoggedInToResetPin;
+
+  /// No description provided for @canOnlyResetOwnPin.
+  ///
+  /// In en, this message translates to:
+  /// **'You can only reset your own PIN. Phone number must match your logged-in account.'**
+  String get canOnlyResetOwnPin;
+
+  /// No description provided for @enterCurrentPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your current PIN to verify ownership.'**
+  String get enterCurrentPin;
+
+  /// No description provided for @currentPinLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Current PIN'**
+  String get currentPinLabel;
+
+  /// No description provided for @newPinMustBeDifferent.
+  ///
+  /// In en, this message translates to:
+  /// **'New PIN must be different from your current PIN.'**
+  String get newPinMustBeDifferent;
+
+  /// No description provided for @contactAdminForPinReset.
+  ///
+  /// In en, this message translates to:
+  /// **'You must be logged in to reset your PIN. If you forgot your PIN, please contact admin for assistance.'**
+  String get contactAdminForPinReset;
+
+  /// No description provided for @forgotCurrentPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot your current PIN?'**
+  String get forgotCurrentPin;
+
+  /// No description provided for @forgotPinHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'If you don\'t remember your current PIN, please contact our support team for assistance.'**
+  String get forgotPinHelp;
+
+  /// No description provided for @adminSupportInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin Support'**
+  String get adminSupportInfo;
+
+  /// No description provided for @callSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Call Support'**
+  String get callSupport;
+
   /// No description provided for @newPinLabel.
   ///
   /// In en, this message translates to:
@@ -1893,6 +1953,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add Carpenter'**
   String get addCarpenter;
+
+  /// No description provided for @deleteCarpenter.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Carpenter'**
+  String get deleteCarpenter;
+
+  /// No description provided for @deleteCarpenterConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this carpenter? This will permanently delete:\n\n• User account\n• All points and transaction history\n• All submitted bills\n• All offer redemptions\n\nThis action cannot be undone.'**
+  String get deleteCarpenterConfirmation;
+
+  /// No description provided for @deleteCarpenterWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleting a carpenter will permanently remove all their data from the system. This action cannot be undone.'**
+  String get deleteCarpenterWarning;
+
+  /// No description provided for @carpenterDeletedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Carpenter deleted successfully'**
+  String get carpenterDeletedSuccess;
+
+  /// No description provided for @failedToDeleteCarpenter.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete carpenter'**
+  String get failedToDeleteCarpenter;
+
+  /// No description provided for @dangerZone.
+  ///
+  /// In en, this message translates to:
+  /// **'Danger Zone'**
+  String get dangerZone;
 
   /// No description provided for @phoneNumberLabel.
   ///

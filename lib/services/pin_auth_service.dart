@@ -177,8 +177,21 @@ class PinAuthService {
     }
   }
 
-  /// Reset PIN for an existing phone (no OTP – you may add extra checks later).
-  Future<bool> resetPin({required String phone, required String newPin}) async {
+  /// Reset PIN for an existing phone with security verification
+  ///
+  /// Security checks:
+  /// - If loggedInPhone is provided, verifies it matches the target phone
+  /// - If currentPin is provided, verifies it matches the stored PIN
+  /// - If isAdmin is true, skips verification (admin privilege)
+  ///
+  /// Returns true if reset successful, false otherwise
+  Future<bool> resetPin({
+    required String phone,
+    required String newPin,
+    String? loggedInPhone,
+    String? currentPin,
+    bool isAdmin = false,
+  }) async {
     try {
       final normalized = normalizePhone(phone);
       final usersRef = _firestore.collection('users');
@@ -189,10 +202,65 @@ class PinAuthService {
           .get();
 
       if (query.docs.isEmpty) {
+        AppLogger.warning(
+          'PIN reset failed: User not found for phone $normalized',
+        );
         return false;
       }
 
       final doc = query.docs.first;
+      final userData = doc.data();
+
+      // Security Verification (skip if admin)
+      if (!isAdmin) {
+        // Check 1: Verify phone ownership (if logged in)
+        if (loggedInPhone != null) {
+          final normalizedLoggedIn = normalizePhone(loggedInPhone);
+          if (normalized != normalizedLoggedIn) {
+            AppLogger.warning(
+              'PIN reset denied: Phone mismatch. Logged in: $normalizedLoggedIn, Requested: $normalized',
+            );
+            return false;
+          }
+        } else {
+          // Not logged in and not admin - deny reset
+          AppLogger.warning(
+            'PIN reset denied: User not logged in and not admin for phone $normalized',
+          );
+          return false;
+        }
+
+        // Check 2: Verify current PIN (if provided)
+        if (currentPin != null) {
+          final salt = userData['pinSalt'] as String?;
+          final storedHash = userData['pinHash'] as String?;
+
+          if (salt == null || storedHash == null) {
+            AppLogger.warning(
+              'PIN reset denied: No PIN set for phone $normalized',
+            );
+            return false;
+          }
+
+          final computedHash = _hashPin(currentPin, salt);
+          if (computedHash != storedHash) {
+            AppLogger.warning(
+              'PIN reset denied: Current PIN verification failed for phone $normalized',
+            );
+            return false;
+          }
+        } else {
+          // Current PIN required for non-admin resets
+          AppLogger.warning(
+            'PIN reset denied: Current PIN not provided for phone $normalized',
+          );
+          return false;
+        }
+      } else {
+        AppLogger.info('PIN reset by admin for phone $normalized');
+      }
+
+      // All security checks passed - proceed with reset
       final salt = _generateSalt();
       final hash = _hashPin(newPin, salt);
 
@@ -202,7 +270,7 @@ class PinAuthService {
         'pinUpdatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      AppLogger.info('PIN reset for $normalized');
+      AppLogger.info('PIN reset successful for $normalized');
       return true;
     } catch (e, st) {
       AppLogger.error('Error resetting PIN for phone $phone', e, st);
@@ -257,7 +325,9 @@ class PinAuthService {
 
       if (existingQuery.docs.isNotEmpty) {
         // User already exists - they should use Reset PIN instead
-        AppLogger.warning('Account already exists for phone $normalized. Use Reset PIN instead.');
+        AppLogger.warning(
+          'Account already exists for phone $normalized. Use Reset PIN instead.',
+        );
         return false;
       }
 
@@ -274,8 +344,8 @@ class PinAuthService {
       // Create new account with phone as document ID
       final userDocRef = usersRef.doc(normalized);
       batch.set(userDocRef, {
-        'phone': normalized,  // Phone number is the unique identifier
-        'userDisplayId': userDisplayId,  // Display ID like 41 (shown as #BP41)
+        'phone': normalized, // Phone number is the unique identifier
+        'userDisplayId': userDisplayId, // Display ID like 41 (shown as #BP41)
         'firstName': firstName,
         'lastName': lastName ?? '',
         'profileImage': profileImageUrl ?? '',

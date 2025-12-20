@@ -221,6 +221,44 @@ service cloud.firestore {
     }
 
     // ============================================
+    // PENDING USERS COLLECTION
+    // ============================================
+    match /pending_users/{phone} {
+      // Allow reading pending users (for admin verification)
+      allow read: if true;
+
+      // Allow creating pending user documents (registration)
+      // Validation: Ensure required fields are present
+      allow create: if request.resource.data.phone != null
+                    && request.resource.data.phone == phone
+                    && request.resource.data.role != null;
+
+      // Allow admin to update pending users (for approval/rejection)
+      // App-level validation ensures only admins can update
+      allow update: if request.resource.data.phone == phone;
+
+      // Allow admin to delete pending users (validated at app level)
+      allow delete: if true; // App-level validation ensures only admins can delete
+    }
+
+    // ============================================
+    // OFFER REDEMPTIONS COLLECTION
+    // ============================================
+    match /offer_redemptions/{redemptionId} {
+      // Allow reading redemptions
+      allow read: if true;
+
+      // Allow creating redemption records
+      // Validation: Ensure required fields are present
+      allow create: if request.resource.data.offerId != null
+                    && request.resource.data.carpenterId != null
+                    && request.resource.data.pointsUsed != null;
+
+      // Allow admin to update/delete redemptions (validated at app level)
+      allow update, delete: if true; // App-level validation ensures only admins can modify
+    }
+
+    // ============================================
     // DEFAULT DENY RULE
     // ============================================
     // Deny all other collections by default

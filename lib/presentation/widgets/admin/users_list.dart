@@ -1,3 +1,4 @@
+import 'package:balaji_points/services/user_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
@@ -24,11 +25,13 @@ class _UsersListState extends State<UsersList> {
   String _searchQuery = '';
   String _selectedTier = 'All';
   final List<String> _tiers = ['All', 'Platinum', 'Gold', 'Silver', 'Bronze'];
+  final _userService = UserService();
 
   void _showUserDetails(Map<String, dynamic> user) {
     showDialog(
       context: context,
-      builder: (context) => UserDetailsDialog(user: user),
+      builder: (context) =>
+          UserDetailsDialog(user: user, onDelete: () => _deleteCarpenter(user)),
     );
   }
 
@@ -37,6 +40,158 @@ class _UsersListState extends State<UsersList> {
       context: context,
       builder: (context) => const AddCarpenterDialog(),
     );
+  }
+
+  Future<void> _deleteCarpenter(Map<String, dynamic> user) async {
+    final l10n = AppLocalizations.of(context)!;
+    final userId = user['userId'] as String?;
+    final firstName = user['firstName'] ?? '';
+    final lastName = user['lastName'] ?? '';
+    final userName = '$firstName $lastName'.trim().isEmpty
+        ? 'Carpenter'
+        : '$firstName $lastName'.trim();
+
+    if (userId == null || userId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.failedToDeleteCarpenter),
+          backgroundColor: DesignToken.error,
+        ),
+      );
+      return;
+    }
+
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(
+              Icons.warning_amber_rounded,
+              color: DesignToken.error,
+              size: 28,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                l10n.deleteCarpenter,
+                style: AppTextStyles.nunitoBold.copyWith(
+                  fontSize: 20,
+                  color: DesignToken.error,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          l10n.deleteCarpenterConfirmation.replaceAll('{userName}', userName),
+          style: AppTextStyles.nunitoRegular.copyWith(
+            fontSize: 16,
+            color: DesignToken.textDark,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              l10n.cancel,
+              style: AppTextStyles.nunitoSemiBold.copyWith(
+                color: DesignToken.textDark,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: DesignToken.error,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(
+              l10n.delete,
+              style: AppTextStyles.nunitoBold.copyWith(
+                color: DesignToken.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    // Show loading indicator
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(color: DesignToken.primary),
+        ),
+      );
+    }
+
+    try {
+      final success = await _userService.deleteCarpenter(userId);
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.carpenterDeletedSuccess),
+              backgroundColor: DesignToken.success,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.failedToDeleteCarpenter),
+              backgroundColor: DesignToken.error,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+
+        // Parse error message for better user feedback
+        String errorMessage = l10n.failedToDeleteCarpenter;
+        final errorStr = e.toString().toLowerCase();
+
+        if (errorStr.contains('permission') ||
+            errorStr.contains('permission_denied')) {
+          errorMessage =
+              '${l10n.failedToDeleteCarpenter}\nPermission denied. Please check Firestore security rules.';
+        } else if (errorStr.contains('network') ||
+            errorStr.contains('connection')) {
+          errorMessage =
+              '${l10n.failedToDeleteCarpenter}\nNetwork error. Please check your connection.';
+        } else {
+          errorMessage = '${l10n.failedToDeleteCarpenter}\n${e.toString()}';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: DesignToken.error,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Dismiss',
+              textColor: Colors.white,
+              onPressed: () {},
+            ),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -277,87 +432,85 @@ class _UsersListState extends State<UsersList> {
 
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
-                    elevation: 2,
+                    elevation: 1,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: Colors.grey.shade200, width: 1),
                     ),
                     child: InkWell(
                       onTap: () => _showUserDetails(user),
                       borderRadius: BorderRadius.circular(16),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
-                        child: Row(
+                        child: Column(
                           children: [
-                            // Rank Badge
-                            Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    DesignToken.primary,
-                                    DesignToken.secondary,
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  '#${index + 1}',
-                                  style: AppTextStyles.nunitoBold.copyWith(
-                                    fontSize: 16,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-
-                            // Profile Image
-                            CircleAvatar(
-                              radius: 28,
-                              backgroundColor: DesignToken.primary.withOpacity(
-                                0.1,
-                              ),
-                              backgroundImage:
-                                  profileImage != null && profileImage != ''
-                                  ? NetworkImage(profileImage)
-                                  : null,
-                              child: profileImage == null || profileImage == ''
-                                  ? Icon(
-                                      Icons.person,
-                                      size: 30,
-                                      color: DesignToken.primary,
-                                    )
-                                  : null,
-                            ),
-                            const SizedBox(width: 12),
-
-                            // User Info
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '$firstName $lastName',
-                                    style: AppTextStyles.nunitoBold.copyWith(
-                                      fontSize: 16,
-                                      color: DesignToken.textDark,
+                            // Top Row: Rank, Profile, Name, Actions
+                            Row(
+                              children: [
+                                // Rank Badge
+                                Container(
+                                  width: 36,
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        DesignToken.primary,
+                                        DesignToken.secondary,
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.phone,
-                                        size: 14,
-                                        color: Colors.grey[600],
+                                  child: Center(
+                                    child: Text(
+                                      '#${index + 1}',
+                                      style: AppTextStyles.nunitoBold.copyWith(
+                                        fontSize: 14,
+                                        color: Colors.white,
                                       ),
-                                      const SizedBox(width: 4),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+
+                                // Profile Image
+                                CircleAvatar(
+                                  radius: 24,
+                                  backgroundColor: DesignToken.primary
+                                      .withOpacity(0.1),
+                                  backgroundImage:
+                                      profileImage != null && profileImage != ''
+                                      ? NetworkImage(profileImage)
+                                      : null,
+                                  child:
+                                      profileImage == null || profileImage == ''
+                                      ? Icon(
+                                          Icons.person,
+                                          size: 24,
+                                          color: DesignToken.primary,
+                                        )
+                                      : null,
+                                ),
+                                const SizedBox(width: 12),
+
+                                // User Name
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '$firstName $lastName',
+                                        style: AppTextStyles.nunitoBold
+                                            .copyWith(
+                                              fontSize: 16,
+                                              color: DesignToken.textDark,
+                                            ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
                                       Text(
                                         phone,
                                         style: AppTextStyles.nunitoRegular
@@ -368,46 +521,54 @@ class _UsersListState extends State<UsersList> {
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 4),
-                                  if (createdAt != null)
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.calendar_today,
-                                          size: 12,
-                                          color: Colors.grey[500],
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          l10n.joinedLabel(
-                                            DateFormat(
-                                              'dd MMM yyyy',
-                                            ).format(createdAt),
-                                          ),
-                                          style: AppTextStyles.nunitoRegular
-                                              .copyWith(
-                                                fontSize: 11,
-                                                color: Colors.grey[500],
-                                              ),
-                                        ),
-                                      ],
+                                ),
+
+                                // Delete Button
+                                OutlinedButton(
+                                  onPressed: () => _deleteCarpenter(user),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: DesignToken.error,
+                                    side: BorderSide(
+                                      color: DesignToken.error,
+                                      width: 1.5,
                                     ),
-                                ],
-                              ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    l10n.delete,
+                                    style: AppTextStyles.nunitoSemiBold
+                                        .copyWith(
+                                          fontSize: 13,
+                                          color: DesignToken.error,
+                                        ),
+                                  ),
+                                ),
+                              ],
                             ),
 
-                            // Points and Tier
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
+                            const SizedBox(height: 12),
+
+                            // Bottom Row: Tier, Points, Joined Date
+                            Row(
                               children: [
+                                // Tier Badge
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
+                                    horizontal: 10,
+                                    vertical: 4,
                                   ),
                                   decoration: BoxDecoration(
                                     color: _getTierColor(tier),
-                                    borderRadius: BorderRadius.circular(8),
+                                    borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
                                     tier,
@@ -417,24 +578,66 @@ class _UsersListState extends State<UsersList> {
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.stars,
-                                      size: 16,
-                                      color: DesignToken.secondary,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '$totalPoints',
-                                      style: AppTextStyles.nunitoBold.copyWith(
-                                        fontSize: 16,
-                                        color: DesignToken.primary,
+                                const SizedBox(width: 12),
+
+                                // Points
+                                Flexible(
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.stars,
+                                        size: 16,
+                                        color: DesignToken.secondary,
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          '$totalPoints Points',
+                                          style: AppTextStyles.nunitoSemiBold
+                                              .copyWith(
+                                                fontSize: 14,
+                                                color: DesignToken.primary,
+                                              ),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
+
+                                const SizedBox(width: 8),
+
+                                // Joined Date
+                                if (createdAt != null)
+                                  Flexible(
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.calendar_today,
+                                          size: 14,
+                                          color: Colors.grey[500],
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Flexible(
+                                          child: Text(
+                                            DateFormat(
+                                              'dd MMM yyyy',
+                                            ).format(createdAt),
+                                            style: AppTextStyles.nunitoRegular
+                                                .copyWith(
+                                                  fontSize: 12,
+                                                  color: Colors.grey[600],
+                                                ),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                               ],
                             ),
                           ],
@@ -652,7 +855,8 @@ class _AddCarpenterDialogState extends State<AddCarpenterDialog> {
 
 class UserDetailsDialog extends StatelessWidget {
   final Map<String, dynamic> user;
-  const UserDetailsDialog({super.key, required this.user});
+  final VoidCallback? onDelete;
+  const UserDetailsDialog({super.key, required this.user, this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -807,6 +1011,83 @@ class UserDetailsDialog extends StatelessWidget {
                         ],
                       ),
                     ),
+
+                    // Delete Button Section
+                    if (onDelete != null) ...[
+                      const SizedBox(height: 24),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: DesignToken.error.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: DesignToken.error.withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.warning_amber_rounded,
+                                  color: DesignToken.error,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  l10n.dangerZone,
+                                  style: AppTextStyles.nunitoBold.copyWith(
+                                    fontSize: 16,
+                                    color: DesignToken.error,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              l10n.deleteCarpenterWarning,
+                              style: AppTextStyles.nunitoRegular.copyWith(
+                                fontSize: 13,
+                                color: DesignToken.textDark.withOpacity(0.7),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  Navigator.of(
+                                    context,
+                                  ).pop(); // Close dialog first
+                                  onDelete?.call();
+                                },
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  size: 18,
+                                ),
+                                label: Text(l10n.deleteCarpenter),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: DesignToken.error,
+                                  side: BorderSide(
+                                    color: DesignToken.error,
+                                    width: 1.5,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
 
                     const SizedBox(height: 24),
                     Text(

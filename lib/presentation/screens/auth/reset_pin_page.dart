@@ -6,9 +6,12 @@ import 'package:balaji_points/config/theme.dart' as LegacyTheme;
 import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/services/pin_auth_service.dart';
+import 'package:balaji_points/services/session_service.dart';
 import 'package:balaji_points/core/utils/back_button_handler.dart';
+import 'package:balaji_points/core/constants/app_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ResetPINPage extends StatefulWidget {
   final String? phoneNumber;
@@ -24,21 +27,28 @@ class _ResetPINPageState extends State<ResetPINPage>
   final _phoneController = TextEditingController();
   final _pinController = TextEditingController();
   final _confirmPinController = TextEditingController();
+  final _currentPinController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   late AnimationController _animationController;
   late List<FloatingElement> _floatingElements;
 
   final _pinAuthService = PinAuthService();
+  final _sessionService = SessionService();
 
   bool _phoneChecked = false;
   bool _phoneExists = false;
   bool _isCheckingPhone = false;
   bool _isSaving = false;
+  bool _isLoggedIn = false;
+  String? _loggedInPhone;
 
   @override
   void initState() {
     super.initState();
+
+    // Check if user is logged in
+    _checkLoginStatus();
 
     if (widget.phoneNumber != null && widget.phoneNumber!.isNotEmpty) {
       _phoneController.text = widget.phoneNumber!;
@@ -63,12 +73,43 @@ class _ResetPINPageState extends State<ResetPINPage>
     });
   }
 
+  Future<void> _checkLoginStatus() async {
+    final isLoggedIn = await _sessionService.isLoggedIn();
+    String? loggedInPhone;
+
+    if (isLoggedIn) {
+      loggedInPhone = await _sessionService.getPhoneNumber();
+    }
+
+    if (mounted) {
+      setState(() {
+        _isLoggedIn = isLoggedIn;
+        _loggedInPhone = loggedInPhone;
+
+        // If logged in, pre-fill phone number
+        if (loggedInPhone != null && _phoneController.text.isEmpty) {
+          _phoneController.text = loggedInPhone;
+        }
+      });
+
+      // Automatically verify the phone number after pre-filling (if logged in)
+      if (isLoggedIn &&
+          loggedInPhone != null &&
+          _phoneController.text.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _checkPhone();
+        });
+      }
+    }
+  }
+
   @override
   void dispose() {
     _animationController.dispose();
     _phoneController.dispose();
     _pinController.dispose();
     _confirmPinController.dispose();
+    _currentPinController.dispose();
     super.dispose();
   }
 
@@ -81,6 +122,36 @@ class _ResetPINPageState extends State<ResetPINPage>
         SnackBar(
           content: Text(l10n.enterValidTenDigit),
           backgroundColor: DesignToken.error,
+        ),
+      );
+      return;
+    }
+
+    // Security check: If logged in, verify phone matches
+    if (_isLoggedIn && _loggedInPhone != null) {
+      final normalizedLoggedIn = _pinAuthService.normalizePhone(
+        _loggedInPhone!,
+      );
+      final normalizedInput = _pinAuthService.normalizePhone(v);
+
+      if (normalizedLoggedIn != normalizedInput) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.canOnlyResetOwnPin),
+            backgroundColor: DesignToken.error,
+          ),
+        );
+        return;
+      }
+    }
+
+    // Security check: If not logged in, deny reset
+    if (!_isLoggedIn) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.mustBeLoggedInToResetPin),
+          backgroundColor: DesignToken.error,
+          duration: const Duration(seconds: 4),
         ),
       );
       return;
@@ -113,13 +184,26 @@ class _ResetPINPageState extends State<ResetPINPage>
 
   bool _hasPinData() {
     return _pinController.text.trim().isNotEmpty ||
-        _confirmPinController.text.trim().isNotEmpty;
+        _confirmPinController.text.trim().isNotEmpty ||
+        _currentPinController.text.trim().isNotEmpty;
   }
 
   Future<void> _saveNewPin() async {
     if (!_formKey.currentState!.validate()) return;
 
     final l10n = AppLocalizations.of(context)!;
+
+    // Security check: Must be logged in
+    if (!_isLoggedIn) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.mustBeLoggedInToResetPin),
+          backgroundColor: DesignToken.error,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
 
     if (!_phoneChecked || !_phoneExists) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -133,7 +217,19 @@ class _ResetPINPageState extends State<ResetPINPage>
 
     final pin = _pinController.text.trim();
     final confirm = _confirmPinController.text.trim();
+    final currentPin = _currentPinController.text.trim();
     final phone = _phoneController.text.trim();
+
+    // Verify current PIN is provided
+    if (currentPin.isEmpty || currentPin.length != 4) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.enterCurrentPin),
+          backgroundColor: DesignToken.error,
+        ),
+      );
+      return;
+    }
 
     if (pin != confirm) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -145,9 +241,27 @@ class _ResetPINPageState extends State<ResetPINPage>
       return;
     }
 
+    // Prevent setting same PIN
+    if (currentPin == pin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.newPinMustBeDifferent),
+          backgroundColor: DesignToken.error,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSaving = true);
 
-    final ok = await _pinAuthService.resetPin(phone: phone, newPin: pin);
+    // Reset PIN with security verification
+    final ok = await _pinAuthService.resetPin(
+      phone: phone,
+      newPin: pin,
+      loggedInPhone: _loggedInPhone,
+      currentPin: currentPin,
+      isAdmin: false,
+    );
 
     if (!mounted) return;
 
@@ -161,6 +275,11 @@ class _ResetPINPageState extends State<ResetPINPage>
         ),
       );
 
+      // Clear form
+      _currentPinController.clear();
+      _pinController.clear();
+      _confirmPinController.clear();
+
       context.pop();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -169,6 +288,34 @@ class _ResetPINPageState extends State<ResetPINPage>
           backgroundColor: DesignToken.error,
         ),
       );
+    }
+  }
+
+  /// Make phone call to support number
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    final uri = Uri.parse('tel:$phoneNumber');
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Cannot make phone call to $phoneNumber'),
+              backgroundColor: DesignToken.error,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error making phone call: $e'),
+            backgroundColor: DesignToken.error,
+          ),
+        );
+      }
     }
   }
 
@@ -197,6 +344,7 @@ class _ResetPINPageState extends State<ResetPINPage>
                 _phoneChecked = false;
                 _pinController.clear();
                 _confirmPinController.clear();
+                _currentPinController.clear();
               });
             }
           } else {
@@ -210,6 +358,7 @@ class _ResetPINPageState extends State<ResetPINPage>
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
+          title: Text(l10n.resetPinTitle),
           leading: BackButton(
             color: DesignToken.primary,
             onPressed: () {
@@ -249,50 +398,18 @@ class _ResetPINPageState extends State<ResetPINPage>
                 key: _formKey,
                 child: Column(
                   children: [
-                    const SizedBox(height: 10),
-
-                    // Logo
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Image.asset(
-                        'assets/images/balaji_point_logo.png',
-                        width: 80,
-                        height: 80,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            color: DesignToken.primary,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(
-                            Icons.star,
-                            color: Colors.white,
-                            size: 40,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    Text(
-                      l10n.resetPinTitle,
-                      style: LegacyTheme.AppTextStyles.nunitoBold.copyWith(
-                        fontSize: 24,
-                        color: DesignToken.primary,
-                      ),
-                    ),
-
                     const SizedBox(height: 6),
 
                     Text(
-                      l10n.resetPinSubtitle,
+                      _isLoggedIn
+                          ? l10n.resetPinSubtitle
+                          : l10n.mustBeLoggedInToResetPin,
                       textAlign: TextAlign.center,
                       style: LegacyTheme.AppTextStyles.nunitoRegular.copyWith(
                         fontSize: 13,
-                        color: DesignToken.textDark.withOpacity(0.7),
+                        color: _isLoggedIn
+                            ? DesignToken.textDark.withOpacity(0.7)
+                            : DesignToken.error,
                       ),
                     ),
 
@@ -334,6 +451,8 @@ class _ResetPINPageState extends State<ResetPINPage>
                                 controller: _phoneController,
                                 keyboardType: TextInputType.phone,
                                 maxLength: 10,
+                                enabled:
+                                    !_isLoggedIn, // Disable if logged in (auto-filled)
                                 style: LegacyTheme.AppTextStyles.nunitoSemiBold
                                     .copyWith(fontSize: 16),
                                 decoration: InputDecoration(
@@ -341,9 +460,9 @@ class _ResetPINPageState extends State<ResetPINPage>
                                   prefixText: "+91 ",
                                   counterText: "",
                                   filled: true,
-                                  fillColor: DesignToken.primary.withOpacity(
-                                    0.05,
-                                  ),
+                                  fillColor: _isLoggedIn
+                                      ? DesignToken.primary.withOpacity(0.1)
+                                      : DesignToken.primary.withOpacity(0.05),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(16),
                                     borderSide: BorderSide(
@@ -369,6 +488,15 @@ class _ResetPINPageState extends State<ResetPINPage>
                                       width: 2,
                                     ),
                                   ),
+                                  disabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    borderSide: BorderSide(
+                                      color: DesignToken.primary.withOpacity(
+                                        0.3,
+                                      ),
+                                      width: 1.5,
+                                    ),
+                                  ),
                                 ),
                                 validator: (value) {
                                   final v = value?.trim() ?? '';
@@ -382,84 +510,396 @@ class _ResetPINPageState extends State<ResetPINPage>
 
                               const SizedBox(height: 12),
 
-                              // Check Number Button
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        _phoneChecked && _phoneExists
-                                            ? DesignToken.success
-                                            : DesignToken.primary,
-                                        _phoneChecked && _phoneExists
-                                            ? DesignToken.greenShade700
-                                            : DesignToken.primary.withOpacity(
-                                                0.8,
-                                              ),
+                              // Check Number Button (only show if not logged in)
+                              if (!_isLoggedIn) ...[
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          _phoneChecked && _phoneExists
+                                              ? DesignToken.success
+                                              : DesignToken.primary,
+                                          _phoneChecked && _phoneExists
+                                              ? DesignToken.greenShade700
+                                              : DesignToken.primary.withOpacity(
+                                                  0.8,
+                                                ),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color:
+                                              (_phoneChecked && _phoneExists
+                                                      ? DesignToken.success
+                                                      : DesignToken.primary)
+                                                  .withOpacity(0.3),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 4),
+                                        ),
                                       ],
                                     ),
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color:
-                                            (_phoneChecked && _phoneExists
-                                                    ? DesignToken.success
-                                                    : DesignToken.primary)
-                                                .withOpacity(0.3),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ElevatedButton.icon(
-                                    onPressed: _isCheckingPhone
-                                        ? null
-                                        : _checkPhone,
-                                    icon: _isCheckingPhone
-                                        ? const SizedBox(
-                                            width: 16,
-                                            height: 16,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              valueColor:
-                                                  AlwaysStoppedAnimation(
-                                                    DesignToken.white,
-                                                  ),
+                                    child: ElevatedButton.icon(
+                                      onPressed: _isCheckingPhone
+                                          ? null
+                                          : _checkPhone,
+                                      icon: _isCheckingPhone
+                                          ? const SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                valueColor:
+                                                    AlwaysStoppedAnimation(
+                                                      DesignToken.white,
+                                                    ),
+                                              ),
+                                            )
+                                          : Icon(
+                                              _phoneChecked && _phoneExists
+                                                  ? Icons.check_circle
+                                                  : Icons.search,
+                                              size: 18,
                                             ),
-                                          )
-                                        : Icon(
-                                            _phoneChecked && _phoneExists
-                                                ? Icons.check_circle
-                                                : Icons.search,
-                                            size: 18,
-                                          ),
-                                    label: Text(
-                                      _phoneChecked && _phoneExists
-                                          ? l10n.verified
-                                          : l10n.checkNumber,
-                                      style: LegacyTheme
-                                          .AppTextStyles
-                                          .nunitoSemiBold
-                                          .copyWith(fontSize: 14),
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.transparent,
-                                      shadowColor: Colors.transparent,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 10,
+                                      label: Text(
+                                        _phoneChecked && _phoneExists
+                                            ? l10n.verified
+                                            : l10n.checkNumber,
+                                        style: LegacyTheme
+                                            .AppTextStyles
+                                            .nunitoSemiBold
+                                            .copyWith(fontSize: 14),
                                       ),
-                                      foregroundColor: DesignToken.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.transparent,
+                                        shadowColor: Colors.transparent,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 10,
+                                        ),
+                                        foregroundColor: DesignToken.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
+                              ],
+
+                              // Auto-verify if logged in
+                              if (_isLoggedIn && _loggedInPhone != null) ...[
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 10,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: DesignToken.success.withOpacity(
+                                        0.1,
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: DesignToken.success,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.check_circle,
+                                          size: 18,
+                                          color: DesignToken.success,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          l10n.verified,
+                                          style: LegacyTheme
+                                              .AppTextStyles
+                                              .nunitoSemiBold
+                                              .copyWith(
+                                                fontSize: 14,
+                                                color: DesignToken.success,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
 
                               const SizedBox(height: 20),
+
+                              // Current PIN Field (Required for logged-in users)
+                              if (_isLoggedIn) ...[
+                                TextFormField(
+                                  controller: _currentPinController,
+                                  keyboardType: TextInputType.number,
+                                  obscureText: true,
+                                  maxLength: 4,
+                                  textAlign: TextAlign.center,
+                                  style: LegacyTheme.AppTextStyles.nunitoBold
+                                      .copyWith(
+                                        fontSize: 20,
+                                        letterSpacing: 8,
+                                        color: DesignToken.primary,
+                                      ),
+                                  decoration: InputDecoration(
+                                    labelText: l10n.currentPinLabel,
+                                    counterText: "",
+                                    filled: true,
+                                    fillColor: DesignToken.primary.withOpacity(
+                                      0.05,
+                                    ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: BorderSide(
+                                        color: DesignToken.primary.withOpacity(
+                                          0.3,
+                                        ),
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: BorderSide(
+                                        color: DesignToken.primary.withOpacity(
+                                          0.2,
+                                        ),
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      borderSide: BorderSide(
+                                        color: DesignToken.primary,
+                                        width: 2,
+                                      ),
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    final v = value?.trim() ?? "";
+                                    if (v.length != 4 ||
+                                        !RegExp(r'^[0-9]+$').hasMatch(v)) {
+                                      return l10n.enter4Digits;
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+
+                              // Admin Support Info (for users who forgot current PIN)
+                              if (_isLoggedIn) ...[
+                                const SizedBox(height: 12),
+                                Container(
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: DesignToken.primary.withOpacity(
+                                      0.05,
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: DesignToken.primary.withOpacity(
+                                        0.2,
+                                      ),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.help_outline,
+                                            size: 20,
+                                            color: DesignToken.primary,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            l10n.forgotCurrentPin,
+                                            style: LegacyTheme
+                                                .AppTextStyles
+                                                .nunitoSemiBold
+                                                .copyWith(
+                                                  fontSize: 14,
+                                                  color: DesignToken.primary,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        l10n.forgotPinHelp,
+                                        style: LegacyTheme
+                                            .AppTextStyles
+                                            .nunitoRegular
+                                            .copyWith(
+                                              fontSize: 12,
+                                              color: DesignToken.textDark
+                                                  .withOpacity(0.7),
+                                            ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: DesignToken.white,
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border: Border.all(
+                                            color: DesignToken.primary
+                                                .withOpacity(0.2),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.support_agent,
+                                                  size: 18,
+                                                  color: DesignToken.secondary,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  l10n.adminSupportInfo,
+                                                  style: LegacyTheme
+                                                      .AppTextStyles
+                                                      .nunitoSemiBold
+                                                      .copyWith(
+                                                        fontSize: 13,
+                                                        color: DesignToken
+                                                            .textDark,
+                                                      ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 10),
+                                            // Support Phone 1
+                                            InkWell(
+                                              onTap: () => _makePhoneCall(
+                                                AppConstants.supportPhone1
+                                                    .replaceAll('-', ''),
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              child: Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 8,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: DesignToken.success
+                                                      .withOpacity(0.1),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons.phone_android,
+                                                      size: 16,
+                                                      color:
+                                                          DesignToken.success,
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Expanded(
+                                                      child: Text(
+                                                        l10n.supportPhone1,
+                                                        style: LegacyTheme
+                                                            .AppTextStyles
+                                                            .nunitoSemiBold
+                                                            .copyWith(
+                                                              fontSize: 13,
+                                                              color: DesignToken
+                                                                  .success,
+                                                            ),
+                                                      ),
+                                                    ),
+                                                    Icon(
+                                                      Icons.call,
+                                                      size: 16,
+                                                      color:
+                                                          DesignToken.success,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            // Support Phone 2
+                                            InkWell(
+                                              onTap: () => _makePhoneCall(
+                                                AppConstants.supportPhone2
+                                                    .replaceAll('-', ''),
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              child: Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 8,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: DesignToken.primary
+                                                      .withOpacity(0.1),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons.phone,
+                                                      size: 16,
+                                                      color:
+                                                          DesignToken.primary,
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Expanded(
+                                                      child: Text(
+                                                        l10n.supportPhone2,
+                                                        style: LegacyTheme
+                                                            .AppTextStyles
+                                                            .nunitoSemiBold
+                                                            .copyWith(
+                                                              fontSize: 13,
+                                                              color: DesignToken
+                                                                  .primary,
+                                                            ),
+                                                      ),
+                                                    ),
+                                                    Icon(
+                                                      Icons.call,
+                                                      size: 16,
+                                                      color:
+                                                          DesignToken.primary,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                              ],
 
                               // New PIN Field
                               TextFormField(
@@ -569,31 +1009,43 @@ class _ResetPINPageState extends State<ResetPINPage>
 
                               const SizedBox(height: 24),
 
-                              // Reset Button with Gradient
+                              // Reset Button with Gradient (only enabled if logged in)
                               SizedBox(
                                 width: double.infinity,
                                 child: Container(
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
-                                      colors: [
-                                        DesignToken.secondary,
-                                        DesignToken.secondary.withOpacity(0.8),
-                                      ],
+                                      colors: _isLoggedIn
+                                          ? [
+                                              DesignToken.secondary,
+                                              DesignToken.secondary.withOpacity(
+                                                0.8,
+                                              ),
+                                            ]
+                                          : [
+                                              Colors.grey,
+                                              Colors.grey.withOpacity(0.8),
+                                            ],
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                     ),
                                     borderRadius: BorderRadius.circular(16),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: DesignToken.secondary
-                                            .withOpacity(0.4),
+                                        color:
+                                            (_isLoggedIn
+                                                    ? DesignToken.secondary
+                                                    : Colors.grey)
+                                                .withOpacity(0.4),
                                         blurRadius: 12,
                                         offset: const Offset(0, 6),
                                       ),
                                     ],
                                   ),
                                   child: ElevatedButton(
-                                    onPressed: _isSaving ? null : _saveNewPin,
+                                    onPressed: (_isSaving || !_isLoggedIn)
+                                        ? null
+                                        : _saveNewPin,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.transparent,
                                       shadowColor: Colors.transparent,
@@ -629,6 +1081,44 @@ class _ResetPINPageState extends State<ResetPINPage>
                                   ),
                                 ),
                               ),
+
+                              // Warning message for non-logged-in users
+                              if (!_isLoggedIn) ...[
+                                const SizedBox(height: 16),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: DesignToken.error.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: DesignToken.error.withOpacity(0.3),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.info_outline,
+                                        size: 20,
+                                        color: DesignToken.error,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          l10n.contactAdminForPinReset,
+                                          style: LegacyTheme
+                                              .AppTextStyles
+                                              .nunitoRegular
+                                              .copyWith(
+                                                fontSize: 13,
+                                                color: DesignToken.error,
+                                              ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
