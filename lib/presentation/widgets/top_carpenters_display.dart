@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:balaji_points/config/theme.dart';
+import 'package:balaji_points/core/theme/design_token.dart';
 
 class TopCarpentersDisplay extends StatelessWidget {
   final List<CarpenterRank> topCarpenters;
@@ -26,7 +26,9 @@ class TopCarpentersDisplay extends StatelessWidget {
       return parts[0].isNotEmpty ? parts[0][0].toUpperCase() : '?';
     }
     final firstInitial = parts[0].isNotEmpty ? parts[0][0] : '';
-    final lastInitial = parts[parts.length - 1].isNotEmpty ? parts[parts.length - 1][0] : '';
+    final lastInitial = parts[parts.length - 1].isNotEmpty
+        ? parts[parts.length - 1][0]
+        : '';
     return (firstInitial + lastInitial).toUpperCase();
   }
 
@@ -45,7 +47,7 @@ class TopCarpentersDisplay extends StatelessWidget {
         Text(
           '🏆 Top 3 Carpenters',
           style: TextStyle(
-            color: AppColors.secondary,
+            color: DesignToken.secondary,
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
@@ -108,8 +110,11 @@ class TopCarpentersDisplay extends StatelessWidget {
           // Profile picture or initials
           CircleAvatar(
             radius: rank == 1 ? 35 : 30,
-            backgroundColor: isCurrentUser ? Colors.white : trophyColor.withValues(alpha: 0.2),
-            backgroundImage: isCurrentUser && _isValidImageUrl(carpenter.imageUrl)
+            backgroundColor: isCurrentUser
+                ? Colors.white
+                : trophyColor.withValues(alpha: 0.2),
+            backgroundImage:
+                isCurrentUser && _isValidImageUrl(carpenter.imageUrl)
                 ? NetworkImage(carpenter.imageUrl!)
                 : null,
             child: isCurrentUser && _isValidImageUrl(carpenter.imageUrl)

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:balaji_points/config/theme.dart';
+import 'package:balaji_points/core/theme/design_token.dart';
 
 class OffersCarousel extends StatefulWidget {
   final List<OfferItem> offers;
@@ -137,7 +137,7 @@ class _OffersCarouselState extends State<OffersCarousel> {
       width: isActive ? 24 : 8,
       height: 8,
       decoration: BoxDecoration(
-        color: isActive ? AppColors.secondary : Colors.grey.shade300,
+        color: isActive ? DesignToken.secondary : Colors.grey.shade300,
         borderRadius: BorderRadius.circular(4),
       ),
     );

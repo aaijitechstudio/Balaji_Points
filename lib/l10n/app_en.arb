@@ -1,7 +1,5 @@
 {
   "@@locale": "en",
-
-  
   "appName": "Balaji Points",
   "loading": "Loading...",
   "error": "Error",
@@ -17,8 +15,6 @@
   "done": "Done",
   "retry": "Retry",
   "refresh": "Refresh",
-
-  
   "loginWithPhone": "Login with Phone Number",
   "enterPhoneNumber": "Enter your registered phone number",
   "phoneNumber": "Phone Number",
@@ -50,8 +46,6 @@
   "loginInfo": "Login using your registered phone number. You will receive an OTP to verify.",
   "poweredBy": "Powered by",
   "companyName": "Shree Balaji Plywood & Hardware",
-
-
   "enterPinPageTitle": "Enter your 4-digit PIN",
   "enter4DigitPin": "Enter your 4-digit PIN",
   "pinLabel": "PIN",
@@ -88,8 +82,6 @@
   "changePin": "Change PIN",
   "rememberMe": "Remember Me",
   "accountExistsUseReset": "Account already exists. Please use Reset PIN to change your PIN.",
-
-
   "home": "Home",
   "addPoints": "Add Points",
   "latestOffers": "Latest Offers",
@@ -123,8 +115,6 @@
       }
     }
   },
-
-  
   "profile": "Profile",
   "editProfile": "Edit Profile",
   "completeProfile": "Complete Your Profile",
@@ -153,8 +143,6 @@
   "getInTouch": "Get in touch with us",
   "mobile": "Mobile",
   "landline": "Landline",
-
-  
   "addBill": "Add Bill",
   "billDetails": "Bill Details",
   "billNumber": "Bill Number",
@@ -180,8 +168,6 @@
   "uploadBillPhoto": "Please upload bill photo",
   "billSubmitted": "Bill submitted successfully",
   "billSubmitError": "Failed to submit bill",
-
-  
   "wallet": "Wallet",
   "availablePoints": "Available Points",
   "redeemPoints": "Redeem Points",
@@ -190,8 +176,6 @@
   "earned": "Earned",
   "spent": "Spent",
   "pending": "Pending",
-
-  
   "offers": "Offers",
   "viewDetails": "View Details",
   "redeemNow": "Redeem Now",
@@ -214,8 +198,6 @@
       }
     }
   },
-
-  
   "dailySpin": "Daily Spin",
   "spinNow": "SPIN NOW",
   "spinning": "Spinning...",
@@ -249,8 +231,6 @@
       }
     }
   },
-
-  
   "adminPanel": "Admin Panel",
   "adminSubtitle": "Manage Bills, Offers, Users & Daily Spin",
   "dashboard": "Dashboard",
@@ -275,8 +255,6 @@
   "offerDescription": "Offer Description",
   "offerCreated": "Offer created successfully",
   "logoutFailed": "Logout failed",
-
-  
   "errorOccurred": "An error occurred",
   "networkError": "Network error. Please check your internet connection.",
   "permissionDenied": "Permission denied",
@@ -290,16 +268,12 @@
   "invalidVerificationCode": "Invalid OTP code. Please check and try again.",
   "verificationExpired": "Verification expired. Please request a new OTP.",
   "userDisabled": "This account has been disabled. Please contact support.",
-
-  
   "fieldRequired": "This field is required",
   "invalidEmail": "Please enter a valid email",
   "invalidName": "Please enter a valid name",
   "nameTooShort": "Name must be at least 2 characters",
   "invalidAmount": "Please enter a valid amount",
   "amountTooLow": "Amount must be greater than 0",
-
-  
   "searchHint": "Search...",
   "noResultsFound": "No results found",
   "noDataAvailable": "No data available",
@@ -314,8 +288,6 @@
   "cannotUndo": "This action cannot be undone.",
   "yes": "Yes",
   "no": "No",
-
-  
   "today": "Today",
   "yesterday": "Yesterday",
   "tomorrow": "Tomorrow",
@@ -342,8 +314,6 @@
   "oct": "Oct",
   "nov": "Nov",
   "dec": "Dec",
-
-
   "approveBill": "Approve Bill",
   "approveBillConfirmation": "Approve bill of ₹{amount} for {phone}?",
   "@approveBillConfirmation": {
@@ -369,8 +339,6 @@
   "noPendingBills": "No Pending Bills",
   "pendingStatus": "Pending",
   "noDate": "No date",
-
-
   "deleteOffer": "Delete Offer",
   "deleteOfferConfirmation": "Are you sure you want to delete this offer? This action cannot be undone.",
   "offerDeletedSuccess": "Offer deleted successfully",
@@ -409,8 +377,6 @@
   "offerCreatedSuccess": "Offer created successfully",
   "failedToSaveOffer": "Failed to save offer",
   "failedToPickImage": "Failed to pick image",
-
-
   "searchByNameOrPhone": "Search by name or phone...",
   "add": "Add",
   "all": "All",
@@ -456,8 +422,6 @@
   },
   "recentActivity": "Recent Activity",
   "noActivityYet": "No activity yet",
-
-
   "noWinnerYetToday": "No winner yet today",
   "youWonPrize": "🎉 You Won!",
   "todaysWinnerLabel": "🏆 Today's Winner",
@@ -500,5 +464,34 @@
   "billLabel": "Bill",
   "statusApproved": "APPROVED",
   "statusPending": "PENDING",
-  "statusRejected": "REJECTED"
+  "statusRejected": "REJECTED",
+  "exitApp": "Exit App?",
+  "exitAppMessage": "Do you want to exit the app?",
+  "exit": "Exit",
+  "discardChanges": "Discard Changes?",
+  "discardChangesMessage": "You have unsaved changes. Do you want to discard them?",
+  "discard": "Discard",
+  "pressBackAgainToExit": "Press back again to exit",
+  "pleaseWait": "Please wait...",
+  "pleaseWaitForSpin": "Please wait for spin to complete",
+  "discardBill": "Discard Bill?",
+  "discardBillMessage": "You have unsaved bill data. Do you want to discard it?",
+  "pleaseCompleteProfile": "Please complete your profile",
+  "rewardsLoyaltyProgram": "Rewards & Loyalty Program",
+  "billImage": "Bill Image",
+  "billAmount": "Bill Amount (₹)",
+  "billDateOptional": "Bill Date (Optional)",
+  "storeVendorNameOptional": "Store/Vendor Name (Optional)",
+  "billInvoiceNumberOptional": "Bill/Invoice Number (Optional)",
+  "notesOptional": "Notes (Optional)",
+  "tapToAddBillImage": "Tap to add bill image",
+  "enterBillAmount": "Enter bill amount",
+  "selectBillDateOptional": "Select bill date (optional)",
+  "enterStoreOrVendorNameOptional": "Enter store or vendor name (optional)",
+  "enterBillOrInvoiceNumberOptional": "Enter bill or invoice number (optional)",
+  "addAnyAdditionalNotes": "Add any additional notes...",
+  "submitBill": "Submit Bill",
+  "completeProfile": "Complete Profile",
+  "saveChanges": "Save Changes",
+  "discardBillMessage": "You have unsaved bill data. Do you want to discard it?"
 }

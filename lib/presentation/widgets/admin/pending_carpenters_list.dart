@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:balaji_points/config/theme.dart';
+import 'package:balaji_points/core/theme/design_token.dart';
+import 'package:balaji_points/config/theme.dart' hide AppColors;
 import '../../../services/user_service.dart';
 import '../../../core/logger.dart';
 
@@ -18,7 +19,7 @@ class _PendingCarpentersListState extends State<PendingCarpentersList> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.woodenBackground,
+      backgroundColor: DesignToken.woodenBackground,
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('pending_users')
@@ -47,14 +48,14 @@ class _PendingCarpentersListState extends State<PendingCarpentersList> {
                   Icon(
                     Icons.pending_actions,
                     size: 64,
-                    color: AppColors.textDark.withOpacity(0.5),
+                    color: DesignToken.textDark.withOpacity(0.5),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'No Pending Requests',
                     style: AppTextStyles.nunitoSemiBold.copyWith(
                       fontSize: 18,
-                      color: AppColors.textDark.withOpacity(0.7),
+                      color: DesignToken.textDark.withOpacity(0.7),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -62,7 +63,7 @@ class _PendingCarpentersListState extends State<PendingCarpentersList> {
                     'All carpenters have been verified',
                     style: AppTextStyles.nunitoRegular.copyWith(
                       fontSize: 14,
-                      color: AppColors.textDark.withOpacity(0.5),
+                      color: DesignToken.textDark.withOpacity(0.5),
                     ),
                   ),
                 ],
@@ -112,7 +113,7 @@ class _PendingCarpentersListState extends State<PendingCarpentersList> {
                         width: 50,
                         height: 50,
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
+                          color: DesignToken.primary.withOpacity(0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Center(
@@ -120,7 +121,7 @@ class _PendingCarpentersListState extends State<PendingCarpentersList> {
                             '${firstName[0]}${lastName.isNotEmpty ? lastName[0] : ''}',
                             style: AppTextStyles.nunitoBold.copyWith(
                               fontSize: 18,
-                              color: AppColors.primary,
+                              color: DesignToken.primary,
                             ),
                           ),
                         ),
@@ -135,7 +136,7 @@ class _PendingCarpentersListState extends State<PendingCarpentersList> {
                               '$firstName $lastName',
                               style: AppTextStyles.nunitoBold.copyWith(
                                 fontSize: 16,
-                                color: AppColors.textDark,
+                                color: DesignToken.textDark,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -144,14 +145,16 @@ class _PendingCarpentersListState extends State<PendingCarpentersList> {
                                 Icon(
                                   Icons.phone,
                                   size: 14,
-                                  color: AppColors.textDark.withOpacity(0.6),
+                                  color: DesignToken.textDark.withOpacity(0.6),
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
                                   phone,
                                   style: AppTextStyles.nunitoRegular.copyWith(
                                     fontSize: 13,
-                                    color: AppColors.textDark.withOpacity(0.6),
+                                    color: DesignToken.textDark.withOpacity(
+                                      0.6,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -244,7 +247,7 @@ class _PendingCarpentersListState extends State<PendingCarpentersList> {
                                     '$firstName $lastName',
                                   ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.secondary,
+                              backgroundColor: DesignToken.secondary,
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -286,13 +289,13 @@ class _PendingCarpentersListState extends State<PendingCarpentersList> {
   Widget _buildDetailRow(IconData icon, String label, String value) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: AppColors.textDark.withOpacity(0.6)),
+        Icon(icon, size: 16, color: DesignToken.textDark.withOpacity(0.6)),
         const SizedBox(width: 8),
         Text(
           '$label: ',
           style: AppTextStyles.nunitoMedium.copyWith(
             fontSize: 13,
-            color: AppColors.textDark.withOpacity(0.7),
+            color: DesignToken.textDark.withOpacity(0.7),
           ),
         ),
         Expanded(
@@ -300,7 +303,7 @@ class _PendingCarpentersListState extends State<PendingCarpentersList> {
             value,
             style: AppTextStyles.nunitoSemiBold.copyWith(
               fontSize: 13,
-              color: AppColors.textDark,
+              color: DesignToken.textDark,
             ),
           ),
         ),
@@ -325,14 +328,14 @@ class _PendingCarpentersListState extends State<PendingCarpentersList> {
           'Approve Carpenter',
           style: AppTextStyles.nunitoBold.copyWith(
             fontSize: 20,
-            color: AppColors.primary,
+            color: DesignToken.primary,
           ),
         ),
         content: Text(
           'Are you sure you want to approve $userName?\n\nThis will create a verified user account.',
           style: AppTextStyles.nunitoRegular.copyWith(
             fontSize: 16,
-            color: AppColors.textDark,
+            color: DesignToken.textDark,
           ),
         ),
         actions: [
@@ -341,14 +344,14 @@ class _PendingCarpentersListState extends State<PendingCarpentersList> {
             child: Text(
               'Cancel',
               style: AppTextStyles.nunitoSemiBold.copyWith(
-                color: AppColors.textDark,
+                color: DesignToken.textDark,
               ),
             ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.secondary,
+              backgroundColor: DesignToken.secondary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -440,7 +443,7 @@ class _PendingCarpentersListState extends State<PendingCarpentersList> {
           'Are you sure you want to reject $userName?\n\nThis action cannot be undone.',
           style: AppTextStyles.nunitoRegular.copyWith(
             fontSize: 16,
-            color: AppColors.textDark,
+            color: DesignToken.textDark,
           ),
         ),
         actions: [
@@ -449,7 +452,7 @@ class _PendingCarpentersListState extends State<PendingCarpentersList> {
             child: Text(
               'Cancel',
               style: AppTextStyles.nunitoSemiBold.copyWith(
-                color: AppColors.textDark,
+                color: DesignToken.textDark,
               ),
             ),
           ),

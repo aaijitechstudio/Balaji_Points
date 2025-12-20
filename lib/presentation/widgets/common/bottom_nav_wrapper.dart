@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:balaji_points/config/theme.dart';
+import 'package:balaji_points/core/theme/design_token.dart';
 
 /// A wrapper widget that adds bottom navigation bar to any screen
 /// Used to maintain consistent bottom navigation across all logged-in screens
@@ -38,9 +38,9 @@ class BottomNavWrapper extends StatelessWidget {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: selectedIndex >= 0 ? selectedIndex : 0,
         onTap: (index) => _onItemTapped(context, index),
-        selectedItemColor: AppColors.secondary,
+        selectedItemColor: DesignToken.secondary,
         unselectedItemColor: Colors.white,
-        backgroundColor: AppColors.primary,
+        backgroundColor: DesignToken.primary,
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),

@@ -4,10 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:balaji_points/config/theme.dart';
+import 'package:balaji_points/core/theme/design_token.dart';
+import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/services/user_service.dart';
 import 'package:balaji_points/services/storage_service.dart';
 import 'package:balaji_points/services/session_service.dart';
+import 'package:balaji_points/core/utils/back_button_handler.dart';
 
 class EditProfilePage extends ConsumerStatefulWidget {
   final bool isFirstTime;
@@ -42,7 +44,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     try {
       debugPrint('EditProfilePage: Loading user data from server...');
       // Force refresh from server to get latest data
-      final userData = await _userService.getCurrentUserData(forceRefresh: true);
+      final userData = await _userService.getCurrentUserData(
+        forceRefresh: true,
+      );
       if (userData != null && mounted) {
         setState(() {
           _firstNameController.text = userData['firstName'] as String? ?? '';
@@ -89,7 +93,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to pick image: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: DesignToken.error,
           ),
         );
       }
@@ -138,7 +142,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
           throw Exception('Failed to upload profile image');
         }
 
-        debugPrint('EditProfilePage: Profile image uploaded successfully: $profileImageUrl');
+        debugPrint(
+          'EditProfilePage: Profile image uploaded successfully: $profileImageUrl',
+        );
 
         setState(() {
           _isUploadingImage = false;
@@ -157,7 +163,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       // Add profile image URL if available
       if (profileImageUrl != null && profileImageUrl.isNotEmpty) {
         updateData['profileImage'] = profileImageUrl;
-        debugPrint('EditProfilePage: Saving profileImage to Firestore: $profileImageUrl');
+        debugPrint(
+          'EditProfilePage: Saving profileImage to Firestore: $profileImageUrl',
+        );
       } else {
         debugPrint('EditProfilePage: No profile image to save');
       }
@@ -197,7 +205,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Profile updated successfully'),
-            backgroundColor: Colors.green,
+            backgroundColor: DesignToken.success,
             duration: Duration(seconds: 2),
           ),
         );
@@ -236,7 +244,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to update profile: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: DesignToken.error,
             duration: const Duration(seconds: 5),
           ),
         );
@@ -249,6 +257,21 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         });
       }
     }
+  }
+
+  bool _hasUnsavedChanges() {
+    if (_isLoading || _isSaving) return false;
+
+    // Compare current form state with loaded data
+    final currentFirstName = _firstNameController.text.trim();
+    final currentLastName = _lastNameController.text.trim();
+    final hasImageChange = _imageFile != null;
+
+    // Get initial values (from loaded data) - store them when loading
+    // For simplicity, check if fields are different from empty or image changed
+    return currentFirstName.isNotEmpty ||
+        currentLastName.isNotEmpty ||
+        hasImageChange;
   }
 
   @override
@@ -270,7 +293,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
               children: [
                 if (!widget.isFirstTime)
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: DesignToken.white,
+                    ),
                     onPressed: () => context.pop(),
                   ),
                 const SizedBox(width: 8),
@@ -278,7 +304,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                   widget.isFirstTime ? 'Complete Your Profile' : 'Edit Profile',
                   style: AppTextStyles.nunitoBold.copyWith(
                     fontSize: 22,
-                    color: Colors.white,
+                    color: DesignToken.white,
                   ),
                 ),
               ],
@@ -288,11 +314,11 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         // Content
         Expanded(
           child: Container(
-            color: AppColors.woodenBackground,
+            color: DesignToken.woodenBackground,
             child: _isLoading
                 ? const Center(
                     child: CircularProgressIndicator(
-                      color: AppColors.primary,
+                      color: DesignToken.primary,
                     ),
                   )
                 : SingleChildScrollView(
@@ -313,14 +339,16 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                   height: 120,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: Colors.white,
+                                    color: DesignToken.white,
                                     border: Border.all(
-                                      color: AppColors.primary,
+                                      color: DesignToken.primary,
                                       width: 3,
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withOpacity(0.1),
+                                        color: DesignToken.black.withOpacity(
+                                          0.1,
+                                        ),
                                         blurRadius: 10,
                                         offset: const Offset(0, 4),
                                       ),
@@ -332,41 +360,54 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                             _imageFile!,
                                             fit: BoxFit.cover,
                                           )
-                                        : _existingImageUrl != null && _existingImageUrl!.isNotEmpty
-                                            ? Image.network(
-                                                _existingImageUrl!,
-                                                fit: BoxFit.cover,
-                                                loadingBuilder: (context, child, loadingProgress) {
-                                                  if (loadingProgress == null) return child;
-                                                  return Container(
-                                                    color: AppColors.secondary.withValues(alpha: 0.2),
-                                                    child: Center(
-                                                      child: CircularProgressIndicator(
-                                                        value: loadingProgress.expectedTotalBytes != null
-                                                            ? loadingProgress.cumulativeBytesLoaded /
-                                                                loadingProgress.expectedTotalBytes!
-                                                            : null,
-                                                        valueColor: AlwaysStoppedAnimation<Color>(
-                                                          AppColors.primary,
-                                                        ),
-                                                      ),
-                                                    ),
+                                        : _existingImageUrl != null &&
+                                              _existingImageUrl!.isNotEmpty
+                                        ? Image.network(
+                                            _existingImageUrl!,
+                                            fit: BoxFit.cover,
+                                            loadingBuilder: (context, child, loadingProgress) {
+                                              if (loadingProgress == null)
+                                                return child;
+                                              return Container(
+                                                color: DesignToken.secondary
+                                                    .withValues(alpha: 0.2),
+                                                child: Center(
+                                                  child: CircularProgressIndicator(
+                                                    value:
+                                                        loadingProgress
+                                                                .expectedTotalBytes !=
+                                                            null
+                                                        ? loadingProgress
+                                                                  .cumulativeBytesLoaded /
+                                                              loadingProgress
+                                                                  .expectedTotalBytes!
+                                                        : null,
+                                                    valueColor:
+                                                        AlwaysStoppedAnimation<
+                                                          Color
+                                                        >(DesignToken.primary),
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                            errorBuilder:
+                                                (context, error, stackTrace) {
+                                                  debugPrint(
+                                                    'EditProfilePage: Error loading profile image: $error',
                                                   );
-                                                },
-                                                errorBuilder: (context, error, stackTrace) {
-                                                  debugPrint('EditProfilePage: Error loading profile image: $error');
                                                   return const Icon(
                                                     Icons.person,
                                                     size: 60,
-                                                    color: AppColors.secondary,
+                                                    color:
+                                                        DesignToken.secondary,
                                                   );
                                                 },
-                                              )
-                                            : const Icon(
-                                                Icons.person,
-                                                size: 60,
-                                                color: AppColors.secondary,
-                                              ),
+                                          )
+                                        : const Icon(
+                                            Icons.person,
+                                            size: 60,
+                                            color: DesignToken.secondary,
+                                          ),
                                   ),
                                 ),
                                 Positioned(
@@ -376,17 +417,17 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                     width: 36,
                                     height: 36,
                                     decoration: BoxDecoration(
-                                      color: AppColors.secondary,
+                                      color: DesignToken.secondary,
                                       shape: BoxShape.circle,
                                       border: Border.all(
-                                        color: Colors.white,
+                                        color: DesignToken.white,
                                         width: 2,
                                       ),
                                     ),
                                     child: const Icon(
                                       Icons.camera_alt,
                                       size: 18,
-                                      color: Colors.white,
+                                      color: DesignToken.white,
                                     ),
                                   ),
                                 ),
@@ -400,7 +441,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                             'Tap to change photo',
                             style: AppTextStyles.nunitoRegular.copyWith(
                               fontSize: 14,
-                              color: AppColors.textDark.withOpacity(0.6),
+                              color: DesignToken.textDark.withOpacity(0.6),
                             ),
                           ),
 
@@ -409,7 +450,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                           // First Name Field
                           Container(
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: DesignToken.white,
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
@@ -423,12 +464,12 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                               controller: _firstNameController,
                               style: AppTextStyles.nunitoRegular.copyWith(
                                 fontSize: 16,
-                                color: AppColors.textDark,
+                                color: DesignToken.textDark,
                               ),
                               decoration: InputDecoration(
                                 labelText: 'First Name *',
                                 labelStyle: AppTextStyles.nunitoMedium.copyWith(
-                                  color: AppColors.primary,
+                                  color: DesignToken.primary,
                                 ),
                                 hintText: 'Enter your first name',
                                 hintStyle: AppTextStyles.nunitoRegular.copyWith(
@@ -436,14 +477,14 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                 ),
                                 prefixIcon: Icon(
                                   Icons.person_outline,
-                                  color: AppColors.primary,
+                                  color: DesignToken.primary,
                                 ),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
                                   borderSide: BorderSide.none,
                                 ),
                                 filled: true,
-                                fillColor: Colors.white,
+                                fillColor: DesignToken.white,
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 20,
                                   vertical: 18,
@@ -466,7 +507,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                           // Last Name Field
                           Container(
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: DesignToken.white,
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
@@ -480,12 +521,12 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                               controller: _lastNameController,
                               style: AppTextStyles.nunitoRegular.copyWith(
                                 fontSize: 16,
-                                color: AppColors.textDark,
+                                color: DesignToken.textDark,
                               ),
                               decoration: InputDecoration(
                                 labelText: 'Last Name',
                                 labelStyle: AppTextStyles.nunitoMedium.copyWith(
-                                  color: AppColors.primary,
+                                  color: DesignToken.primary,
                                 ),
                                 hintText: 'Enter your last name',
                                 hintStyle: AppTextStyles.nunitoRegular.copyWith(
@@ -493,14 +534,14 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                 ),
                                 prefixIcon: Icon(
                                   Icons.person_outline,
-                                  color: AppColors.primary,
+                                  color: DesignToken.primary,
                                 ),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
                                   borderSide: BorderSide.none,
                                 ),
                                 filled: true,
-                                fillColor: Colors.white,
+                                fillColor: DesignToken.white,
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 20,
                                   vertical: 18,
@@ -524,7 +565,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
                                       valueColor: AlwaysStoppedAnimation<Color>(
-                                        AppColors.primary,
+                                        DesignToken.primary,
                                       ),
                                     ),
                                   ),
@@ -533,7 +574,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                     'Uploading image...',
                                     style: AppTextStyles.nunitoMedium.copyWith(
                                       fontSize: 14,
-                                      color: AppColors.primary,
+                                      color: DesignToken.primary,
                                     ),
                                   ),
                                 ],
@@ -547,17 +588,19 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppColors.secondary.withOpacity(0.3),
+                                  color: DesignToken.secondary.withOpacity(0.3),
                                   blurRadius: 15,
                                   offset: const Offset(0, 6),
                                 ),
                               ],
                             ),
                             child: ElevatedButton(
-                              onPressed: (_isSaving || _isUploadingImage) ? null : _saveProfile,
+                              onPressed: (_isSaving || _isUploadingImage)
+                                  ? null
+                                  : _saveProfile,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.secondary,
-                                foregroundColor: Colors.white,
+                                backgroundColor: DesignToken.secondary,
+                                foregroundColor: DesignToken.white,
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 18,
                                 ),
@@ -572,16 +615,19 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                       width: 20,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(
-                                          Colors.white,
-                                        ),
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Colors.white,
+                                            ),
                                       ),
                                     )
                                   : Text(
-                                      widget.isFirstTime ? 'Complete Profile' : 'Save Changes',
+                                      widget.isFirstTime
+                                          ? 'Complete Profile'
+                                          : 'Save Changes',
                                       style: AppTextStyles.nunitoBold.copyWith(
                                         fontSize: 18,
-                                        color: Colors.white,
+                                        color: DesignToken.white,
                                       ),
                                     ),
                             ),
@@ -594,12 +640,14 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                               textAlign: TextAlign.center,
                               style: AppTextStyles.nunitoRegular.copyWith(
                                 fontSize: 14,
-                                color: AppColors.textDark.withOpacity(0.6),
+                                color: DesignToken.textDark.withOpacity(0.6),
                               ),
                             ),
                           ],
 
-                          const SizedBox(height: 80), // Extra padding for bottom nav
+                          const SizedBox(
+                            height: 80,
+                          ), // Extra padding for bottom nav
                         ],
                       ),
                     ),
@@ -626,24 +674,59 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    return PopScope(
+      canPop: !widget.isFirstTime && !_hasUnsavedChanges(),
+      onPopInvoked: (didPop) async {
+        if (!didPop) {
+          // Check for dialogs first
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+            return;
+          }
+
+          if (widget.isFirstTime) {
+            // Prevent back on first-time setup
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Please complete your profile'),
+                backgroundColor: DesignToken.orange,
+              ),
+            );
+          } else if (_hasUnsavedChanges()) {
+            final shouldDiscard = await BackButtonHandler.showDiscardDialog(
+              context,
+            );
+            if (shouldDiscard == true && mounted) {
+              context.pop();
+            }
+          } else {
+            context.pop();
+          }
+        }
+      },
+      child: _buildScaffold(context),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
     // Don't show bottom nav when it's first time profile completion
     if (widget.isFirstTime) {
       return Scaffold(
-        backgroundColor: AppColors.primary,
+        backgroundColor: DesignToken.primary,
         body: _buildContent(),
       );
     }
 
     // Show bottom navigation for edit profile
     return Scaffold(
-      backgroundColor: AppColors.primary,
+      backgroundColor: DesignToken.primary,
       body: _buildContent(),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 2, // Profile tab selected
         onTap: _onBottomNavTapped,
-        selectedItemColor: AppColors.secondary,
+        selectedItemColor: DesignToken.secondary,
         unselectedItemColor: Colors.white,
-        backgroundColor: AppColors.primary,
+        backgroundColor: DesignToken.primary,
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),

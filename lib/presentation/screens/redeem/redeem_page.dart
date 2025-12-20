@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:balaji_points/config/theme.dart';
+import 'package:balaji_points/core/theme/design_token.dart';
+import 'package:balaji_points/config/theme.dart' hide AppColors;
 
 class RedeemPage extends StatelessWidget {
   const RedeemPage({super.key});
@@ -18,7 +19,7 @@ class RedeemPage extends StatelessWidget {
                 "My Work",
                 style: AppTextStyles.nunitoBold.copyWith(
                   fontSize: 22,
-                  color: Colors.black87,
+                  color: DesignToken.black87,
                 ),
               ),
               const SizedBox(height: 16),
@@ -54,7 +55,7 @@ class RedeemPage extends StatelessWidget {
                             "Submit photos or job details to earn points",
                             style: AppTextStyles.nunitoRegular.copyWith(
                               fontSize: 13,
-                              color: Colors.black54,
+                              color: DesignToken.black54,
                             ),
                           ),
                         ],

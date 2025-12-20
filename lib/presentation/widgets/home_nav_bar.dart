@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:balaji_points/config/theme.dart';
+import 'package:balaji_points/core/theme/design_token.dart';
+import 'package:balaji_points/config/theme.dart' hide AppColors;
 
 class HomeNavBar extends StatelessWidget {
   final String? userImageUrl;
@@ -32,7 +33,7 @@ class HomeNavBar extends StatelessWidget {
     }
 
     return Container(
-      color: AppColors.primary,
+      color: DesignToken.primary,
       child: SafeArea(
         bottom: false,
         child: Container(
@@ -41,8 +42,8 @@ class HomeNavBar extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                AppColors.primary,
-                AppColors.primary.withValues(alpha: 0.95),
+                DesignToken.primary,
+                DesignToken.primary.withValues(alpha: 0.95),
               ],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
@@ -85,7 +86,7 @@ class HomeNavBar extends StatelessWidget {
                               width: 28,
                               height: 28,
                               decoration: BoxDecoration(
-                                color: AppColors.secondary,
+                                color: DesignToken.secondary,
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: const Icon(
@@ -194,7 +195,7 @@ class HomeNavBar extends StatelessWidget {
                   loadingBuilder: (context, child, loadingProgress) {
                     if (loadingProgress == null) return child;
                     return Container(
-                      color: AppColors.secondary.withValues(alpha: 0.3),
+                      color: DesignToken.secondary.withValues(alpha: 0.3),
                       child: Center(
                         child: SizedBox(
                           width: 16,
@@ -219,8 +220,8 @@ class HomeNavBar extends StatelessWidget {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            AppColors.secondary,
-                            AppColors.secondary.withValues(alpha: 0.8),
+                            DesignToken.secondary,
+                            DesignToken.secondary.withValues(alpha: 0.8),
                           ],
                         ),
                       ),
@@ -236,8 +237,8 @@ class HomeNavBar extends StatelessWidget {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        AppColors.secondary,
-                        AppColors.secondary.withValues(alpha: 0.8),
+                        DesignToken.secondary,
+                        DesignToken.secondary.withValues(alpha: 0.8),
                       ],
                     ),
                   ),

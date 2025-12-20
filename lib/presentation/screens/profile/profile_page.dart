@@ -4,7 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:balaji_points/l10n/app_localizations.dart';
-import 'package:balaji_points/config/theme.dart';
+import 'package:balaji_points/core/theme/design_token.dart';
+import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/services/user_service.dart';
 import 'package:balaji_points/services/session_service.dart';
 import 'package:balaji_points/presentation/providers/theme_provider.dart';
@@ -150,8 +151,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              backgroundColor: DesignToken.error,
+              foregroundColor: DesignToken.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -208,7 +209,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: AppColors.primary,
+      backgroundColor: DesignToken.primary,
       body: Column(
         children: [
           // Modern Navigation Bar - Consistent height
@@ -221,17 +222,17 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
           // Content with wooden background
           Expanded(
             child: Container(
-              color: AppColors.woodenBackground,
+              color: DesignToken.woodenBackground,
               child: _isLoading
                   ? const Center(
                       child: CircularProgressIndicator(
-                        color: AppColors.primary,
+                        color: DesignToken.primary,
                       ),
                     )
                   : RefreshIndicator(
                       onRefresh: _handleRefresh,
-                      color: AppColors.primary,
-                      backgroundColor: Colors.white,
+                      color: DesignToken.primary,
+                      backgroundColor: DesignToken.white,
                       child: SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
                         child: Column(
@@ -245,11 +246,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                               ),
                               padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: DesignToken.white,
                                 borderRadius: BorderRadius.circular(16),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
+                                    color: DesignToken.black.withOpacity(0.1),
                                     blurRadius: 10,
                                     offset: const Offset(0, 4),
                                   ),
@@ -264,7 +265,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
                                       border: Border.all(
-                                        color: AppColors.primary,
+                                        color: DesignToken.primary,
                                         width: 3,
                                       ),
                                     ),
@@ -282,7 +283,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                                                 if (loadingProgress == null)
                                                   return child;
                                                 return Container(
-                                                  color: AppColors.secondary
+                                                  color: DesignToken.secondary
                                                       .withValues(alpha: 0.3),
                                                   child: Center(
                                                     child: CircularProgressIndicator(
@@ -299,7 +300,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                                                       valueColor:
                                                           AlwaysStoppedAnimation<
                                                             Color
-                                                          >(AppColors.primary),
+                                                          >(
+                                                            DesignToken.primary,
+                                                          ),
                                                     ),
                                                   ),
                                                 );
@@ -311,20 +314,21 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                                                     );
                                                     return Container(
                                                       color:
-                                                          AppColors.secondary,
+                                                          DesignToken.secondary,
                                                       child: const Icon(
                                                         Icons.person,
-                                                        color: Colors.white,
+                                                        color:
+                                                            DesignToken.white,
                                                         size: 40,
                                                       ),
                                                     );
                                                   },
                                             )
                                           : Container(
-                                              color: AppColors.secondary,
+                                              color: DesignToken.secondary,
                                               child: const Icon(
                                                 Icons.person,
-                                                color: Colors.white,
+                                                color: DesignToken.white,
                                                 size: 40,
                                               ),
                                             ),
@@ -337,7 +341,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                                     _getUserDisplayName(),
                                     style: AppTextStyles.nunitoBold.copyWith(
                                       fontSize: 20,
-                                      color: AppColors.textDark,
+                                      color: DesignToken.textDark,
                                     ),
                                     textAlign: TextAlign.center,
                                   ),
@@ -347,11 +351,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                                   if (_userData?['userDisplayId'] != null)
                                     Text(
                                       '#BP${_userData!['userDisplayId']}',
-                                      style: AppTextStyles.nunitoMedium.copyWith(
-                                        fontSize: 14,
-                                        color: AppColors.primary.withValues(alpha: 0.7),
-                                        letterSpacing: 0.5,
-                                      ),
+                                      style: AppTextStyles.nunitoMedium
+                                          .copyWith(
+                                            fontSize: 14,
+                                            color: DesignToken.primary
+                                                .withValues(alpha: 0.7),
+                                            letterSpacing: 0.5,
+                                          ),
                                       textAlign: TextAlign.center,
                                     ),
                                   const SizedBox(height: 8),
@@ -362,7 +368,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                                     children: [
                                       Icon(
                                         Icons.monetization_on,
-                                        color: Colors.amber.shade700,
+                                        color: DesignToken.amberShade700,
                                         size: 18,
                                       ),
                                       const SizedBox(width: 4),
@@ -371,7 +377,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                                         style: AppTextStyles.nunitoSemiBold
                                             .copyWith(
                                               fontSize: 16,
-                                              color: AppColors.primary,
+                                              color: DesignToken.primary,
                                             ),
                                       ),
                                       const SizedBox(width: 12),
@@ -381,7 +387,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                                           vertical: 4,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: AppColors.secondary
+                                          color: DesignToken.secondary
                                               .withOpacity(0.2),
                                           borderRadius: BorderRadius.circular(
                                             12,
@@ -392,7 +398,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                                           style: AppTextStyles.nunitoSemiBold
                                               .copyWith(
                                                 fontSize: 14,
-                                                color: AppColors.secondary,
+                                                color: DesignToken.secondary,
                                               ),
                                         ),
                                       ),
@@ -434,9 +440,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                                     title: l10n.changePin,
                                     onTap: () async {
                                       // Get current phone number from session
-                                      final phoneNumber = await _sessionService.getPhoneNumber();
-                                      if (phoneNumber != null && context.mounted) {
-                                        context.push('/pin-reset?phone=$phoneNumber');
+                                      final phoneNumber = await _sessionService
+                                          .getPhoneNumber();
+                                      if (phoneNumber != null &&
+                                          context.mounted) {
+                                        context.push(
+                                          '/pin-reset?phone=$phoneNumber',
+                                        );
                                       }
                                     },
                                   ),
@@ -467,7 +477,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                                       borderRadius: BorderRadius.circular(16),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.red.withOpacity(0.2),
+                                          color: DesignToken.error.withOpacity(
+                                            0.2,
+                                          ),
                                           blurRadius: 10,
                                           offset: const Offset(0, 4),
                                         ),
@@ -477,8 +489,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                                       onPressed: () =>
                                           _handleLogout(context, ref),
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.red.shade600,
-                                        foregroundColor: Colors.white,
+                                        backgroundColor:
+                                            DesignToken.redShade600,
+                                        foregroundColor: DesignToken.white,
                                         padding: const EdgeInsets.symmetric(
                                           vertical: 18,
                                         ),
@@ -500,7 +513,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                                             style: AppTextStyles.nunitoBold
                                                 .copyWith(
                                                   fontSize: 18,
-                                                  color: Colors.white,
+                                                  color: DesignToken.white,
                                                 ),
                                           ),
                                         ],
@@ -518,7 +531,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                                         style: AppTextStyles.nunitoRegular
                                             .copyWith(
                                               fontSize: 13,
-                                              color: AppColors.textDark
+                                              color: DesignToken.textDark
                                                   .withOpacity(0.5),
                                             ),
                                       ),
@@ -540,9 +553,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
           ? BottomNavigationBar(
               currentIndex: 2, // Profile tab selected
               onTap: _onBottomNavTapped,
-              selectedItemColor: AppColors.secondary,
-              unselectedItemColor: Colors.white,
-              backgroundColor: AppColors.primary,
+              selectedItemColor: DesignToken.secondary,
+              unselectedItemColor: DesignToken.white,
+              backgroundColor: DesignToken.primary,
               type: BottomNavigationBarType.fixed,
               items: [
                 BottomNavigationBarItem(
@@ -613,7 +626,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [AppColors.primary, AppColors.secondary],
+                      colors: [DesignToken.primary, DesignToken.secondary],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -645,7 +658,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                               l10n.helpSupport,
                               style: AppTextStyles.nunitoBold.copyWith(
                                 fontSize: 22,
-                                color: Colors.white,
+                                color: DesignToken.white,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -744,7 +757,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                 title,
                 style: AppTextStyles.nunitoBold.copyWith(
                   fontSize: 18,
-                  color: AppColors.textDark,
+                  color: DesignToken.textDark,
                 ),
               ),
             ],
@@ -804,7 +817,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                   value,
                   style: AppTextStyles.nunitoSemiBold.copyWith(
                     fontSize: 16,
-                    color: AppColors.textDark,
+                    color: DesignToken.textDark,
                   ),
                 ),
               ],
@@ -875,13 +888,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
             child: Row(
               children: [
-                Icon(icon, color: AppColors.primary, size: 24),
+                Icon(icon, color: DesignToken.primary, size: 24),
                 const SizedBox(width: 16),
                 Text(
                   title,
                   style: AppTextStyles.nunitoSemiBold.copyWith(
                     fontSize: 16,
-                    color: AppColors.textDark,
+                    color: DesignToken.textDark,
                   ),
                 ),
                 const Spacer(),
@@ -914,13 +927,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
         child: Row(
           children: [
-            const Icon(Icons.language, color: AppColors.primary, size: 24),
+            const Icon(Icons.language, color: DesignToken.primary, size: 24),
             const SizedBox(width: 16),
             Text(
               isHindi ? 'भाषा' : 'Language',
               style: AppTextStyles.nunitoSemiBold.copyWith(
                 fontSize: 16,
-                color: AppColors.textDark,
+                color: DesignToken.textDark,
               ),
             ),
             const Spacer(),
@@ -928,7 +941,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: DesignToken.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: DropdownButtonHideUnderline(
@@ -937,12 +950,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                   isDense: true,
                   icon: Icon(
                     Icons.arrow_drop_down,
-                    color: AppColors.primary,
+                    color: DesignToken.primary,
                     size: 20,
                   ),
                   style: AppTextStyles.nunitoSemiBold.copyWith(
                     fontSize: 14,
-                    color: AppColors.primary,
+                    color: DesignToken.primary,
                   ),
                   dropdownColor: Colors.white,
                   borderRadius: BorderRadius.circular(12),
@@ -991,7 +1004,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
           children: [
             Icon(
               isDark ? Icons.dark_mode : Icons.light_mode,
-              color: AppColors.primary,
+              color: DesignToken.primary,
               size: 24,
             ),
             const SizedBox(width: 16),
@@ -999,7 +1012,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
               l10n.darkMode,
               style: AppTextStyles.nunitoSemiBold.copyWith(
                 fontSize: 16,
-                color: AppColors.textDark,
+                color: DesignToken.textDark,
               ),
             ),
             const Spacer(),
@@ -1008,7 +1021,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
               onChanged: (value) {
                 ref.read(themeModeProvider.notifier).toggleTheme();
               },
-              activeTrackColor: AppColors.primary,
+              activeTrackColor: DesignToken.primary,
             ),
           ],
         ),

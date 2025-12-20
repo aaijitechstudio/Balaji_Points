@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:balaji_points/config/theme.dart';
+import 'package:balaji_points/core/theme/design_token.dart';
+import 'package:balaji_points/config/theme.dart' hide AppColors;
 import '../../../services/bill_service.dart';
 import '../../../core/logger.dart';
 
@@ -18,7 +19,7 @@ class _BillManagementWidgetState extends State<BillManagementWidget> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.woodenBackground,
+      backgroundColor: DesignToken.woodenBackground,
       body: Column(
         children: [
           // Filter Buttons
@@ -73,14 +74,14 @@ class _BillManagementWidgetState extends State<BillManagementWidget> {
                         Icon(
                           Icons.receipt_long_outlined,
                           size: 64,
-                          color: AppColors.textDark.withOpacity(0.5),
+                          color: DesignToken.textDark.withOpacity(0.5),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           'No Bills Found',
                           style: AppTextStyles.nunitoSemiBold.copyWith(
                             fontSize: 18,
-                            color: AppColors.textDark.withOpacity(0.7),
+                            color: DesignToken.textDark.withOpacity(0.7),
                           ),
                         ),
                       ],
@@ -138,12 +139,12 @@ class _BillManagementWidgetState extends State<BillManagementWidget> {
                           width: 50,
                           height: 50,
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.1),
+                            color: DesignToken.primary.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Icon(
                             Icons.receipt,
-                            color: AppColors.primary,
+                            color: DesignToken.primary,
                             size: 24,
                           ),
                         ),
@@ -154,7 +155,7 @@ class _BillManagementWidgetState extends State<BillManagementWidget> {
                               userName,
                               style: AppTextStyles.nunitoBold.copyWith(
                                 fontSize: 16,
-                                color: AppColors.textDark,
+                                color: DesignToken.textDark,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -164,7 +165,7 @@ class _BillManagementWidgetState extends State<BillManagementWidget> {
                                   '$pointsFromAmount pts',
                                   style: AppTextStyles.nunitoSemiBold.copyWith(
                                     fontSize: 18,
-                                    color: AppColors.primary,
+                                    color: DesignToken.primary,
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -172,7 +173,9 @@ class _BillManagementWidgetState extends State<BillManagementWidget> {
                                   rupeeText,
                                   style: AppTextStyles.nunitoRegular.copyWith(
                                     fontSize: 14,
-                                    color: AppColors.textDark.withOpacity(0.6),
+                                    color: DesignToken.textDark.withOpacity(
+                                      0.6,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -185,7 +188,7 @@ class _BillManagementWidgetState extends State<BillManagementWidget> {
                             'Points: $points',
                             style: AppTextStyles.nunitoRegular.copyWith(
                               fontSize: 13,
-                              color: AppColors.textDark.withOpacity(0.6),
+                              color: DesignToken.textDark.withOpacity(0.6),
                             ),
                           ),
                         ),
@@ -312,7 +315,7 @@ class _BillManagementWidgetState extends State<BillManagementWidget> {
                                       points,
                                     ),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.secondary,
+                                      backgroundColor: DesignToken.secondary,
                                       padding: const EdgeInsets.symmetric(
                                         vertical: 12,
                                       ),
@@ -357,13 +360,13 @@ class _BillManagementWidgetState extends State<BillManagementWidget> {
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary
-              : AppColors.primary.withOpacity(0.1),
+              ? DesignToken.primary
+              : DesignToken.primary.withOpacity(0.1),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected
-                ? AppColors.primary
-                : AppColors.primary.withOpacity(0.3),
+                ? DesignToken.primary
+                : DesignToken.primary.withOpacity(0.3),
             width: 1,
           ),
         ),
@@ -372,7 +375,7 @@ class _BillManagementWidgetState extends State<BillManagementWidget> {
             label,
             style: AppTextStyles.nunitoSemiBold.copyWith(
               fontSize: 13,
-              color: isSelected ? Colors.white : AppColors.primary,
+              color: isSelected ? Colors.white : DesignToken.primary,
             ),
           ),
         ),
@@ -383,13 +386,13 @@ class _BillManagementWidgetState extends State<BillManagementWidget> {
   Widget _buildDetailRow(IconData icon, String label, String value) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: AppColors.textDark.withOpacity(0.6)),
+        Icon(icon, size: 16, color: DesignToken.textDark.withOpacity(0.6)),
         const SizedBox(width: 8),
         Text(
           '$label: ',
           style: AppTextStyles.nunitoMedium.copyWith(
             fontSize: 13,
-            color: AppColors.textDark.withOpacity(0.7),
+            color: DesignToken.textDark.withOpacity(0.7),
           ),
         ),
         Expanded(
@@ -397,7 +400,7 @@ class _BillManagementWidgetState extends State<BillManagementWidget> {
             value,
             style: AppTextStyles.nunitoSemiBold.copyWith(
               fontSize: 13,
-              color: AppColors.textDark,
+              color: DesignToken.textDark,
             ),
           ),
         ),
@@ -435,14 +438,14 @@ class _BillManagementWidgetState extends State<BillManagementWidget> {
           'Approve Bill',
           style: AppTextStyles.nunitoBold.copyWith(
             fontSize: 20,
-            color: AppColors.primary,
+            color: DesignToken.primary,
           ),
         ),
         content: Text(
           'Approve this bill of ₹${amount.toStringAsFixed(0)}?\n\n$points points will be added to the user.',
           style: AppTextStyles.nunitoRegular.copyWith(
             fontSize: 16,
-            color: AppColors.textDark,
+            color: DesignToken.textDark,
           ),
         ),
         actions: [
@@ -451,14 +454,14 @@ class _BillManagementWidgetState extends State<BillManagementWidget> {
             child: Text(
               'Cancel',
               style: AppTextStyles.nunitoSemiBold.copyWith(
-                color: AppColors.textDark,
+                color: DesignToken.textDark,
               ),
             ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.secondary,
+              backgroundColor: DesignToken.secondary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -513,7 +516,7 @@ class _BillManagementWidgetState extends State<BillManagementWidget> {
           'Are you sure you want to reject this bill?',
           style: AppTextStyles.nunitoRegular.copyWith(
             fontSize: 16,
-            color: AppColors.textDark,
+            color: DesignToken.textDark,
           ),
         ),
         actions: [
@@ -522,7 +525,7 @@ class _BillManagementWidgetState extends State<BillManagementWidget> {
             child: Text(
               'Cancel',
               style: AppTextStyles.nunitoSemiBold.copyWith(
-                color: AppColors.textDark,
+                color: DesignToken.textDark,
               ),
             ),
           ),

@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:balaji_points/presentation/providers/daily_spin_provider.dart';
-import 'package:balaji_points/config/theme.dart';
+import 'package:balaji_points/core/theme/design_token.dart';
+import 'package:balaji_points/config/theme.dart' hide AppColors;
 
 class DailySpinWheel extends ConsumerStatefulWidget {
   final VoidCallback? onSpinComplete;
@@ -144,7 +145,7 @@ class _DailySpinWheelState extends ConsumerState<DailySpinWheel>
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            color: AppColors.secondary,
+            color: DesignToken.secondary,
           ),
           textAlign: TextAlign.center,
         ),
@@ -161,7 +162,7 @@ class _DailySpinWheelState extends ConsumerState<DailySpinWheel>
               style: const TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
-                color: AppColors.secondary,
+                color: DesignToken.secondary,
               ),
             ),
             const SizedBox(height: 20),
@@ -186,7 +187,7 @@ class _DailySpinWheelState extends ConsumerState<DailySpinWheel>
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.secondary,
+                backgroundColor: DesignToken.secondary,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 40,
                   vertical: 12,
@@ -238,7 +239,7 @@ class _DailySpinWheelState extends ConsumerState<DailySpinWheel>
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
+                  color: DesignToken.primary,
                 ).merge(AppTextStyles.nunitoBold),
               ),
             ],

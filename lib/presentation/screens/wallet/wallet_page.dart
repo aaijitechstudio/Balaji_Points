@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:balaji_points/l10n/app_localizations.dart';
-import 'package:balaji_points/config/theme.dart';
+import 'package:balaji_points/core/theme/design_token.dart';
+import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/services/session_service.dart';
 import '../../widgets/home_nav_bar.dart';
 
@@ -49,7 +50,7 @@ class _WalletPageState extends State<WalletPage> {
     final userId = _userId ?? 'loading';
 
     return Scaffold(
-      backgroundColor: AppColors.primary,
+      backgroundColor: DesignToken.primary,
       body: Column(
         children: [
           // Standard Navigation Bar - Material Design kToolbarHeight (56dp)
@@ -61,12 +62,12 @@ class _WalletPageState extends State<WalletPage> {
           // Content with wooden background
           Expanded(
             child: Container(
-              color: AppColors.woodenBackground,
+              color: DesignToken.woodenBackground,
               child: RefreshIndicator(
                 key: ValueKey(_refreshKey),
                 onRefresh: _handleRefresh,
-                color: AppColors.primary,
-                backgroundColor: Colors.white,
+                color: DesignToken.primary,
+                backgroundColor: DesignToken.white,
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(20),
@@ -88,7 +89,7 @@ class _WalletPageState extends State<WalletPage> {
                               icon: Icons.pending_actions,
                               label: l10n.pending,
                               value: _buildPendingCount(userId),
-                              color: Colors.orange,
+                              color: DesignToken.orange,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -97,7 +98,7 @@ class _WalletPageState extends State<WalletPage> {
                               icon: Icons.check_circle,
                               label: l10n.approved,
                               value: _buildApprovedCount(userId),
-                              color: Colors.green,
+                              color: DesignToken.success,
                             ),
                           ),
                         ],
@@ -110,9 +111,9 @@ class _WalletPageState extends State<WalletPage> {
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              Colors.blue.shade600,
+                              DesignToken.blue600,
                               Colors.purple.shade500,
-                              AppColors.secondary,
+                              DesignToken.secondary,
                             ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
@@ -120,14 +121,14 @@ class _WalletPageState extends State<WalletPage> {
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.secondary.withOpacity(0.3),
+                              color: DesignToken.secondary.withOpacity(0.3),
                               blurRadius: 15,
                               offset: const Offset(0, 6),
                             ),
                           ],
                         ),
                         child: Material(
-                          color: Colors.transparent,
+                          color: DesignToken.transparent,
                           child: InkWell(
                             onTap: () => context.push('/add-bill'),
                             borderRadius: BorderRadius.circular(20),
@@ -142,12 +143,12 @@ class _WalletPageState extends State<WalletPage> {
                                   Container(
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.2),
+                                      color: DesignToken.white.withOpacity(0.2),
                                       shape: BoxShape.circle,
                                     ),
                                     child: const Icon(
                                       Icons.add_circle_outline,
-                                      color: Colors.white,
+                                      color: DesignToken.white,
                                       size: 28,
                                     ),
                                   ),
@@ -156,7 +157,7 @@ class _WalletPageState extends State<WalletPage> {
                                     l10n.addNewBill,
                                     style: AppTextStyles.nunitoBold.copyWith(
                                       fontSize: 18,
-                                      color: Colors.white,
+                                      color: DesignToken.white,
                                       letterSpacing: 0.5,
                                     ),
                                   ),
@@ -175,12 +176,12 @@ class _WalletPageState extends State<WalletPage> {
                           Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
+                              color: DesignToken.primary.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
                               Icons.receipt_long,
-                              color: AppColors.primary,
+                              color: DesignToken.primary,
                               size: 18,
                             ),
                           ),
@@ -189,7 +190,7 @@ class _WalletPageState extends State<WalletPage> {
                             l10n.recentBills,
                             style: AppTextStyles.nunitoBold.copyWith(
                               fontSize: 20,
-                              color: AppColors.textDark,
+                              color: DesignToken.textDark,
                             ),
                           ),
                         ],
@@ -221,9 +222,9 @@ class _WalletPageState extends State<WalletPage> {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              AppColors.primary,
-              AppColors.primary.withOpacity(0.85),
-              AppColors.primary.withOpacity(0.7),
+              DesignToken.primary,
+              DesignToken.primary.withOpacity(0.85),
+              DesignToken.primary.withOpacity(0.7),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -231,7 +232,7 @@ class _WalletPageState extends State<WalletPage> {
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withOpacity(0.4),
+              color: DesignToken.primary.withOpacity(0.4),
               blurRadius: 25,
               spreadRadius: 2,
               offset: const Offset(0, 12),
@@ -322,9 +323,9 @@ class _WalletPageState extends State<WalletPage> {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                AppColors.primary,
-                AppColors.primary.withOpacity(0.85),
-                AppColors.primary.withOpacity(0.7),
+                DesignToken.primary,
+                DesignToken.primary.withOpacity(0.85),
+                DesignToken.primary.withOpacity(0.7),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -332,7 +333,7 @@ class _WalletPageState extends State<WalletPage> {
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withOpacity(0.4),
+                color: DesignToken.primary.withOpacity(0.4),
                 blurRadius: 25,
                 spreadRadius: 2,
                 offset: const Offset(0, 12),
@@ -433,7 +434,7 @@ class _WalletPageState extends State<WalletPage> {
             label,
             style: AppTextStyles.nunitoMedium.copyWith(
               fontSize: 14,
-              color: AppColors.textDark.withOpacity(0.7),
+              color: DesignToken.textDark.withOpacity(0.7),
             ),
           ),
         ],
@@ -448,7 +449,7 @@ class _WalletPageState extends State<WalletPage> {
         '...',
         style: AppTextStyles.nunitoBold.copyWith(
           fontSize: 24,
-          color: AppColors.textDark,
+          color: DesignToken.textDark,
         ),
       );
     }
@@ -465,7 +466,7 @@ class _WalletPageState extends State<WalletPage> {
           '$count',
           style: AppTextStyles.nunitoBold.copyWith(
             fontSize: 24,
-            color: AppColors.textDark,
+            color: DesignToken.textDark,
           ),
         );
       },
@@ -479,7 +480,7 @@ class _WalletPageState extends State<WalletPage> {
         '...',
         style: AppTextStyles.nunitoBold.copyWith(
           fontSize: 24,
-          color: AppColors.textDark,
+          color: DesignToken.textDark,
         ),
       );
     }
@@ -496,7 +497,7 @@ class _WalletPageState extends State<WalletPage> {
           '$count',
           style: AppTextStyles.nunitoBold.copyWith(
             fontSize: 24,
-            color: AppColors.textDark,
+            color: DesignToken.textDark,
           ),
         );
       },
@@ -589,7 +590,7 @@ class _WalletPageState extends State<WalletPage> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: AppColors.primary.withOpacity(0.1),
+                color: DesignToken.primary.withOpacity(0.1),
                 width: 1,
               ),
               boxShadow: [
@@ -625,7 +626,7 @@ class _WalletPageState extends State<WalletPage> {
                         storeName,
                         style: AppTextStyles.nunitoBold.copyWith(
                           fontSize: 16,
-                          color: AppColors.textDark,
+                          color: DesignToken.textDark,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -635,7 +636,7 @@ class _WalletPageState extends State<WalletPage> {
                             '₹${amount.toStringAsFixed(0)}',
                             style: AppTextStyles.nunitoSemiBold.copyWith(
                               fontSize: 14,
-                              color: AppColors.primary,
+                              color: DesignToken.primary,
                             ),
                           ),
                           if (pointsEarned > 0) ...[
@@ -644,7 +645,7 @@ class _WalletPageState extends State<WalletPage> {
                               '• $pointsEarned pts',
                               style: AppTextStyles.nunitoRegular.copyWith(
                                 fontSize: 13,
-                                color: AppColors.textDark.withOpacity(0.6),
+                                color: DesignToken.textDark.withOpacity(0.6),
                               ),
                             ),
                           ],
@@ -655,7 +656,7 @@ class _WalletPageState extends State<WalletPage> {
                         _formatDate(date),
                         style: AppTextStyles.nunitoRegular.copyWith(
                           fontSize: 12,
-                          color: AppColors.textDark.withOpacity(0.5),
+                          color: DesignToken.textDark.withOpacity(0.5),
                         ),
                       ),
                     ],
@@ -730,7 +731,7 @@ class _WalletPageState extends State<WalletPage> {
                   '${snapshot.error}',
                   style: AppTextStyles.nunitoRegular.copyWith(
                     fontSize: 12,
-                    color: AppColors.textDark.withOpacity(0.5),
+                    color: DesignToken.textDark.withOpacity(0.5),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -761,14 +762,14 @@ class _WalletPageState extends State<WalletPage> {
                 Icon(
                   Icons.receipt_long_outlined,
                   size: 64,
-                  color: AppColors.textDark.withOpacity(0.3),
+                  color: DesignToken.textDark.withOpacity(0.3),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   AppLocalizations.of(context)!.noBillsYet,
                   style: AppTextStyles.nunitoSemiBold.copyWith(
                     fontSize: 16,
-                    color: AppColors.textDark.withOpacity(0.6),
+                    color: DesignToken.textDark.withOpacity(0.6),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -776,7 +777,7 @@ class _WalletPageState extends State<WalletPage> {
                   AppLocalizations.of(context)!.submitFirstBill,
                   style: AppTextStyles.nunitoRegular.copyWith(
                     fontSize: 14,
-                    color: AppColors.textDark.withOpacity(0.5),
+                    color: DesignToken.textDark.withOpacity(0.5),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -811,7 +812,7 @@ class _WalletPageState extends State<WalletPage> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: DesignToken.primary.withOpacity(0.1),
                   width: 1,
                 ),
                 boxShadow: [
@@ -849,7 +850,7 @@ class _WalletPageState extends State<WalletPage> {
                               : AppLocalizations.of(context)!.billLabel,
                           style: AppTextStyles.nunitoBold.copyWith(
                             fontSize: 16,
-                            color: AppColors.textDark,
+                            color: DesignToken.textDark,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -859,7 +860,7 @@ class _WalletPageState extends State<WalletPage> {
                               '₹${amount.toStringAsFixed(0)}',
                               style: AppTextStyles.nunitoSemiBold.copyWith(
                                 fontSize: 14,
-                                color: AppColors.primary,
+                                color: DesignToken.primary,
                               ),
                             ),
                             if (pointsEarned > 0) ...[
@@ -868,7 +869,7 @@ class _WalletPageState extends State<WalletPage> {
                                 '• $pointsEarned pts',
                                 style: AppTextStyles.nunitoRegular.copyWith(
                                   fontSize: 13,
-                                  color: AppColors.textDark.withOpacity(0.6),
+                                  color: DesignToken.textDark.withOpacity(0.6),
                                 ),
                               ),
                             ],
@@ -880,7 +881,7 @@ class _WalletPageState extends State<WalletPage> {
                             _formatDate(createdAt.toDate()),
                             style: AppTextStyles.nunitoRegular.copyWith(
                               fontSize: 12,
-                              color: AppColors.textDark.withOpacity(0.5),
+                              color: DesignToken.textDark.withOpacity(0.5),
                             ),
                           ),
                         ],

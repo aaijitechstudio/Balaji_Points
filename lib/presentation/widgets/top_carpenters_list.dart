@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:balaji_points/config/theme.dart';
+import 'package:balaji_points/core/theme/design_token.dart';
+import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'top_carpenters_display.dart';
 
 class TopCarpentersList extends StatelessWidget {
@@ -20,7 +21,9 @@ class TopCarpentersList extends StatelessWidget {
       return parts[0].isNotEmpty ? parts[0][0].toUpperCase() : '?';
     }
     final firstInitial = parts[0].isNotEmpty ? parts[0][0] : '';
-    final lastInitial = parts[parts.length - 1].isNotEmpty ? parts[parts.length - 1][0] : '';
+    final lastInitial = parts[parts.length - 1].isNotEmpty
+        ? parts[parts.length - 1][0]
+        : '';
     return (firstInitial + lastInitial).toUpperCase();
   }
 
@@ -49,7 +52,7 @@ class TopCarpentersList extends StatelessWidget {
               Text(
                 '🏆 Top Carpenters',
                 style: TextStyle(
-                  color: AppColors.secondary,
+                  color: DesignToken.secondary,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -81,8 +84,8 @@ class TopCarpentersList extends StatelessWidget {
       rankBgColor = Colors.brown.shade100;
       rankTextColor = Colors.brown.shade700;
     } else {
-      rankBgColor = AppColors.secondary.withValues(alpha: 0.1);
-      rankTextColor = AppColors.secondary;
+      rankBgColor = DesignToken.secondary.withValues(alpha: 0.1);
+      rankTextColor = DesignToken.secondary;
     }
 
     return Container(
@@ -92,7 +95,7 @@ class TopCarpentersList extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.secondary.withValues(alpha: 0.2),
+          color: DesignToken.secondary.withValues(alpha: 0.2),
           width: 1.5,
         ),
         boxShadow: [
@@ -132,15 +135,18 @@ class TopCarpentersList extends StatelessWidget {
             height: 50,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: carpenter.isCurrentUser && _isValidImageUrl(carpenter.imageUrl)
+              color:
+                  carpenter.isCurrentUser &&
+                      _isValidImageUrl(carpenter.imageUrl)
                   ? Colors.transparent
                   : rankBgColor,
               border: Border.all(
-                color: AppColors.secondary.withValues(alpha: 0.3),
+                color: DesignToken.secondary.withValues(alpha: 0.3),
                 width: 2,
               ),
             ),
-            child: carpenter.isCurrentUser && _isValidImageUrl(carpenter.imageUrl)
+            child:
+                carpenter.isCurrentUser && _isValidImageUrl(carpenter.imageUrl)
                 ? ClipOval(
                     child: Image.network(
                       carpenter.imageUrl!,
@@ -178,7 +184,7 @@ class TopCarpentersList extends StatelessWidget {
               carpenter.name,
               style: AppTextStyles.nunitoSemiBold.copyWith(
                 fontSize: 16,
-                color: AppColors.textDark,
+                color: DesignToken.textDark,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -192,10 +198,7 @@ class TopCarpentersList extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.amber.shade50,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.amber.shade200,
-                width: 1,
-              ),
+              border: Border.all(color: Colors.amber.shade200, width: 1),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,

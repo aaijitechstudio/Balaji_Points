@@ -18,7 +18,8 @@ import 'package:balaji_points/presentation/widgets/complete_profile_card.dart';
 // Daily spin removed - admin only feature now
 import 'package:balaji_points/services/user_service.dart';
 import 'package:balaji_points/services/session_service.dart';
-import 'package:balaji_points/config/theme.dart';
+import 'package:balaji_points/core/theme/design_token.dart';
+import 'package:balaji_points/config/theme.dart' hide AppColors;
 
 /// ---------------------------------------------------------------------------
 /// OFFER MODEL
@@ -165,8 +166,8 @@ class _OffersCarouselState extends State<OffersCarousel> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(4),
         color: _currentPage == index
-            ? AppColors.primary
-            : AppColors.primary.withOpacity(0.3),
+            ? DesignToken.primary
+            : DesignToken.primary.withOpacity(0.3),
       ),
     );
   }
@@ -220,7 +221,7 @@ class _BannerOfferCard extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.center,
-                  colors: [Colors.black54, Colors.transparent],
+                  colors: [DesignToken.black54, DesignToken.transparent],
                 ),
               ),
             ),
@@ -235,7 +236,7 @@ class _BannerOfferCard extends StatelessWidget {
                 Text(
                   offer.title,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: DesignToken.white,
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
                   ),
@@ -245,13 +246,13 @@ class _BannerOfferCard extends StatelessWidget {
                   offer.description,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                  style: TextStyle(color: DesignToken.white70, fontSize: 14),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   "${offer.points} Points",
                   style: const TextStyle(
-                    color: Colors.yellowAccent,
+                    color: DesignToken.yellowAccent,
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                   ),
@@ -275,11 +276,15 @@ class _BasicOfferCard extends StatelessWidget {
       width: 300,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.transparent, // no white background
+        color: DesignToken.transparent, // no white background
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.black12),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3)),
+        border: Border.all(color: DesignToken.black12),
+        boxShadow: [
+          BoxShadow(
+            color: DesignToken.black12,
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
         ],
       ),
       child: Column(
@@ -294,13 +299,13 @@ class _BasicOfferCard extends StatelessWidget {
             offer.description,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 14, color: Colors.black54),
+            style: TextStyle(fontSize: 14, color: DesignToken.black54),
           ),
           const Spacer(),
           Text(
             "${offer.points} Points",
             style: const TextStyle(
-              color: Colors.blueAccent,
+              color: DesignToken.blueAccent,
               fontSize: 16,
               fontWeight: FontWeight.w700,
             ),
@@ -323,41 +328,45 @@ class _FullWidthOfferCard extends StatelessWidget {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          AppColors.primary,
-          AppColors.primary.withOpacity(0.7),
-          AppColors.secondary.withOpacity(0.8),
+          DesignToken.primary,
+          DesignToken.primary.withOpacity(0.7),
+          DesignToken.secondary.withOpacity(0.8),
         ],
       ),
       LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          AppColors.secondary,
-          AppColors.secondary.withOpacity(0.7),
-          AppColors.primary.withOpacity(0.8),
-        ],
-      ),
-      LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Colors.blue.shade600, AppColors.primary, AppColors.secondary],
-      ),
-      LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          Colors.purple.shade500,
-          AppColors.secondary,
-          AppColors.primary.withOpacity(0.9),
+          DesignToken.secondary,
+          DesignToken.secondary.withOpacity(0.7),
+          DesignToken.primary.withOpacity(0.8),
         ],
       ),
       LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          AppColors.primary.withOpacity(0.9),
-          Colors.blue.shade500,
-          AppColors.secondary.withOpacity(0.9),
+          DesignToken.blue600,
+          DesignToken.primary,
+          DesignToken.secondary,
+        ],
+      ),
+      LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          DesignToken.purpleShade500,
+          DesignToken.secondary,
+          DesignToken.primary.withOpacity(0.9),
+        ],
+      ),
+      LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          DesignToken.primary.withOpacity(0.9),
+          DesignToken.blue500,
+          DesignToken.secondary.withOpacity(0.9),
         ],
       ),
     ];
@@ -374,7 +383,7 @@ class _FullWidthOfferCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: const [
           BoxShadow(
-            color: Colors.black26,
+            color: DesignToken.black26,
             blurRadius: 12,
             offset: Offset(0, 6),
           ),
@@ -392,7 +401,7 @@ class _FullWidthOfferCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    color: DesignToken.white,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -402,7 +411,7 @@ class _FullWidthOfferCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 15,
-                    color: Colors.white70,
+                    color: DesignToken.white70,
                     height: 1.4,
                   ),
                 ),
@@ -425,14 +434,14 @@ class _FullWidthOfferCard extends StatelessWidget {
                     children: [
                       const Icon(
                         Icons.monetization_on,
-                        color: Colors.white,
+                        color: DesignToken.white,
                         size: 20,
                       ),
                       const SizedBox(width: 6),
                       Text(
                         "${offer.points} Points",
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: DesignToken.white,
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                         ),
@@ -899,7 +908,7 @@ class _HomePageState extends State<HomePage>
         : <CarpenterRank>[];
 
     return Scaffold(
-      backgroundColor: AppColors.primary,
+      backgroundColor: DesignToken.primary,
       body: Stack(
         children: [
           Column(
@@ -908,10 +917,10 @@ class _HomePageState extends State<HomePage>
 
               Expanded(
                 child: Container(
-                  color: AppColors.woodenBackground,
+                  color: DesignToken.woodenBackground,
                   child: RefreshIndicator(
                     onRefresh: _loadInitialData,
-                    color: AppColors.primary,
+                    color: DesignToken.primary,
                     backgroundColor: Colors.white,
                     child: SingleChildScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
@@ -944,7 +953,7 @@ class _HomePageState extends State<HomePage>
                             child: Text(
                               AppLocalizations.of(context)!.latestOffers,
                               style: TextStyle(
-                                color: AppColors.primary,
+                                color: DesignToken.primary,
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
                               ).merge(AppTextStyles.nunitoBold),
@@ -979,7 +988,7 @@ class _HomePageState extends State<HomePage>
                               ),
                               padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: DesignToken.white,
                                 borderRadius: BorderRadius.circular(20),
                                 boxShadow: [
                                   BoxShadow(
@@ -1039,10 +1048,10 @@ class _HomePageState extends State<HomePage>
               colors: const [
                 Colors.amber,
                 Colors.orange,
-                Colors.red,
-                Colors.pink,
-                Colors.purple,
-                Colors.blue,
+                DesignToken.red,
+                DesignToken.pink,
+                DesignToken.purple,
+                DesignToken.blue500,
               ],
             ),
           ),
@@ -1056,7 +1065,9 @@ class _HomePageState extends State<HomePage>
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.secondary.withOpacity(_glowAnimation.value),
+                  color: DesignToken.secondary.withOpacity(
+                    _glowAnimation.value,
+                  ),
                   blurRadius: 20,
                   spreadRadius: 2,
                 ),
@@ -1070,7 +1081,7 @@ class _HomePageState extends State<HomePage>
                   GoRouter.of(context).push('/add-bill');
                 }
               },
-              backgroundColor: AppColors.secondary,
+              backgroundColor: DesignToken.secondary,
               elevation: 6,
               icon: const Icon(Icons.add_circle, color: Colors.white, size: 28),
               label: Text(
@@ -1105,14 +1116,14 @@ class _HomePageState extends State<HomePage>
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.blue.shade700, Colors.purple.shade600],
+          colors: [DesignToken.blue700, DesignToken.purpleShade600],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withValues(alpha: 0.3),
+            color: DesignToken.blue500.withValues(alpha: 0.3),
             blurRadius: 15,
             offset: const Offset(0, 6),
           ),
@@ -1144,7 +1155,7 @@ class _HomePageState extends State<HomePage>
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Colors.blue.shade700,
+                    color: DesignToken.blue700,
                   ),
                 ),
                 Text(
@@ -1168,7 +1179,7 @@ class _HomePageState extends State<HomePage>
                 Text(
                   AppLocalizations.of(context)!.yourPosition,
                   style: const TextStyle(
-                    color: Colors.white70,
+                    color: DesignToken.white70,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
@@ -1177,7 +1188,7 @@ class _HomePageState extends State<HomePage>
                 Text(
                   _getUserDisplayName(),
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: DesignToken.white,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -1192,7 +1203,7 @@ class _HomePageState extends State<HomePage>
                     Text(
                       '$_currentUserPoints Points',
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: DesignToken.white,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -1246,7 +1257,7 @@ class _HomePageState extends State<HomePage>
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: AppColors.secondary.withValues(alpha: 0.2),
+                  color: DesignToken.secondary.withValues(alpha: 0.2),
                   width: 2,
                 ),
                 boxShadow: [
@@ -1263,13 +1274,13 @@ class _HomePageState extends State<HomePage>
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: AppColors.secondary.withValues(alpha: 0.1),
+                      color: DesignToken.secondary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.emoji_events_outlined,
                       size: 28,
-                      color: AppColors.secondary.withValues(alpha: 0.6),
+                      color: DesignToken.secondary.withValues(alpha: 0.6),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -1284,7 +1295,7 @@ class _HomePageState extends State<HomePage>
                           AppLocalizations.of(context)!.todaysWinnerLabel,
                           style: AppTextStyles.nunitoBold.copyWith(
                             fontSize: 14,
-                            color: AppColors.secondary,
+                            color: DesignToken.secondary,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -1340,7 +1351,7 @@ class _HomePageState extends State<HomePage>
                   border: Border.all(
                     color: isCurrentUserWinner
                         ? Colors.amber.shade300
-                        : AppColors.secondary.withValues(alpha: 0.3),
+                        : DesignToken.secondary.withValues(alpha: 0.3),
                     width: 2,
                   ),
                   boxShadow: [
@@ -1359,7 +1370,7 @@ class _HomePageState extends State<HomePage>
                       decoration: BoxDecoration(
                         color: isCurrentUserWinner
                             ? Colors.amber.shade50
-                            : AppColors.secondary.withValues(alpha: 0.1),
+                            : DesignToken.secondary.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -1367,7 +1378,7 @@ class _HomePageState extends State<HomePage>
                         size: 28,
                         color: isCurrentUserWinner
                             ? Colors.amber.shade700
-                            : AppColors.secondary,
+                            : DesignToken.secondary,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -1381,7 +1392,7 @@ class _HomePageState extends State<HomePage>
                         border: Border.all(
                           color: isCurrentUserWinner
                               ? Colors.amber.shade300
-                              : AppColors.secondary.withValues(alpha: 0.3),
+                              : DesignToken.secondary.withValues(alpha: 0.3),
                           width: 2,
                         ),
                       ),
@@ -1392,25 +1403,25 @@ class _HomePageState extends State<HomePage>
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) {
                                   return Container(
-                                    color: AppColors.secondary.withValues(
+                                    color: DesignToken.secondary.withValues(
                                       alpha: 0.1,
                                     ),
                                     child: Icon(
                                       Icons.person,
                                       size: 25,
-                                      color: AppColors.secondary,
+                                      color: DesignToken.secondary,
                                     ),
                                   );
                                 },
                               )
                             : Container(
-                                color: AppColors.secondary.withValues(
+                                color: DesignToken.secondary.withValues(
                                   alpha: 0.1,
                                 ),
                                 child: Icon(
                                   Icons.person,
                                   size: 25,
-                                  color: AppColors.secondary,
+                                  color: DesignToken.secondary,
                                 ),
                               ),
                       ),
@@ -1433,7 +1444,7 @@ class _HomePageState extends State<HomePage>
                               fontSize: 14,
                               color: isCurrentUserWinner
                                   ? Colors.amber.shade800
-                                  : AppColors.secondary,
+                                  : DesignToken.secondary,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -1441,7 +1452,7 @@ class _HomePageState extends State<HomePage>
                             winnerName,
                             style: AppTextStyles.nunitoSemiBold.copyWith(
                               fontSize: 16,
-                              color: AppColors.textDark,
+                              color: DesignToken.textDark,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -1502,7 +1513,7 @@ class _HomePageState extends State<HomePage>
           DrawerHeader(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.primary, AppColors.secondary],
+                colors: [DesignToken.primary, DesignToken.secondary],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -1520,7 +1531,7 @@ class _HomePageState extends State<HomePage>
                       ? const Icon(
                           Icons.person,
                           size: 40,
-                          color: AppColors.secondary,
+                          color: DesignToken.secondary,
                         )
                       : null,
                 ),
@@ -1528,7 +1539,7 @@ class _HomePageState extends State<HomePage>
                 Text(
                   _getUserDisplayName(),
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: DesignToken.white,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
@@ -1545,41 +1556,44 @@ class _HomePageState extends State<HomePage>
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.home, color: AppColors.primary),
+            leading: const Icon(Icons.home, color: DesignToken.primary),
             title: Text(AppLocalizations.of(context)!.home),
             onTap: () => Navigator.pop(context),
           ),
           ListTile(
             leading: const Icon(
               Icons.monetization_on,
-              color: AppColors.primary,
+              color: DesignToken.primary,
             ),
             title: Text(AppLocalizations.of(context)!.myPoints),
             onTap: () => Navigator.pop(context),
           ),
           ListTile(
-            leading: const Icon(Icons.card_giftcard, color: AppColors.primary),
+            leading: const Icon(
+              Icons.card_giftcard,
+              color: DesignToken.primary,
+            ),
             title: Text(AppLocalizations.of(context)!.redeemRewards),
             onTap: () => Navigator.pop(context),
           ),
           ListTile(
-            leading: const Icon(Icons.history, color: AppColors.primary),
+            leading: const Icon(Icons.history, color: DesignToken.primary),
             title: Text(AppLocalizations.of(context)!.transactionHistory),
             onTap: () => Navigator.pop(context),
           ),
           ListTile(
-            leading: const Icon(Icons.leaderboard, color: AppColors.primary),
+            leading: const Icon(Icons.leaderboard, color: DesignToken.primary),
             title: Text(AppLocalizations.of(context)!.leaderboard),
             onTap: () => Navigator.pop(context),
           ),
           ListTile(
-            leading: const Icon(Icons.settings, color: AppColors.primary),
+            leading: const Icon(Icons.settings, color: DesignToken.primary),
             title: Text(AppLocalizations.of(context)!.settings),
             onTap: () => Navigator.pop(context),
           ),
           const Divider(),
           ListTile(
-            leading: const Icon(Icons.help_outline, color: AppColors.primary),
+            leading: const Icon(Icons.help_outline, color: DesignToken.primary),
             title: Text(AppLocalizations.of(context)!.helpSupport),
             onTap: () => Navigator.pop(context),
           ),

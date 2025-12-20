@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:balaji_points/config/theme.dart';
+import 'package:balaji_points/core/theme/design_token.dart';
+import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:intl/intl.dart';
 
 class TodaysEligibleCarpenters extends StatelessWidget {
@@ -10,7 +11,8 @@ class TodaysEligibleCarpenters extends StatelessWidget {
     try {
       // Get today's date in YYYY-MM-DD format
       final today = DateTime.now();
-      final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      final todayStr =
+          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
 
       debugPrint('Fetching eligible carpenters for date: $todayStr');
 
@@ -46,7 +48,9 @@ class TodaysEligibleCarpenters extends StatelessWidget {
         }
       }
 
-      debugPrint('Unique carpenters with approved bills today: ${carpenterIds.length}');
+      debugPrint(
+        'Unique carpenters with approved bills today: ${carpenterIds.length}',
+      );
 
       // Fetch carpenter details
       final eligibleCarpenters = <Map<String, dynamic>>[];
@@ -92,7 +96,9 @@ class TodaysEligibleCarpenters extends StatelessWidget {
       }
 
       // Sort by total points descending
-      eligibleCarpenters.sort((a, b) => (b['totalPoints'] as int).compareTo(a['totalPoints'] as int));
+      eligibleCarpenters.sort(
+        (a, b) => (b['totalPoints'] as int).compareTo(a['totalPoints'] as int),
+      );
 
       debugPrint('Returning ${eligibleCarpenters.length} eligible carpenters');
       return eligibleCarpenters;
@@ -145,7 +151,7 @@ class TodaysEligibleCarpenters extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
+            valueColor: AlwaysStoppedAnimation<Color>(DesignToken.secondary),
           ),
           const SizedBox(height: 16),
           Text(
@@ -223,7 +229,7 @@ class TodaysEligibleCarpenters extends StatelessWidget {
             'No Eligible Carpenters Today',
             style: AppTextStyles.nunitoBold.copyWith(
               fontSize: 18,
-              color: AppColors.textDark,
+              color: DesignToken.textDark,
             ),
             textAlign: TextAlign.center,
           ),
@@ -266,8 +272,8 @@ class TodaysEligibleCarpenters extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  AppColors.secondary,
-                  AppColors.secondary.withValues(alpha: 0.8),
+                  DesignToken.secondary,
+                  DesignToken.secondary.withValues(alpha: 0.8),
                 ],
               ),
               borderRadius: const BorderRadius.only(
@@ -346,7 +352,7 @@ class TodaysEligibleCarpenters extends StatelessWidget {
         color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: AppColors.secondary.withValues(alpha: 0.2),
+          color: DesignToken.secondary.withValues(alpha: 0.2),
           width: 1.5,
         ),
       ),
@@ -357,7 +363,7 @@ class TodaysEligibleCarpenters extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.secondary.withValues(alpha: 0.15),
+              color: DesignToken.secondary.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -365,7 +371,7 @@ class TodaysEligibleCarpenters extends StatelessWidget {
                 '$rank',
                 style: AppTextStyles.nunitoBold.copyWith(
                   fontSize: 18,
-                  color: AppColors.secondary,
+                  color: DesignToken.secondary,
                 ),
               ),
             ),
@@ -379,7 +385,7 @@ class TodaysEligibleCarpenters extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: AppColors.secondary.withValues(alpha: 0.3),
+                color: DesignToken.secondary.withValues(alpha: 0.3),
                 width: 2,
               ),
             ),
@@ -390,21 +396,21 @@ class TodaysEligibleCarpenters extends StatelessWidget {
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         return Container(
-                          color: AppColors.secondary.withValues(alpha: 0.1),
+                          color: DesignToken.secondary.withValues(alpha: 0.1),
                           child: Icon(
                             Icons.person,
                             size: 28,
-                            color: AppColors.secondary,
+                            color: DesignToken.secondary,
                           ),
                         );
                       },
                     )
                   : Container(
-                      color: AppColors.secondary.withValues(alpha: 0.1),
+                      color: DesignToken.secondary.withValues(alpha: 0.1),
                       child: Icon(
                         Icons.person,
                         size: 28,
-                        color: AppColors.secondary,
+                        color: DesignToken.secondary,
                       ),
                     ),
             ),
@@ -420,7 +426,7 @@ class TodaysEligibleCarpenters extends StatelessWidget {
                   name,
                   style: AppTextStyles.nunitoSemiBold.copyWith(
                     fontSize: 16,
-                    color: AppColors.textDark,
+                    color: DesignToken.textDark,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -428,11 +434,7 @@ class TodaysEligibleCarpenters extends StatelessWidget {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Icon(
-                      Icons.phone,
-                      size: 14,
-                      color: Colors.grey.shade600,
-                    ),
+                    Icon(Icons.phone, size: 14, color: Colors.grey.shade600),
                     const SizedBox(width: 4),
                     Text(
                       phone,
@@ -452,7 +454,10 @@ class TodaysEligibleCarpenters extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.green.shade50,
                   borderRadius: BorderRadius.circular(8),
@@ -461,11 +466,7 @@ class TodaysEligibleCarpenters extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.receipt,
-                      size: 14,
-                      color: Colors.green.shade700,
-                    ),
+                    Icon(Icons.receipt, size: 14, color: Colors.green.shade700),
                     const SizedBox(width: 4),
                     Text(
                       '$billsCount',
@@ -479,7 +480,10 @@ class TodaysEligibleCarpenters extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.amber.shade50,
                   borderRadius: BorderRadius.circular(8),

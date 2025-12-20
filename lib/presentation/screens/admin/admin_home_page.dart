@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
-import 'package:balaji_points/config/theme.dart';
+import 'package:balaji_points/core/theme/design_token.dart';
+import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/l10n/app_localizations.dart';
+import 'package:balaji_points/core/mixins/double_tap_exit_mixin.dart';
 import '../../widgets/admin/pending_bills_list.dart';
 import '../../widgets/admin/offers_management.dart';
 import '../../widgets/admin/users_list.dart';
@@ -18,7 +20,7 @@ class AdminHomePage extends ConsumerStatefulWidget {
 }
 
 class _AdminHomePageState extends ConsumerState<AdminHomePage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, DoubleTapExitMixin {
   late TabController _tabController;
 
   @override
@@ -61,8 +63,8 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              backgroundColor: DesignToken.error,
+              foregroundColor: DesignToken.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -100,75 +102,85 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    return Scaffold(
-      backgroundColor: AppColors.primary,
-      body: Column(
-        children: [
-          // Unified Navigation Bar - Consistent 64px height
-          HomeNavBar(
-            title: l10n.adminPanel,
-            subtitle: l10n.adminSubtitle,
-            showLogo: true,
-            showProfileButton: false,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.logout, color: Colors.white, size: 22),
-                onPressed: _handleLogout,
-                tooltip: l10n.logout,
-              ),
-            ],
-          ),
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (!didPop) {
+          // Check for dialogs first
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+            return;
+          }
 
-          // Tabs
-          Container(
-            color: AppColors.primary,
-            child: TabBar(
-              controller: _tabController,
-              indicatorColor: Colors.white,
-              indicatorWeight: 3,
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.white.withValues(alpha: 0.7),
-              labelStyle: AppTextStyles.nunitoSemiBold.copyWith(fontSize: 14),
-              unselectedLabelStyle: AppTextStyles.nunitoRegular.copyWith(
-                fontSize: 14,
-              ),
-              tabs: [
-                Tab(
-                  icon: const Icon(Icons.receipt_long),
-                  text: l10n.pendingBills,
-                ),
-                Tab(
-                  icon: const Icon(Icons.local_offer),
-                  text: l10n.offers,
-                ),
-                Tab(
-                  icon: const Icon(Icons.people),
-                  text: l10n.users,
-                ),
-                Tab(
-                  icon: const Icon(Icons.casino),
-                  text: l10n.dailySpin,
+          // Handle double-tap exit
+          await handleDoubleTapExit();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: DesignToken.primary,
+        body: Column(
+          children: [
+            // Unified Navigation Bar - Consistent 64px height
+            HomeNavBar(
+              title: l10n.adminPanel,
+              subtitle: l10n.adminSubtitle,
+              showLogo: true,
+              showProfileButton: false,
+              actions: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.logout,
+                    color: DesignToken.white,
+                    size: 22,
+                  ),
+                  onPressed: _handleLogout,
+                  tooltip: l10n.logout,
                 ),
               ],
             ),
-          ),
 
-          // Tab Content
-          Expanded(
-            child: Container(
-              color: AppColors.woodenBackground,
-              child: TabBarView(
+            // Tabs
+            Container(
+              color: DesignToken.primary,
+              child: TabBar(
                 controller: _tabController,
-                children: const [
-                  PendingBillsList(),
-                  OffersManagement(),
-                  UsersList(),
-                  DailySpinManagement(),
+                indicatorColor: DesignToken.white,
+                indicatorWeight: 3,
+                labelColor: DesignToken.white,
+                unselectedLabelColor: DesignToken.white.withValues(alpha: 0.7),
+                labelStyle: AppTextStyles.nunitoSemiBold.copyWith(fontSize: 14),
+                unselectedLabelStyle: AppTextStyles.nunitoRegular.copyWith(
+                  fontSize: 14,
+                ),
+                tabs: [
+                  Tab(
+                    icon: const Icon(Icons.receipt_long),
+                    text: l10n.pendingBills,
+                  ),
+                  Tab(icon: const Icon(Icons.local_offer), text: l10n.offers),
+                  Tab(icon: const Icon(Icons.people), text: l10n.users),
+                  Tab(icon: const Icon(Icons.casino), text: l10n.dailySpin),
                 ],
               ),
             ),
-          ),
-        ],
+
+            // Tab Content
+            Expanded(
+              child: Container(
+                color: DesignToken.woodenBackground,
+                child: TabBarView(
+                  controller: _tabController,
+                  children: const [
+                    PendingBillsList(),
+                    OffersManagement(),
+                    UsersList(),
+                    DailySpinManagement(),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

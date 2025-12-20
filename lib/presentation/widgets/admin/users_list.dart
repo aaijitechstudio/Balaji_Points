@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:balaji_points/config/theme.dart';
+import 'package:balaji_points/core/theme/design_token.dart';
+import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/services/pin_auth_service.dart';
 import 'package:intl/intl.dart';
@@ -67,7 +68,7 @@ class _UsersListState extends State<UsersList> {
                         ),
                         prefixIcon: const Icon(
                           Icons.search,
-                          color: AppColors.primary,
+                          color: DesignToken.primary,
                         ),
                         filled: true,
                         fillColor: Colors.grey[100],
@@ -88,7 +89,7 @@ class _UsersListState extends State<UsersList> {
                     icon: const Icon(Icons.add),
                     label: Text(l10n.add),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: DesignToken.primary,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -119,10 +120,12 @@ class _UsersListState extends State<UsersList> {
                         label: Text(tierLabel),
                         labelStyle: AppTextStyles.nunitoSemiBold.copyWith(
                           fontSize: 14,
-                          color: isSelected ? Colors.white : AppColors.textDark,
+                          color: isSelected
+                              ? Colors.white
+                              : DesignToken.textDark,
                         ),
                         backgroundColor: Colors.grey[200],
-                        selectedColor: AppColors.primary,
+                        selectedColor: DesignToken.primary,
                         onSelected: (selected) {
                           setState(() {
                             _selectedTier = tier;
@@ -177,7 +180,9 @@ class _UsersListState extends State<UsersList> {
 
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(
-                  child: CircularProgressIndicator(color: AppColors.primary),
+                  child: const CircularProgressIndicator(
+                    color: DesignToken.primary,
+                  ),
                 );
               }
 
@@ -232,7 +237,7 @@ class _UsersListState extends State<UsersList> {
                         l10n.noUsersFound,
                         style: AppTextStyles.nunitoBold.copyWith(
                           fontSize: 20,
-                          color: AppColors.textDark,
+                          color: DesignToken.textDark,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -290,8 +295,8 @@ class _UsersListState extends State<UsersList> {
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
                                   colors: [
-                                    AppColors.primary,
-                                    AppColors.secondary,
+                                    DesignToken.primary,
+                                    DesignToken.secondary,
                                   ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
@@ -313,7 +318,7 @@ class _UsersListState extends State<UsersList> {
                             // Profile Image
                             CircleAvatar(
                               radius: 28,
-                              backgroundColor: AppColors.primary.withOpacity(
+                              backgroundColor: DesignToken.primary.withOpacity(
                                 0.1,
                               ),
                               backgroundImage:
@@ -321,10 +326,10 @@ class _UsersListState extends State<UsersList> {
                                   ? NetworkImage(profileImage)
                                   : null,
                               child: profileImage == null || profileImage == ''
-                                  ? const Icon(
+                                  ? Icon(
                                       Icons.person,
                                       size: 30,
-                                      color: AppColors.primary,
+                                      color: DesignToken.primary,
                                     )
                                   : null,
                             ),
@@ -339,7 +344,7 @@ class _UsersListState extends State<UsersList> {
                                     '$firstName $lastName',
                                     style: AppTextStyles.nunitoBold.copyWith(
                                       fontSize: 16,
-                                      color: AppColors.textDark,
+                                      color: DesignToken.textDark,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -418,14 +423,14 @@ class _UsersListState extends State<UsersList> {
                                     const Icon(
                                       Icons.stars,
                                       size: 16,
-                                      color: AppColors.secondary,
+                                      color: DesignToken.secondary,
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
                                       '$totalPoints',
                                       style: AppTextStyles.nunitoBold.copyWith(
                                         fontSize: 16,
-                                        color: AppColors.primary,
+                                        color: DesignToken.primary,
                                       ),
                                     ),
                                   ],
@@ -627,7 +632,7 @@ class _AddCarpenterDialogState extends State<AddCarpenterDialog> {
                     child: ElevatedButton(
                       onPressed: _createCarpenter,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
+                        backgroundColor: DesignToken.primary,
                       ),
                       child: const Text('Create'),
                     ),
@@ -676,7 +681,7 @@ class UserDetailsDialog extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [AppColors.primary, AppColors.secondary],
+                  colors: [DesignToken.primary, DesignToken.secondary],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -691,10 +696,10 @@ class UserDetailsDialog extends StatelessWidget {
                         ? NetworkImage(profileImage)
                         : null,
                     child: profileImage == null || profileImage == ''
-                        ? const Icon(
+                        ? Icon(
                             Icons.person,
                             size: 35,
-                            color: AppColors.primary,
+                            color: DesignToken.primary,
                           )
                         : null,
                   ),
@@ -742,15 +747,15 @@ class UserDetailsDialog extends StatelessWidget {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            AppColors.primary.withOpacity(0.1),
-                            AppColors.secondary.withOpacity(0.1),
+                            DesignToken.primary.withOpacity(0.1),
+                            DesignToken.secondary.withOpacity(0.1),
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: AppColors.primary.withOpacity(0.3),
+                          color: DesignToken.primary.withOpacity(0.3),
                         ),
                       ),
                       child: Column(
@@ -758,17 +763,17 @@ class UserDetailsDialog extends StatelessWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.stars,
                                 size: 32,
-                                color: AppColors.secondary,
+                                color: DesignToken.secondary,
                               ),
                               const SizedBox(width: 12),
                               Text(
                                 '$totalPoints',
                                 style: AppTextStyles.nunitoBold.copyWith(
                                   fontSize: 36,
-                                  color: AppColors.primary,
+                                  color: DesignToken.primary,
                                 ),
                               ),
                             ],
@@ -808,7 +813,7 @@ class UserDetailsDialog extends StatelessWidget {
                       l10n.recentActivity,
                       style: AppTextStyles.nunitoBold.copyWith(
                         fontSize: 18,
-                        color: AppColors.textDark,
+                        color: DesignToken.textDark,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -825,7 +830,7 @@ class UserDetailsDialog extends StatelessWidget {
                             child: Padding(
                               padding: EdgeInsets.all(20.0),
                               child: CircularProgressIndicator(
-                                color: AppColors.primary,
+                                color: DesignToken.primary,
                               ),
                             ),
                           );
@@ -928,7 +933,7 @@ class UserDetailsDialog extends StatelessWidget {
                                           style: AppTextStyles.nunitoMedium
                                               .copyWith(
                                                 fontSize: 14,
-                                                color: AppColors.textDark,
+                                                color: DesignToken.textDark,
                                               ),
                                         ),
                                         if (date != null)

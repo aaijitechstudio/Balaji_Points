@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:balaji_points/config/theme.dart';
+import 'package:balaji_points/core/theme/design_token.dart';
+import 'package:balaji_points/config/theme.dart' hide AppColors;
+import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/services/session_service.dart';
 
 class SplashPage extends StatefulWidget {
@@ -116,163 +118,168 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.primary,
-      body: Stack(
-        children: [
-          // Animated Background Elements
-          IgnorePointer(
-            child: RepaintBoundary(
-              child: ListenableBuilder(
-                listenable: _backgroundController,
-                builder: (context, child) {
-                  return CustomPaint(
-                    size: Size.infinite,
-                    painter: CelebrationPainter(
-                      animationValue: _backgroundController.value,
-                      elements: _floatingElements,
-                    ),
-                  );
-                },
+    final l10n = AppLocalizations.of(context);
+    return PopScope(
+      canPop: false, // Prevent back button on splash
+      child: Scaffold(
+        backgroundColor: DesignToken.primary,
+        body: Stack(
+          children: [
+            // Animated Background Elements
+            IgnorePointer(
+              child: RepaintBoundary(
+                child: ListenableBuilder(
+                  listenable: _backgroundController,
+                  builder: (context, child) {
+                    return CustomPaint(
+                      size: Size.infinite,
+                      painter: CelebrationPainter(
+                        animationValue: _backgroundController.value,
+                        elements: _floatingElements,
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
-          ),
 
-          // Main Content
-          Center(
-            child: FadeTransition(
-              opacity: _fade,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Animated Logo
-                  ScaleTransition(
-                    scale: _scale,
-                    child: RotationTransition(
-                      turns: _rotation,
-                      child: Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.secondary.withOpacity(0.4),
-                              blurRadius: 30,
-                              spreadRadius: 5,
-                              offset: const Offset(0, 10),
+            // Main Content
+            Center(
+              child: FadeTransition(
+                opacity: _fade,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Animated Logo
+                    ScaleTransition(
+                      scale: _scale,
+                      child: RotationTransition(
+                        turns: _rotation,
+                        child: Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: DesignToken.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: DesignToken.secondary.withOpacity(0.4),
+                                blurRadius: 30,
+                                spreadRadius: 5,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.asset(
+                              'assets/images/balaji_point_logo.png',
+                              width: 100,
+                              height: 100,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  width: 100,
+                                  height: 100,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        DesignToken.primary,
+                                        DesignToken.secondary,
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(
+                                    Icons.star,
+                                    color: DesignToken.white,
+                                    size: 50,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Brand Name with animation
+                    FadeTransition(
+                      opacity: _fade,
+                      child: Text(
+                        l10n?.appName ?? 'Balaji Points',
+                        style: AppTextStyles.nunitoBold.copyWith(
+                          fontSize: 32,
+                          color: DesignToken.white,
+                          letterSpacing: 1.5,
+                          shadows: [
+                            Shadow(
+                              color: DesignToken.black.withOpacity(0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
                             ),
                           ],
                         ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: Image.asset(
-                            'assets/images/balaji_point_logo.png',
-                            width: 100,
-                            height: 100,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                width: 100,
-                                height: 100,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      AppColors.primary,
-                                      AppColors.secondary,
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Icon(
-                                  Icons.star,
-                                  color: Colors.white,
-                                  size: 50,
-                                ),
-                              );
-                            },
-                          ),
-                        ),
                       ),
                     ),
-                  ),
 
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 8),
 
-                  // Brand Name with animation
-                  FadeTransition(
-                    opacity: _fade,
-                    child: Text(
-                      'Balaji Points',
-                      style: AppTextStyles.nunitoBold.copyWith(
-                        fontSize: 32,
-                        color: Colors.white,
-                        letterSpacing: 1.5,
-                        shadows: [
-                          Shadow(
-                            color: Colors.black.withOpacity(0.3),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // Subtitle
-                  FadeTransition(
-                    opacity: _fade,
-                    child: Text(
-                      'Rewards & Loyalty Program',
-                      style: AppTextStyles.nunitoRegular.copyWith(
-                        fontSize: 16,
-                        color: Colors.white.withOpacity(0.9),
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 60),
-
-                  // Loading Indicator
-                  SizedBox(
-                    width: 40,
-                    height: 40,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 3,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Colors.white.withOpacity(0.8),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 40),
-
-                  // Footer
-                  FadeTransition(
-                    opacity: _fade,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 40),
+                    // Subtitle
+                    FadeTransition(
+                      opacity: _fade,
                       child: Text(
-                        'Powered by\nShree Balaji Plywood & Hardware',
-                        textAlign: TextAlign.center,
+                        l10n?.rewardsLoyaltyProgram ??
+                            'Rewards & Loyalty Program',
                         style: AppTextStyles.nunitoRegular.copyWith(
-                          fontSize: 14,
-                          color: Colors.white.withOpacity(0.8),
-                          height: 1.5,
+                          fontSize: 16,
+                          color: DesignToken.white.withOpacity(0.9),
+                          letterSpacing: 0.5,
                         ),
                       ),
                     ),
-                  ),
-                ],
+
+                    const SizedBox(height: 60),
+
+                    // Loading Indicator
+                    SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 3,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          DesignToken.white.withOpacity(0.8),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 40),
+
+                    // Footer
+                    FadeTransition(
+                      opacity: _fade,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 40),
+                        child: Text(
+                          '${l10n?.poweredBy ?? 'Powered by'}\n${l10n?.companyName ?? 'Shree Balaji Plywood & Hardware'}',
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.nunitoRegular.copyWith(
+                            fontSize: 14,
+                            color: DesignToken.white.withOpacity(0.8),
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -350,19 +357,19 @@ class CelebrationPainter extends CustomPainter {
   Color _getColorForType(FloatingType type) {
     switch (type) {
       case FloatingType.coin:
-        return Colors.amber;
+        return DesignToken.amber;
       case FloatingType.star:
-        return AppColors.secondary;
+        return DesignToken.secondary;
       case FloatingType.sparkle:
-        return Colors.white;
+        return DesignToken.white;
       case FloatingType.points:
-        return Colors.green;
+        return DesignToken.success;
     }
   }
 
   void _drawCoin(Canvas canvas, Paint paint) {
     canvas.drawCircle(Offset.zero, 10, paint);
-    paint.color = Colors.white.withOpacity(0.6);
+    paint.color = DesignToken.white.withOpacity(0.6);
     canvas.drawCircle(Offset(-3, -3), 3, paint);
   }
 
@@ -404,7 +411,7 @@ class CelebrationPainter extends CustomPainter {
       ),
     );
     canvas.drawPath(path, paint);
-    paint.color = Colors.white.withOpacity(0.8);
+    paint.color = DesignToken.white.withOpacity(0.8);
     canvas.drawCircle(Offset(-5, 0), 2.5, paint);
     canvas.drawCircle(Offset(5, 0), 2.5, paint);
   }

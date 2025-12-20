@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../config/theme.dart';
+import '../../core/theme/design_token.dart';
 import '../providers/loading_provider.dart';
 
 class LoadingOverlay extends ConsumerWidget {
@@ -32,22 +32,22 @@ class LoadingOverlay extends ConsumerWidget {
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
-                  SizedBox(
+                children: [
+                  const SizedBox(
                     width: 40,
                     height: 40,
                     child: CircularProgressIndicator(
                       strokeWidth: 4,
-                      color: AppColors.secondary,
+                      color: DesignToken.secondary,
                     ),
                   ),
-                  SizedBox(height: 12),
+                  const SizedBox(height: 12),
                   Text(
                     'Loading...',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.textDark,
+                      color: DesignToken.textDark,
                     ),
                   ),
                 ],

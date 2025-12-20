@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:balaji_points/config/theme.dart';
+import 'package:balaji_points/core/theme/design_token.dart';
 import 'todays_eligible_carpenters.dart';
 
 class DailySpinManagement extends StatefulWidget {
@@ -281,8 +281,8 @@ class _DailySpinManagementState extends State<DailySpinManagement>
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            AppColors.woodenBackground,
-            AppColors.woodenBackground.withValues(alpha: 0.8),
+            DesignToken.woodenBackground,
+            DesignToken.woodenBackground.withValues(alpha: 0.8),
           ],
         ),
       ),
@@ -294,8 +294,8 @@ class _DailySpinManagementState extends State<DailySpinManagement>
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    AppColors.primary,
-                    AppColors.primary.withValues(alpha: 0.8),
+                    DesignToken.primary,
+                    DesignToken.primary.withValues(alpha: 0.8),
                   ],
                 ),
                 boxShadow: [
@@ -652,7 +652,7 @@ class _DailySpinManagementState extends State<DailySpinManagement>
                         onPressed: _isSpinning || !canSpin ? null : _spinWheel,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: canSpin
-                              ? AppColors.primary
+                              ? DesignToken.primary
                               : Colors.grey,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(
@@ -663,7 +663,9 @@ class _DailySpinManagementState extends State<DailySpinManagement>
                             borderRadius: BorderRadius.circular(16),
                           ),
                           elevation: _isSpinning ? 0 : 8,
-                          shadowColor: AppColors.primary.withValues(alpha: 0.5),
+                          shadowColor: DesignToken.primary.withValues(
+                            alpha: 0.5,
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -756,7 +758,7 @@ class _DailySpinManagementState extends State<DailySpinManagement>
         children: [
           Row(
             children: [
-              Icon(Icons.today, color: AppColors.secondary, size: 24),
+              Icon(Icons.today, color: DesignToken.secondary, size: 24),
               const SizedBox(width: 12),
               const Text(
                 'Today\'s Winners',
@@ -883,7 +885,11 @@ class _DailySpinManagementState extends State<DailySpinManagement>
         children: [
           Row(
             children: [
-              Icon(Icons.calendar_month, color: AppColors.secondary, size: 24),
+              Icon(
+                Icons.calendar_month,
+                color: DesignToken.secondary,
+                size: 24,
+              ),
               const SizedBox(width: 12),
               const Text(
                 'Monthly Winners',
@@ -957,12 +963,12 @@ class _DailySpinManagementState extends State<DailySpinManagement>
                       leading: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: AppColors.secondary.withValues(alpha: 0.1),
+                          color: DesignToken.secondary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.calendar_today,
-                          color: AppColors.secondary,
+                          color: DesignToken.secondary,
                           size: 20,
                         ),
                       ),

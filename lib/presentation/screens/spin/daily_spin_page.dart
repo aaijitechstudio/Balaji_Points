@@ -1,8 +1,9 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:balaji_points/presentation/providers/daily_spin_provider.dart';
-import 'package:balaji_points/config/theme.dart';
+import 'package:balaji_points/core/theme/design_token.dart';
 
 class DailySpinPage extends ConsumerStatefulWidget {
   const DailySpinPage({super.key});
@@ -77,7 +78,7 @@ class _DailySpinPageState extends ConsumerState<DailySpinPage>
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            color: AppColors.secondary,
+            color: DesignToken.secondary,
           ),
           textAlign: TextAlign.center,
         ),
@@ -94,7 +95,7 @@ class _DailySpinPageState extends ConsumerState<DailySpinPage>
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
-                color: AppColors.secondary,
+                color: DesignToken.secondary,
               ),
             ),
             const SizedBox(height: 20),
@@ -113,7 +114,7 @@ class _DailySpinPageState extends ConsumerState<DailySpinPage>
                 Navigator.of(context).pop();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.secondary,
+                backgroundColor: DesignToken.secondary,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 40,
                   vertical: 12,
@@ -134,156 +135,181 @@ class _DailySpinPageState extends ConsumerState<DailySpinPage>
   Widget build(BuildContext context) {
     final spinState = ref.watch(dailySpinProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Daily Spin'),
-        backgroundColor: AppColors.background,
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const SizedBox(height: 40),
-                Text(
-                  'Spin & Win Points!',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.secondary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Get your daily spin and win exciting points',
-                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 60),
+    return PopScope(
+      canPop: !_isSpinning,
+      onPopInvoked: (didPop) async {
+        if (!didPop) {
+          // Check for dialogs first
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+            return;
+          }
 
-                // Spin Wheel
-                AnimatedBuilder(
-                  animation: _rotationAnimation,
-                  builder: (context, child) {
-                    return Transform.rotate(
-                      angle: _rotationAnimation.value * 20 * 3.14159,
-                      child: Container(
-                        width: 280,
-                        height: 280,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.pink.shade400,
-                              Colors.pink.shade600,
-                              AppColors.secondary,
+          if (_isSpinning) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Please wait for spin to complete'),
+                backgroundColor: DesignToken.orange,
+              ),
+            );
+          } else {
+            context.pop();
+          }
+        }
+      },
+      child: Scaffold(
+        backgroundColor: DesignToken.background,
+        appBar: AppBar(
+          title: const Text('Daily Spin'),
+          backgroundColor: DesignToken.background,
+        ),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 40),
+                  Text(
+                    'Spin & Win Points!',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: DesignToken.secondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Get your daily spin and win exciting points',
+                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 60),
+
+                  // Spin Wheel
+                  AnimatedBuilder(
+                    animation: _rotationAnimation,
+                    builder: (context, child) {
+                      return Transform.rotate(
+                        angle: _rotationAnimation.value * 20 * 3.14159,
+                        child: Container(
+                          width: 280,
+                          height: 280,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.pink.shade400,
+                                Colors.pink.shade600,
+                                DesignToken.secondary,
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.pink.withOpacity(0.3),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                              ),
                             ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.pink.withOpacity(0.3),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            // Segments (simplified - you can make this more elaborate)
-                            CustomPaint(
-                              size: const Size(280, 280),
-                              painter: SpinWheelPainter(),
-                            ),
-                            // Center circle
-                            Container(
-                              width: 80,
-                              height: 80,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.white,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 10,
-                                  ),
-                                ],
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              // Segments (simplified - you can make this more elaborate)
+                              CustomPaint(
+                                size: const Size(280, 280),
+                                painter: SpinWheelPainter(),
                               ),
-                              child: Icon(
-                                Icons.radio_button_checked,
-                                size: 40,
-                                color: AppColors.secondary,
+                              // Center circle
+                              Container(
+                                width: 80,
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: DesignToken.white,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: DesignToken.black.withOpacity(0.1),
+                                      blurRadius: 10,
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  Icons.radio_button_checked,
+                                  size: 40,
+                                  color: DesignToken.secondary,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 60),
-
-                // Spin Button
-                if (!spinState.isLoading)
-                  ElevatedButton(
-                    onPressed: spinState.canSpin && !_isSpinning ? _spin : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.secondary,
-                      disabledBackgroundColor: Colors.grey[300],
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 60,
-                        vertical: 18,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                    ),
-                    child: Text(
-                      _isSpinning ? 'Spinning...' : 'Spin Now!',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  )
-                else
-                  const CircularProgressIndicator(),
-
-                const SizedBox(height: 30),
-
-                // Info
-                if (!spinState.canSpin && spinState.lastSpinDate != null)
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.info_outline, color: Colors.blue[700]),
-                        const SizedBox(width: 10),
-                        Text(
-                          'You\'ve already spun today!\nCome back tomorrow for another chance.',
-                          style: TextStyle(
-                            color: Colors.blue[700],
-                            fontSize: 14,
+                            ],
                           ),
-                          textAlign: TextAlign.center,
                         ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
-              ],
+
+                  const SizedBox(height: 60),
+
+                  // Spin Button
+                  if (!spinState.isLoading)
+                    ElevatedButton(
+                      onPressed: spinState.canSpin && !_isSpinning
+                          ? _spin
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: DesignToken.secondary,
+                        disabledBackgroundColor: Colors.grey[300],
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 60,
+                          vertical: 18,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      child: Text(
+                        _isSpinning ? 'Spinning...' : 'Spin Now!',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: DesignToken.white,
+                        ),
+                      ),
+                    )
+                  else
+                    const CircularProgressIndicator(),
+
+                  const SizedBox(height: 30),
+
+                  // Info
+                  if (!spinState.canSpin && spinState.lastSpinDate != null)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: DesignToken.blueShade50,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.info_outline, color: DesignToken.blue700),
+                          const SizedBox(width: 10),
+                          Text(
+                            'You\'ve already spun today!\nCome back tomorrow for another chance.',
+                            style: TextStyle(
+                              color: DesignToken.blue700,
+                              fontSize: 14,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -304,12 +330,12 @@ class SpinWheelPainter extends CustomPainter {
     final segmentAngle = (2 * 3.14159) / segments;
 
     final colors = [
-      Colors.red.shade300,
-      Colors.orange.shade300,
-      Colors.yellow.shade300,
-      Colors.green.shade300,
-      Colors.blue.shade300,
-      Colors.indigo.shade300,
+      DesignToken.redShade300,
+      DesignToken.orangeShade300,
+      DesignToken.yellowShade300,
+      DesignToken.greenShade300,
+      DesignToken.blueShade300,
+      DesignToken.indigoShade300,
       Colors.purple.shade300,
       Colors.pink.shade300,
     ];
@@ -327,7 +353,7 @@ class SpinWheelPainter extends CustomPainter {
 
       // Draw lines between segments
       final linePaint = Paint()
-        ..color = Colors.white
+        ..color = DesignToken.white
         ..strokeWidth = 2
         ..style = PaintingStyle.stroke;
       canvas.drawLine(
@@ -351,8 +377,8 @@ class SpinWheelPainter extends CustomPainter {
       final points = (i + 1) * 10;
       textPainter.text = TextSpan(
         text: '$points',
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: DesignToken.white,
           fontSize: 24,
           fontWeight: FontWeight.bold,
         ),

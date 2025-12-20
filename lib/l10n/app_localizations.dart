@@ -637,7 +637,7 @@ abstract class AppLocalizations {
   /// No description provided for @completeProfile.
   ///
   /// In en, this message translates to:
-  /// **'Complete Your Profile'**
+  /// **'Complete Profile'**
   String get completeProfile;
 
   /// No description provided for @profileIncomplete.
@@ -805,7 +805,7 @@ abstract class AppLocalizations {
   /// No description provided for @billAmount.
   ///
   /// In en, this message translates to:
-  /// **'Bill Amount'**
+  /// **'Bill Amount (₹)'**
   String get billAmount;
 
   /// No description provided for @billDate.
@@ -859,7 +859,7 @@ abstract class AppLocalizations {
   /// No description provided for @enterBillAmount.
   ///
   /// In en, this message translates to:
-  /// **'Please enter bill amount'**
+  /// **'Enter bill amount'**
   String get enterBillAmount;
 
   /// No description provided for @enterValidAmount.
@@ -2127,6 +2127,156 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'REJECTED'**
   String get statusRejected;
+
+  /// No description provided for @exitApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit App?'**
+  String get exitApp;
+
+  /// No description provided for @exitAppMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Do you want to exit the app?'**
+  String get exitAppMessage;
+
+  /// No description provided for @exit.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit'**
+  String get exit;
+
+  /// No description provided for @discardChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard Changes?'**
+  String get discardChanges;
+
+  /// No description provided for @discardChangesMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You have unsaved changes. Do you want to discard them?'**
+  String get discardChangesMessage;
+
+  /// No description provided for @discard.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard'**
+  String get discard;
+
+  /// No description provided for @pressBackAgainToExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Press back again to exit'**
+  String get pressBackAgainToExit;
+
+  /// No description provided for @pleaseWait.
+  ///
+  /// In en, this message translates to:
+  /// **'Please wait...'**
+  String get pleaseWait;
+
+  /// No description provided for @pleaseWaitForSpin.
+  ///
+  /// In en, this message translates to:
+  /// **'Please wait for spin to complete'**
+  String get pleaseWaitForSpin;
+
+  /// No description provided for @discardBill.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard Bill?'**
+  String get discardBill;
+
+  /// No description provided for @discardBillMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You have unsaved bill data. Do you want to discard it?'**
+  String get discardBillMessage;
+
+  /// No description provided for @pleaseCompleteProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Please complete your profile'**
+  String get pleaseCompleteProfile;
+
+  /// No description provided for @rewardsLoyaltyProgram.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewards & Loyalty Program'**
+  String get rewardsLoyaltyProgram;
+
+  /// No description provided for @billImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Bill Image'**
+  String get billImage;
+
+  /// No description provided for @billDateOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Bill Date (Optional)'**
+  String get billDateOptional;
+
+  /// No description provided for @storeVendorNameOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Store/Vendor Name (Optional)'**
+  String get storeVendorNameOptional;
+
+  /// No description provided for @billInvoiceNumberOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Bill/Invoice Number (Optional)'**
+  String get billInvoiceNumberOptional;
+
+  /// No description provided for @notesOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes (Optional)'**
+  String get notesOptional;
+
+  /// No description provided for @tapToAddBillImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to add bill image'**
+  String get tapToAddBillImage;
+
+  /// No description provided for @selectBillDateOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Select bill date (optional)'**
+  String get selectBillDateOptional;
+
+  /// No description provided for @enterStoreOrVendorNameOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter store or vendor name (optional)'**
+  String get enterStoreOrVendorNameOptional;
+
+  /// No description provided for @enterBillOrInvoiceNumberOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter bill or invoice number (optional)'**
+  String get enterBillOrInvoiceNumberOptional;
+
+  /// No description provided for @addAnyAdditionalNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Add any additional notes...'**
+  String get addAnyAdditionalNotes;
+
+  /// No description provided for @submitBill.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit Bill'**
+  String get submitBill;
+
+  /// No description provided for @saveChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Changes'**
+  String get saveChanges;
 }
 
 class _AppLocalizationsDelegate

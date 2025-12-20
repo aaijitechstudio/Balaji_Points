@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:balaji_points/config/theme.dart';
+import 'package:balaji_points/core/theme/design_token.dart';
+import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/services/bill_service.dart';
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
@@ -96,14 +97,14 @@ class _PendingBillsListState extends State<PendingBillsList> {
           'Approve Bill',
           style: AppTextStyles.nunitoBold.copyWith(
             fontSize: 20,
-            color: AppColors.primary,
+            color: DesignToken.primary,
           ),
         ),
         content: Text(
           'Approve this bill of ₹${amount.toStringAsFixed(0)}?\n\n${(amount / 1000).floor()} points will be added to the carpenter.',
           style: AppTextStyles.nunitoRegular.copyWith(
             fontSize: 16,
-            color: AppColors.textDark,
+            color: DesignToken.textDark,
           ),
         ),
         actions: [
@@ -112,14 +113,14 @@ class _PendingBillsListState extends State<PendingBillsList> {
             child: Text(
               'Cancel',
               style: AppTextStyles.nunitoSemiBold.copyWith(
-                color: AppColors.textDark,
+                color: DesignToken.textDark,
               ),
             ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.secondary,
+              backgroundColor: DesignToken.secondary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -194,7 +195,7 @@ class _PendingBillsListState extends State<PendingBillsList> {
           'Are you sure you want to reject this bill?',
           style: AppTextStyles.nunitoRegular.copyWith(
             fontSize: 16,
-            color: AppColors.textDark,
+            color: DesignToken.textDark,
           ),
         ),
         actions: [
@@ -203,7 +204,7 @@ class _PendingBillsListState extends State<PendingBillsList> {
             child: Text(
               'Cancel',
               style: AppTextStyles.nunitoSemiBold.copyWith(
-                color: AppColors.textDark,
+                color: DesignToken.textDark,
               ),
             ),
           ),
@@ -267,7 +268,7 @@ class _PendingBillsListState extends State<PendingBillsList> {
       context: context,
       barrierDismissible: false,
       builder: (_) => const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
+        child: const CircularProgressIndicator(color: DesignToken.primary),
       ),
     );
   }
@@ -290,7 +291,7 @@ class _PendingBillsListState extends State<PendingBillsList> {
 
         if (!snap.hasData) {
           return const Center(
-            child: CircularProgressIndicator(color: AppColors.primary),
+            child: const CircularProgressIndicator(color: DesignToken.primary),
           );
         }
 
@@ -342,12 +343,12 @@ class _PendingBillsListState extends State<PendingBillsList> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
+                              color: DesignToken.primary.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.receipt_long,
-                              color: AppColors.primary,
+                              color: DesignToken.primary,
                               size: 22,
                             ),
                           ),
@@ -365,7 +366,7 @@ class _PendingBillsListState extends State<PendingBillsList> {
                                       '${(amount / 1000).floor()} pts',
                                       style: AppTextStyles.nunitoBold.copyWith(
                                         fontSize: 18,
-                                        color: AppColors.primary,
+                                        color: DesignToken.primary,
                                       ),
                                     ),
                                     const SizedBox(width: 8),

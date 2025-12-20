@@ -1074,4 +1074,83 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get statusRejected => 'நிராகரி';
+
+  @override
+  String get exitApp => 'Exit App?';
+
+  @override
+  String get exitAppMessage => 'Do you want to exit the app?';
+
+  @override
+  String get exit => 'Exit';
+
+  @override
+  String get discardChanges => 'Discard Changes?';
+
+  @override
+  String get discardChangesMessage =>
+      'You have unsaved changes. Do you want to discard them?';
+
+  @override
+  String get discard => 'Discard';
+
+  @override
+  String get pressBackAgainToExit => 'Press back again to exit';
+
+  @override
+  String get pleaseWait => 'Please wait...';
+
+  @override
+  String get pleaseWaitForSpin => 'Please wait for spin to complete';
+
+  @override
+  String get discardBill => 'Discard Bill?';
+
+  @override
+  String get discardBillMessage =>
+      'You have unsaved bill data. Do you want to discard it?';
+
+  @override
+  String get pleaseCompleteProfile => 'Please complete your profile';
+
+  @override
+  String get rewardsLoyaltyProgram => 'Rewards & Loyalty Program';
+
+  @override
+  String get billImage => 'Bill Image';
+
+  @override
+  String get billDateOptional => 'Bill Date (Optional)';
+
+  @override
+  String get storeVendorNameOptional => 'Store/Vendor Name (Optional)';
+
+  @override
+  String get billInvoiceNumberOptional => 'Bill/Invoice Number (Optional)';
+
+  @override
+  String get notesOptional => 'Notes (Optional)';
+
+  @override
+  String get tapToAddBillImage => 'Tap to add bill image';
+
+  @override
+  String get selectBillDateOptional => 'Select bill date (optional)';
+
+  @override
+  String get enterStoreOrVendorNameOptional =>
+      'Enter store or vendor name (optional)';
+
+  @override
+  String get enterBillOrInvoiceNumberOptional =>
+      'Enter bill or invoice number (optional)';
+
+  @override
+  String get addAnyAdditionalNotes => 'Add any additional notes...';
+
+  @override
+  String get submitBill => 'Submit Bill';
+
+  @override
+  String get saveChanges => 'Save Changes';
 }
