@@ -135,25 +135,14 @@ class _ResetPINPageState extends State<ResetPINPage>
       final normalizedInput = _pinAuthService.normalizePhone(v);
 
       if (normalizedLoggedIn != normalizedInput) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.canOnlyResetOwnPin),
-            backgroundColor: DesignToken.error,
-          ),
-        );
+        // Silently return - don't show error banner
         return;
       }
     }
 
-    // Security check: If not logged in, deny reset
+    // Security check: If not logged in, deny reset (silently)
     if (!_isLoggedIn) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.mustBeLoggedInToResetPin),
-          backgroundColor: DesignToken.error,
-          duration: const Duration(seconds: 4),
-        ),
-      );
+      // Don't show error banner - user can see the informational text below
       return;
     }
 
@@ -401,15 +390,11 @@ class _ResetPINPageState extends State<ResetPINPage>
                     const SizedBox(height: 6),
 
                     Text(
-                      _isLoggedIn
-                          ? l10n.resetPinSubtitle
-                          : l10n.mustBeLoggedInToResetPin,
+                      l10n.resetPinSubtitle,
                       textAlign: TextAlign.center,
                       style: LegacyTheme.AppTextStyles.nunitoRegular.copyWith(
                         fontSize: 13,
-                        color: _isLoggedIn
-                            ? DesignToken.textDark.withOpacity(0.7)
-                            : DesignToken.error,
+                        color: DesignToken.textDark.withOpacity(0.7),
                       ),
                     ),
 
@@ -1082,41 +1067,20 @@ class _ResetPINPageState extends State<ResetPINPage>
                                 ),
                               ),
 
-                              // Warning message for non-logged-in users
-                              if (!_isLoggedIn) ...[
+                              // Static informational text for non-logged-in users (only if phone not verified)
+                              if (!_isLoggedIn &&
+                                  (!_phoneChecked || !_phoneExists)) ...[
                                 const SizedBox(height: 16),
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: DesignToken.error.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: DesignToken.error.withOpacity(0.3),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.info_outline,
-                                        size: 20,
-                                        color: DesignToken.error,
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Text(
-                                          l10n.contactAdminForPinReset,
-                                          style: LegacyTheme
-                                              .AppTextStyles
-                                              .nunitoRegular
-                                              .copyWith(
-                                                fontSize: 13,
-                                                color: DesignToken.error,
-                                              ),
+                                Text(
+                                  l10n.contactAdminForPinReset,
+                                  textAlign: TextAlign.center,
+                                  style: LegacyTheme.AppTextStyles.nunitoRegular
+                                      .copyWith(
+                                        fontSize: 13,
+                                        color: DesignToken.textDark.withOpacity(
+                                          0.7,
                                         ),
                                       ),
-                                    ],
-                                  ),
                                 ),
                               ],
                             ],

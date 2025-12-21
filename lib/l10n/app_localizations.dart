@@ -520,6 +520,60 @@ abstract class AppLocalizations {
   /// **'Call Support'**
   String get callSupport;
 
+  /// No description provided for @adminResetPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset PIN'**
+  String get adminResetPin;
+
+  /// No description provided for @adminResetPinTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset PIN for {carpenterName}'**
+  String adminResetPinTitle(String carpenterName);
+
+  /// No description provided for @adminResetPinSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a new 4-digit PIN for this carpenter.'**
+  String get adminResetPinSubtitle;
+
+  /// No description provided for @adminResetPinConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to reset the PIN for {carpenterName}?'**
+  String adminResetPinConfirm(String carpenterName);
+
+  /// No description provided for @adminResetPinSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'PIN reset successfully for {carpenterName}'**
+  String adminResetPinSuccess(String carpenterName);
+
+  /// No description provided for @adminResetPinFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to reset PIN. Please try again.'**
+  String get adminResetPinFailed;
+
+  /// No description provided for @adminNotAuthorized.
+  ///
+  /// In en, this message translates to:
+  /// **'You are not authorized to perform this action.'**
+  String get adminNotAuthorized;
+
+  /// No description provided for @enterNewPinForCarpenter.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter new 4-digit PIN'**
+  String get enterNewPinForCarpenter;
+
+  /// No description provided for @confirmNewPinForCarpenter.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm new 4-digit PIN'**
+  String get confirmNewPinForCarpenter;
+
   /// No description provided for @newPinLabel.
   ///
   /// In en, this message translates to:
@@ -573,6 +627,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter 4 digits'**
   String get enter4Digits;
+
+  /// No description provided for @pinMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'PINs do not match'**
+  String get pinMismatch;
 
   /// No description provided for @enterValidFirstName.
   ///

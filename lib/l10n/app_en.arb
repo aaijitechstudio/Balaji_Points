@@ -77,6 +77,36 @@
   "forgotPinHelp": "If you don't remember your current PIN, please contact our support team for assistance.",
   "adminSupportInfo": "Admin Support",
   "callSupport": "Call Support",
+  "adminResetPin": "Reset PIN",
+  "adminResetPinTitle": "Reset PIN for {carpenterName}",
+  "@adminResetPinTitle": {
+    "placeholders": {
+      "carpenterName": {
+        "type": "String"
+      }
+    }
+  },
+  "adminResetPinSubtitle": "Enter a new 4-digit PIN for this carpenter.",
+  "adminResetPinConfirm": "Are you sure you want to reset the PIN for {carpenterName}?",
+  "@adminResetPinConfirm": {
+    "placeholders": {
+      "carpenterName": {
+        "type": "String"
+      }
+    }
+  },
+  "adminResetPinSuccess": "PIN reset successfully for {carpenterName}",
+  "@adminResetPinSuccess": {
+    "placeholders": {
+      "carpenterName": {
+        "type": "String"
+      }
+    }
+  },
+  "adminResetPinFailed": "Failed to reset PIN. Please try again.",
+  "adminNotAuthorized": "You are not authorized to perform this action.",
+  "enterNewPinForCarpenter": "Enter new 4-digit PIN",
+  "confirmNewPinForCarpenter": "Confirm new 4-digit PIN",
   "newPinLabel": "New 4-digit PIN",
   "checkNumber": "Check Number",
   "verified": "Verified",
@@ -86,6 +116,7 @@
   "failedToResetPin": "Failed to reset PIN. Try again.",
   "enterValidTenDigit": "Enter valid 10-digit number",
   "enter4Digits": "Enter 4 digits",
+  "pinMismatch": "PINs do not match",
   "enterValidFirstName": "Enter valid first name",
   "imageError": "Image error",
   "resetPin": "Reset PIN",

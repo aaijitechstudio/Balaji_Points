@@ -229,6 +229,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String get callSupport => 'Call Support';
 
   @override
+  String get adminResetPin => 'Reset PIN';
+
+  @override
+  String adminResetPinTitle(String carpenterName) {
+    return 'Reset PIN for $carpenterName';
+  }
+
+  @override
+  String get adminResetPinSubtitle =>
+      'Enter a new 4-digit PIN for this carpenter.';
+
+  @override
+  String adminResetPinConfirm(String carpenterName) {
+    return 'Are you sure you want to reset the PIN for $carpenterName?';
+  }
+
+  @override
+  String adminResetPinSuccess(String carpenterName) {
+    return 'PIN reset successfully for $carpenterName';
+  }
+
+  @override
+  String get adminResetPinFailed => 'Failed to reset PIN. Please try again.';
+
+  @override
+  String get adminNotAuthorized =>
+      'You are not authorized to perform this action.';
+
+  @override
+  String get enterNewPinForCarpenter => 'Enter new 4-digit PIN';
+
+  @override
+  String get confirmNewPinForCarpenter => 'Confirm new 4-digit PIN';
+
+  @override
   String get newPinLabel => 'New 4-digit PIN';
 
   @override
@@ -254,6 +289,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get enter4Digits => 'Enter 4 digits';
+
+  @override
+  String get pinMismatch => 'PINs do not match';
 
   @override
   String get enterValidFirstName => 'Enter valid first name';

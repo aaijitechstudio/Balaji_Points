@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
 
 import '../core/logger.dart';
+import 'user_service.dart';
 
 class PinAuthService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -211,8 +212,21 @@ class PinAuthService {
       final doc = query.docs.first;
       final userData = doc.data();
 
-      // Security Verification (skip if admin)
-      if (!isAdmin) {
+      // Security Verification
+      if (isAdmin) {
+        // Admin PIN reset - verify admin status first
+        final userService = UserService();
+        final isActuallyAdmin = await userService.isAdmin();
+        if (!isActuallyAdmin) {
+          AppLogger.warning(
+            'PIN reset denied: User is not authorized as admin for phone $normalized',
+          );
+          return false;
+        }
+        // Admin verified - skip security checks and proceed
+        AppLogger.info('Admin PIN reset authorized for phone $normalized');
+      } else {
+        // Regular user reset - apply security checks
         // Check 1: Verify phone ownership (if logged in)
         if (loggedInPhone != null) {
           final normalizedLoggedIn = normalizePhone(loggedInPhone);
@@ -256,8 +270,6 @@ class PinAuthService {
           );
           return false;
         }
-      } else {
-        AppLogger.info('PIN reset by admin for phone $normalized');
       }
 
       // All security checks passed - proceed with reset

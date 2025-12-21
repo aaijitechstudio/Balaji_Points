@@ -475,22 +475,68 @@ class _UsersListState extends State<UsersList> {
                                 const SizedBox(width: 12),
 
                                 // Profile Image
-                                CircleAvatar(
-                                  radius: 24,
-                                  backgroundColor: DesignToken.primary
-                                      .withOpacity(0.1),
-                                  backgroundImage:
-                                      profileImage != null && profileImage != ''
-                                      ? NetworkImage(profileImage)
-                                      : null,
+                                ClipOval(
                                   child:
-                                      profileImage == null || profileImage == ''
-                                      ? Icon(
-                                          Icons.person,
-                                          size: 24,
-                                          color: DesignToken.primary,
+                                      profileImage != null && profileImage != ''
+                                      ? Image.network(
+                                          profileImage,
+                                          width: 48,
+                                          height: 48,
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                                return Container(
+                                                  width: 48,
+                                                  height: 48,
+                                                  color: DesignToken.primary
+                                                      .withOpacity(0.1),
+                                                  child: Icon(
+                                                    Icons.person,
+                                                    size: 24,
+                                                    color: DesignToken.primary,
+                                                  ),
+                                                );
+                                              },
+                                          loadingBuilder: (context, child, loadingProgress) {
+                                            if (loadingProgress == null)
+                                              return child;
+                                            return Container(
+                                              width: 48,
+                                              height: 48,
+                                              color: DesignToken.primary
+                                                  .withOpacity(0.1),
+                                              child: Center(
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  value:
+                                                      loadingProgress
+                                                              .expectedTotalBytes !=
+                                                          null
+                                                      ? loadingProgress
+                                                                .cumulativeBytesLoaded /
+                                                            loadingProgress
+                                                                .expectedTotalBytes!
+                                                      : null,
+                                                  valueColor:
+                                                      AlwaysStoppedAnimation<
+                                                        Color
+                                                      >(DesignToken.primary),
+                                                ),
+                                              ),
+                                            );
+                                          },
                                         )
-                                      : null,
+                                      : Container(
+                                          width: 48,
+                                          height: 48,
+                                          color: DesignToken.primary
+                                              .withOpacity(0.1),
+                                          child: Icon(
+                                            Icons.person,
+                                            size: 24,
+                                            color: DesignToken.primary,
+                                          ),
+                                        ),
                                 ),
                                 const SizedBox(width: 12),
 
@@ -893,19 +939,60 @@ class UserDetailsDialog extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Colors.white,
-                    backgroundImage: profileImage != null && profileImage != ''
-                        ? NetworkImage(profileImage)
-                        : null,
-                    child: profileImage == null || profileImage == ''
-                        ? Icon(
-                            Icons.person,
-                            size: 35,
-                            color: DesignToken.primary,
+                  ClipOval(
+                    child: profileImage != null && profileImage != ''
+                        ? Image.network(
+                            profileImage,
+                            width: 60,
+                            height: 60,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                width: 60,
+                                height: 60,
+                                color: Colors.white,
+                                child: Icon(
+                                  Icons.person,
+                                  size: 35,
+                                  color: DesignToken.primary,
+                                ),
+                              );
+                            },
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                width: 60,
+                                height: 60,
+                                color: Colors.white,
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    value:
+                                        loadingProgress.expectedTotalBytes !=
+                                            null
+                                        ? loadingProgress
+                                                  .cumulativeBytesLoaded /
+                                              loadingProgress
+                                                  .expectedTotalBytes!
+                                        : null,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      DesignToken.primary,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
                           )
-                        : null,
+                        : Container(
+                            width: 60,
+                            height: 60,
+                            color: Colors.white,
+                            child: Icon(
+                              Icons.person,
+                              size: 35,
+                              color: DesignToken.primary,
+                            ),
+                          ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -1005,6 +1092,82 @@ class UserDetailsDialog extends StatelessWidget {
                               style: AppTextStyles.nunitoBold.copyWith(
                                 fontSize: 16,
                                 color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Reset PIN Button Section
+                    const SizedBox(height: 24),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: DesignToken.primary.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: DesignToken.primary.withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.lock_reset,
+                                color: DesignToken.primary,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                l10n.adminResetPin,
+                                style: AppTextStyles.nunitoBold.copyWith(
+                                  fontSize: 16,
+                                  color: DesignToken.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            l10n.adminResetPinSubtitle,
+                            style: AppTextStyles.nunitoRegular.copyWith(
+                              fontSize: 13,
+                              color: DesignToken.textDark.withOpacity(0.7),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.of(
+                                  context,
+                                ).pop(); // Close current dialog
+                                showDialog(
+                                  context: context,
+                                  builder: (context) =>
+                                      AdminResetPINDialog(user: user),
+                                );
+                              },
+                              icon: const Icon(Icons.vpn_key, size: 18),
+                              label: Text(l10n.adminResetPin),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: DesignToken.primary,
+                                side: BorderSide(
+                                  color: DesignToken.primary,
+                                  width: 1.5,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
                               ),
                             ),
                           ),
@@ -1252,6 +1415,370 @@ class UserDetailsDialog extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Admin Reset PIN Dialog
+/// Allows admin to reset PIN for any carpenter
+class AdminResetPINDialog extends StatefulWidget {
+  final Map<String, dynamic> user;
+  const AdminResetPINDialog({super.key, required this.user});
+
+  @override
+  State<AdminResetPINDialog> createState() => _AdminResetPINDialogState();
+}
+
+class _AdminResetPINDialogState extends State<AdminResetPINDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _newPinController = TextEditingController();
+  final _confirmPinController = TextEditingController();
+  final _pinAuthService = PinAuthService();
+  bool _isResetting = false;
+
+  @override
+  void dispose() {
+    _newPinController.dispose();
+    _confirmPinController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _resetPin() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final l10n = AppLocalizations.of(context)!;
+    final newPin = _newPinController.text.trim();
+    final confirmPin = _confirmPinController.text.trim();
+    final phone = widget.user['phone'] as String? ?? '';
+
+    if (newPin != confirmPin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.pinMismatch),
+          backgroundColor: DesignToken.error,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isResetting = true);
+
+    try {
+      final success = await _pinAuthService.resetPin(
+        phone: phone,
+        newPin: newPin,
+        isAdmin: true,
+      );
+
+      if (!mounted) return;
+      setState(() => _isResetting = false);
+
+      if (success) {
+        final firstName = widget.user['firstName'] ?? '';
+        final lastName = widget.user['lastName'] ?? '';
+        final carpenterName = '$firstName $lastName'.trim().isEmpty
+            ? 'Carpenter'
+            : '$firstName $lastName'.trim();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.adminResetPinSuccess(carpenterName)),
+            backgroundColor: DesignToken.success,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+
+        Navigator.of(context).pop(); // Close dialog
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.adminResetPinFailed),
+            backgroundColor: DesignToken.error,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isResetting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.adminResetPinFailed),
+          backgroundColor: DesignToken.error,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final firstName = widget.user['firstName'] ?? '';
+    final lastName = widget.user['lastName'] ?? '';
+    final carpenterName = '$firstName $lastName'.trim().isEmpty
+        ? 'Carpenter'
+        : '$firstName $lastName'.trim();
+    final phone = widget.user['phone'] as String? ?? '';
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [DesignToken.primary, DesignToken.secondary],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.lock_reset, color: Colors.white, size: 28),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.adminResetPinTitle(carpenterName),
+                            style: AppTextStyles.nunitoBold.copyWith(
+                              fontSize: 18,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            phone,
+                            style: AppTextStyles.nunitoRegular.copyWith(
+                              fontSize: 13,
+                              color: Colors.white.withOpacity(0.9),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      onPressed: _isResetting
+                          ? null
+                          : () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Content
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.adminResetPinSubtitle,
+                      style: AppTextStyles.nunitoRegular.copyWith(
+                        fontSize: 14,
+                        color: DesignToken.textDark.withOpacity(0.7),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // New PIN Field
+                    TextFormField(
+                      controller: _newPinController,
+                      keyboardType: TextInputType.number,
+                      obscureText: true,
+                      maxLength: 4,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.nunitoBold.copyWith(
+                        fontSize: 20,
+                        letterSpacing: 8,
+                        color: DesignToken.primary,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: l10n.enterNewPinForCarpenter,
+                        counterText: "",
+                        filled: true,
+                        fillColor: DesignToken.primary.withOpacity(0.05),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                            color: DesignToken.primary.withOpacity(0.3),
+                            width: 1.5,
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                            color: DesignToken.primary.withOpacity(0.2),
+                            width: 1.5,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                            color: DesignToken.primary,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      validator: (value) {
+                        final v = value?.trim() ?? "";
+                        if (v.length != 4 || !RegExp(r'^[0-9]+$').hasMatch(v)) {
+                          return l10n.enter4Digits;
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Confirm PIN Field
+                    TextFormField(
+                      controller: _confirmPinController,
+                      keyboardType: TextInputType.number,
+                      obscureText: true,
+                      maxLength: 4,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.nunitoBold.copyWith(
+                        fontSize: 20,
+                        letterSpacing: 8,
+                        color: DesignToken.primary,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: l10n.confirmNewPinForCarpenter,
+                        counterText: "",
+                        filled: true,
+                        fillColor: DesignToken.primary.withOpacity(0.05),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                            color: DesignToken.primary.withOpacity(0.3),
+                            width: 1.5,
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                            color: DesignToken.primary.withOpacity(0.2),
+                            width: 1.5,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                            color: DesignToken.primary,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      validator: (value) {
+                        final v = value?.trim() ?? "";
+                        if (v.length != 4 || !RegExp(r'^[0-9]+$').hasMatch(v)) {
+                          return l10n.enter4Digits;
+                        }
+                        if (v != _newPinController.text.trim()) {
+                          return l10n.pinMismatch;
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Action Buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _isResetting
+                                ? null
+                                : () => Navigator.of(context).pop(),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              side: BorderSide(
+                                color: DesignToken.primary,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Text(
+                              l10n.cancel,
+                              style: AppTextStyles.nunitoSemiBold.copyWith(
+                                fontSize: 16,
+                                color: DesignToken.primary,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  DesignToken.secondary,
+                                  DesignToken.secondary.withOpacity(0.8),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: ElevatedButton(
+                              onPressed: _isResetting ? null : _resetPin,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: _isResetting
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        valueColor: AlwaysStoppedAnimation(
+                                          Colors.white,
+                                        ),
+                                      ),
+                                    )
+                                  : Text(
+                                      l10n.adminResetPin,
+                                      style: AppTextStyles.nunitoBold.copyWith(
+                                        fontSize: 16,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
