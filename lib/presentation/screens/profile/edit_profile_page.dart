@@ -116,10 +116,30 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         throw Exception('No user logged in');
       }
 
+      // ✅ DATA SAFETY FIX: Validate and sanitize inputs before saving
       final firstName = _firstNameController.text.trim();
       final lastName = _lastNameController.text.trim();
 
+      // Validate data before proceeding
+      if (firstName.isEmpty || firstName.length < 2) {
+        throw Exception('First name must be at least 2 characters');
+      }
+      if (firstName.length > 50) {
+        throw Exception('First name is too long (max 50 characters)');
+      }
+      if (lastName.length > 50) {
+        throw Exception('Last name is too long (max 50 characters)');
+      }
+
+      // Sanitize inputs (remove any potentially harmful characters)
+      final sanitizedFirstName = _sanitizeInput(firstName);
+      final sanitizedLastName = lastName.isNotEmpty
+          ? _sanitizeInput(lastName)
+          : '';
+
       String? profileImageUrl = _existingImageUrl;
+      String?
+      oldImageUrlToDelete; // Store old image URL for deletion after successful save
 
       // Upload new image if user selected one
       if (_imageFile != null) {
@@ -129,32 +149,48 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
         debugPrint('EditProfilePage: Uploading new profile image...');
 
-        // Delete old image if exists
-        await _storageService.deleteOldProfileImageIfExists(_existingImageUrl);
+        // ✅ DATA SAFETY FIX: Upload new image FIRST, then delete old one
+        // This prevents data loss if upload fails
+        try {
+          // Upload new image with phone number
+          final newImageUrl = await _storageService.uploadProfileImage(
+            phoneNumber: phoneNumber,
+            imageFile: _imageFile!,
+          );
 
-        // Upload new image with phone number
-        profileImageUrl = await _storageService.uploadProfileImage(
-          phoneNumber: phoneNumber,
-          imageFile: _imageFile!,
-        );
+          if (newImageUrl == null || newImageUrl.isEmpty) {
+            throw Exception('Failed to upload profile image');
+          }
 
-        if (profileImageUrl == null) {
-          throw Exception('Failed to upload profile image');
+          debugPrint(
+            'EditProfilePage: Profile image uploaded successfully: $newImageUrl',
+          );
+
+          // Only after successful upload, mark old image for deletion
+          // We'll delete it after Firestore update succeeds
+          if (_existingImageUrl != null && _existingImageUrl!.isNotEmpty) {
+            oldImageUrlToDelete = _existingImageUrl;
+          }
+
+          profileImageUrl = newImageUrl;
+
+          setState(() {
+            _isUploadingImage = false;
+          });
+        } catch (e) {
+          setState(() {
+            _isUploadingImage = false;
+          });
+          // Re-throw to show error to user - old image is still safe
+          throw Exception('Failed to upload profile image: ${e.toString()}');
         }
-
-        debugPrint(
-          'EditProfilePage: Profile image uploaded successfully: $profileImageUrl',
-        );
-
-        setState(() {
-          _isUploadingImage = false;
-        });
       }
 
       // Update user data in Firestore (use set with merge to create if not exists)
+      // ✅ DATA SAFETY FIX: Use sanitized values and preserve existing critical data
       final updateData = {
-        'firstName': firstName,
-        'lastName': lastName,
+        'firstName': sanitizedFirstName,
+        'lastName': sanitizedLastName,
         'updatedAt': FieldValue.serverTimestamp(),
         // Ensure phone field exists (used as unique identifier)
         'phone': phoneNumber,
@@ -172,34 +208,76 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
       debugPrint('EditProfilePage: === SAVING USER DATA ===');
       debugPrint('  User ID (phone): $phoneNumber');
-      debugPrint('  First Name: "$firstName"');
-      debugPrint('  Last Name: "$lastName"');
+      debugPrint('  First Name: "$sanitizedFirstName"');
+      debugPrint('  Last Name: "$sanitizedLastName"');
       debugPrint('  Profile Image: ${profileImageUrl ?? "none"}');
       debugPrint('  Update Data: $updateData');
 
-      // Save to Firestore
-      await FirebaseFirestore.instance
+      // ✅ DATA SAFETY FIX: Get current data as backup before update
+      final userRef = FirebaseFirestore.instance
           .collection('users')
-          .doc(phoneNumber)
-          .set(updateData, SetOptions(merge: true));
+          .doc(phoneNumber);
+      final currentDataSnapshot = await userRef.get();
+      final currentData = currentDataSnapshot.data();
+
+      // Save to Firestore
+      await userRef.set(updateData, SetOptions(merge: true));
 
       debugPrint('EditProfilePage: ✅ Data saved successfully to Firestore!');
 
-      // Verify the save by reading back
-      final verifyDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(phoneNumber)
-          .get();
+      // ✅ DATA SAFETY FIX: Verify the save by reading back and comparing
+      final verifyDoc = await userRef.get(GetOptions(source: Source.server));
+      final savedData = verifyDoc.data();
+
       debugPrint('EditProfilePage: Verified saved data:');
-      debugPrint('  firstName: "${verifyDoc.data()?['firstName']}"');
-      debugPrint('  lastName: "${verifyDoc.data()?['lastName']}"');
-      debugPrint('  profileImage: ${verifyDoc.data()?['profileImage']}');
+      debugPrint('  firstName: "${savedData?['firstName']}"');
+      debugPrint('  lastName: "${savedData?['lastName']}"');
+      debugPrint('  profileImage: ${savedData?['profileImage']}');
+
+      // Verify critical fields were saved correctly
+      if (savedData == null) {
+        throw Exception('Failed to verify saved data - document not found');
+      }
+
+      if (savedData['firstName'] != sanitizedFirstName) {
+        // Attempt to restore from backup
+        if (currentData != null) {
+          debugPrint(
+            'EditProfilePage: ⚠️ Data mismatch detected, attempting restore...',
+          );
+          await userRef.set(currentData, SetOptions(merge: true));
+        }
+        throw Exception('Data verification failed - firstName mismatch');
+      }
+
+      if (savedData['phone'] != phoneNumber) {
+        throw Exception('Data verification failed - phone number mismatch');
+      }
+
+      debugPrint('EditProfilePage: ✅ Data verification passed!');
 
       // Update session with new profile data
       await _sessionService.updateProfile(
-        firstName: firstName,
-        lastName: lastName.isNotEmpty ? lastName : null,
+        firstName: sanitizedFirstName,
+        lastName: sanitizedLastName.isNotEmpty ? sanitizedLastName : null,
       );
+
+      // ✅ DATA SAFETY FIX: Delete old image only after successful Firestore save
+      // This ensures we don't lose the image if Firestore update fails
+      if (oldImageUrlToDelete != null && oldImageUrlToDelete.isNotEmpty) {
+        try {
+          await _storageService.deleteOldProfileImageIfExists(
+            oldImageUrlToDelete,
+          );
+          debugPrint('EditProfilePage: Old profile image deleted successfully');
+        } catch (e) {
+          // Don't fail the entire operation if old image deletion fails
+          // It's just cleanup - old image will remain in storage
+          debugPrint(
+            'EditProfilePage: Warning - Could not delete old image: $e',
+          );
+        }
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -272,6 +350,14 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     return currentFirstName.isNotEmpty ||
         currentLastName.isNotEmpty ||
         hasImageChange;
+  }
+
+  /// ✅ DATA SAFETY FIX: Sanitize user input to prevent injection attacks
+  String _sanitizeInput(String input) {
+    // Remove any control characters and trim
+    return input
+        .replaceAll(RegExp(r'[\x00-\x1F\x7F]'), '') // Remove control chars
+        .trim();
   }
 
   @override

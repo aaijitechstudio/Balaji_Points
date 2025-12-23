@@ -475,19 +475,37 @@ class _BillManagementWidgetState extends State<BillManagementWidget> {
       ),
     );
 
-    if (confirm != true) return;
+    if (confirm != true) {
+      print('❌ UI (BillManagement): User cancelled approval');
+      return;
+    }
+
+    print('✅ UI (BillManagement): User confirmed approval');
+    print('   Parameters: billId="$billId", userId="$userId", amount=$amount');
 
     try {
-      await _billService.approveBill(billId, userId, amount);
+      print('📞 UI (BillManagement): Calling _billService.approveBill()...');
+      final success = await _billService.approveBill(billId, userId, amount);
+      print('📥 UI (BillManagement): approveBill returned: $success');
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Bill approved and points added successfully'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            backgroundColor: success ? Colors.green : Colors.red,
+            content: Text(
+              success
+                  ? 'Bill approved and points added successfully'
+                  : 'Failed to approve bill',
+              style: const TextStyle(color: Colors.white),
+            ),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
-    } catch (e) {
+    } catch (e, st) {
+      print('❌ UI (BillManagement): Exception caught');
+      print('   Error: $e');
+      print('   StackTrace: $st');
       AppLogger.error('Error approving bill', e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

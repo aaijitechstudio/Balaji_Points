@@ -84,9 +84,16 @@ class _PendingBillsListState extends State<PendingBillsList> {
 
   // ---------------- APPROVE HANDLER ----------------
   Future<void> _approveBill(Map<String, dynamic> bill) async {
+    print('🎯 UI: _approveBill called');
+    print('   Bill data: $bill');
+
     final billId = bill['billId'];
     final carpenterId = bill['carpenterId'];
     final amount = (bill['amount'] ?? 0).toDouble();
+
+    print(
+      '   Extracted: billId="$billId", carpenterId="$carpenterId", amount=$amount',
+    );
 
     // Show confirmation dialog
     final confirm = await showDialog<bool>(
@@ -134,21 +141,35 @@ class _PendingBillsListState extends State<PendingBillsList> {
       ),
     );
 
-    if (confirm != true) return;
+    if (confirm != true) {
+      print('❌ UI: User cancelled approval');
+      return;
+    }
 
+    print('✅ UI: User confirmed approval, calling approveBill...');
     _showLoadingDialog();
 
     try {
+      print('📞 UI: Calling _billService.approveBill()...');
+      print(
+        '   Parameters: billId="$billId", carpenterId="$carpenterId", amount=$amount',
+      );
+
       final success = await _billService.approveBill(
         billId,
         carpenterId,
         amount,
       );
 
+      print('📥 UI: approveBill returned: $success');
       Navigator.pop(context); // close loading
 
-      if (!mounted) return;
+      if (!mounted) {
+        print('⚠️ UI: Widget not mounted, skipping snackbar');
+        return;
+      }
 
+      print('📢 UI: Showing snackbar (success: $success)');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: success ? Colors.green : Colors.red,
@@ -161,7 +182,10 @@ class _PendingBillsListState extends State<PendingBillsList> {
           duration: const Duration(seconds: 2),
         ),
       );
-    } catch (e) {
+    } catch (e, st) {
+      print('❌ UI: Exception caught in _approveBill');
+      print('   Error: $e');
+      print('   StackTrace: $st');
       Navigator.pop(context); // close loading
       if (!mounted) return;
 
