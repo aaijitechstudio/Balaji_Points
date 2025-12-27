@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:go_router/go_router.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/services/bill_service.dart';
@@ -574,392 +575,435 @@ class _PendingBillsListState extends State<PendingBillsList> {
         ),
         // Bills List
         Expanded(
-          child: StreamBuilder<QuerySnapshot>(
-            stream: _firestore
-                .collection('bills')
-                .where('status', isEqualTo: "pending")
-                .orderBy('createdAt', descending: true)
-                .snapshots(),
-            builder: (context, snap) {
-              if (snap.hasError) {
-                return Center(child: Text(l10n.errorLoadingBills));
-              }
+          child: Stack(
+            children: [
+              StreamBuilder<QuerySnapshot>(
+                stream: _firestore
+                    .collection('bills')
+                    .where('status', isEqualTo: "pending")
+                    .orderBy('createdAt', descending: true)
+                    .snapshots(),
+                builder: (context, snap) {
+                  if (snap.hasError) {
+                    return Center(child: Text(l10n.errorLoadingBills));
+                  }
 
-              if (!snap.hasData) {
-                return const Center(
-                  child: const CircularProgressIndicator(
-                    color: DesignToken.primary,
-                  ),
-                );
-              }
-
-              var bills = snap.data!.docs;
-
-              // Apply date filter
-              bills = _filterBills(bills);
-
-              if (bills.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.filter_alt_off,
-                        size: 64,
-                        color: Colors.grey[400],
+                  if (!snap.hasData) {
+                    return const Center(
+                      child: const CircularProgressIndicator(
+                        color: DesignToken.primary,
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        _carpenterNameFilter.isNotEmpty ||
-                                !_isToday(_selectedDate)
-                            ? 'No bills found matching filters'
-                            : l10n.noPendingBills,
-                        style: AppTextStyles.nunitoRegular.copyWith(
-                          fontSize: 16,
-                          color: Colors.grey[600],
-                        ),
+                    );
+                  }
+
+                  var bills = snap.data!.docs;
+
+                  // Apply date filter
+                  bills = _filterBills(bills);
+
+                  if (bills.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.filter_alt_off,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            _carpenterNameFilter.isNotEmpty ||
+                                    !_isToday(_selectedDate)
+                                ? 'No bills found matching filters'
+                                : l10n.noPendingBills,
+                            style: AppTextStyles.nunitoRegular.copyWith(
+                              fontSize: 16,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                );
-              }
+                    );
+                  }
 
-              return ListView.builder(
-                padding: const EdgeInsets.all(12),
-                itemCount: bills.length,
-                itemBuilder: (_, i) {
-                  final bill = bills[i].data() as Map<String, dynamic>;
-                  bill['billId'] = bills[i].id;
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: bills.length,
+                    itemBuilder: (_, i) {
+                      final bill = bills[i].data() as Map<String, dynamic>;
+                      bill['billId'] = bills[i].id;
 
-                  final billId = bill['billId'];
-                  final isExpanded = _expanded[billId] ?? false;
-                  final carpenterId = bill['carpenterId'] ?? '';
-                  final amount = bill['amount'] ?? 0;
-                  final phone = bill['carpenterPhone'] ?? "";
-                  final imageUrl = bill['imageUrl'] ?? "";
-                  final billDate = bill['billDate'] as Timestamp?;
-                  final createdAt = bill['createdAt'] as Timestamp?;
+                      final billId = bill['billId'];
+                      final isExpanded = _expanded[billId] ?? false;
+                      final carpenterId = bill['carpenterId'] ?? '';
+                      final amount = bill['amount'] ?? 0;
+                      final phone = bill['carpenterPhone'] ?? "";
+                      final imageUrl = bill['imageUrl'] ?? "";
+                      final createdAt = bill['createdAt'] as Timestamp?;
 
-                  return FutureBuilder<Map<String, dynamic>?>(
-                    future: _fetchCarpenterData(carpenterId),
-                    builder: (context, carpenterSnapshot) {
-                      // Get carpenter name and profile image
-                      String carpenterName = "Carpenter";
-                      String? profileImageUrl;
+                      return FutureBuilder<Map<String, dynamic>?>(
+                        future: _fetchCarpenterData(carpenterId),
+                        builder: (context, carpenterSnapshot) {
+                          // Get carpenter name and profile image
+                          String carpenterName = "Carpenter";
+                          String? profileImageUrl;
 
-                      if (carpenterSnapshot.hasData &&
-                          carpenterSnapshot.data != null) {
-                        final carpenterData = carpenterSnapshot.data!;
-                        final firstName = carpenterData['firstName'] ?? '';
-                        final lastName = carpenterData['lastName'] ?? '';
-                        carpenterName = ('$firstName $lastName').trim();
-                        if (carpenterName.isEmpty) {
-                          carpenterName = "Carpenter";
-                        }
-                        profileImageUrl =
-                            carpenterData['profileImage'] as String?;
-                      }
+                          if (carpenterSnapshot.hasData &&
+                              carpenterSnapshot.data != null) {
+                            final carpenterData = carpenterSnapshot.data!;
+                            final firstName = carpenterData['firstName'] ?? '';
+                            final lastName = carpenterData['lastName'] ?? '';
+                            carpenterName = ('$firstName $lastName').trim();
+                            if (carpenterName.isEmpty) {
+                              carpenterName = "Carpenter";
+                            }
+                            profileImageUrl =
+                                carpenterData['profileImage'] as String?;
+                          }
 
-                      // Apply carpenter name filter
-                      if (_carpenterNameFilter.isNotEmpty) {
-                        final fullName = carpenterName.toLowerCase();
-                        if (!fullName.contains(_carpenterNameFilter)) {
-                          return const SizedBox.shrink();
-                        }
-                      }
+                          // Apply carpenter name filter
+                          if (_carpenterNameFilter.isNotEmpty) {
+                            final fullName = carpenterName.toLowerCase();
+                            if (!fullName.contains(_carpenterNameFilter)) {
+                              return const SizedBox.shrink();
+                            }
+                          }
 
-                      return Card(
-                        elevation: 2,
-                        margin: const EdgeInsets.only(bottom: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
-                          onTap: () {
-                            setState(() {
-                              _expanded[billId] = !isExpanded;
-                            });
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // ------------ CARPENTER PROFILE ROW -------------
-                                Row(
+                          return Card(
+                            elevation: 2,
+                            margin: const EdgeInsets.only(bottom: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: () {
+                                setState(() {
+                                  _expanded[billId] = !isExpanded;
+                                });
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    // Profile Image
-                                    Container(
-                                      width: 50,
-                                      height: 50,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: DesignToken.primary.withOpacity(
-                                          0.1,
-                                        ),
-                                        border: Border.all(
-                                          color: DesignToken.primary
-                                              .withOpacity(0.3),
-                                          width: 2,
-                                        ),
-                                      ),
-                                      child:
-                                          profileImageUrl != null &&
-                                              profileImageUrl.isNotEmpty
-                                          ? ClipOval(
-                                              child: Image.network(
-                                                profileImageUrl,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (_, __, ___) =>
-                                                    Icon(
-                                                      Icons.person,
-                                                      color:
-                                                          DesignToken.primary,
-                                                      size: 28,
-                                                    ),
-                                              ),
-                                            )
-                                          : Icon(
-                                              Icons.person,
-                                              color: DesignToken.primary,
-                                              size: 28,
-                                            ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    // Name
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            carpenterName,
-                                            style: AppTextStyles.nunitoBold
-                                                .copyWith(
-                                                  fontSize: 16,
-                                                  color: DesignToken.textDark,
-                                                ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          if (phone.isNotEmpty)
-                                            Text(
-                                              phone,
-                                              style: AppTextStyles.nunitoRegular
-                                                  .copyWith(
-                                                    fontSize: 12,
-                                                    color: Colors.grey[600],
-                                                  ),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                    // Points and Amount - Separate Highlighted Containers
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
+                                    // ------------ CARPENTER PROFILE ROW -------------
+                                    Row(
                                       children: [
-                                        // Points Container
+                                        // Profile Image
                                         Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 10,
-                                            vertical: 6,
-                                          ),
+                                          width: 50,
+                                          height: 50,
                                           decoration: BoxDecoration(
-                                            color: DesignToken.secondary
-                                                .withOpacity(0.2),
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
+                                            shape: BoxShape.circle,
+                                            color: DesignToken.primary
+                                                .withOpacity(0.1),
                                             border: Border.all(
                                               color: DesignToken.primary
                                                   .withOpacity(0.3),
-                                              width: 1.5,
+                                              width: 2,
                                             ),
                                           ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
+                                          child:
+                                              profileImageUrl != null &&
+                                                  profileImageUrl.isNotEmpty
+                                              ? ClipOval(
+                                                  child: Image.network(
+                                                    profileImageUrl,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder:
+                                                        (_, __, ___) => Icon(
+                                                          Icons.person,
+                                                          color: DesignToken
+                                                              .primary,
+                                                          size: 28,
+                                                        ),
+                                                  ),
+                                                )
+                                              : Icon(
+                                                  Icons.person,
+                                                  color: DesignToken.primary,
+                                                  size: 28,
+                                                ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        // Name
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
-                                              Icon(
-                                                Icons.monetization_on,
-                                                size: 18,
-                                                color: DesignToken.secondary,
-                                              ),
-                                              const SizedBox(width: 4),
                                               Text(
-                                                '${(amount / 1000).floor()} pts',
+                                                carpenterName,
                                                 style: AppTextStyles.nunitoBold
                                                     .copyWith(
-                                                      fontSize: 15,
+                                                      fontSize: 16,
                                                       color:
-                                                          DesignToken.secondary,
+                                                          DesignToken.textDark,
                                                     ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
                                               ),
+                                              if (phone.isNotEmpty)
+                                                Text(
+                                                  phone,
+                                                  style: AppTextStyles
+                                                      .nunitoRegular
+                                                      .copyWith(
+                                                        fontSize: 12,
+                                                        color: Colors.grey[600],
+                                                      ),
+                                                ),
                                             ],
                                           ),
                                         ),
-                                        const SizedBox(height: 6),
-                                        // Amount Container
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 10,
-                                            vertical: 6,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.green.withOpacity(
-                                              0.15,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            border: Border.all(
-                                              color: DesignToken.primary
-                                                  .withOpacity(0.3),
-                                              width: 1.5,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            '₹${amount.toStringAsFixed(0)}',
-                                            style: AppTextStyles.nunitoSemiBold
-                                                .copyWith(
-                                                  fontSize: 13,
-                                                  color: Colors.green.shade700,
+                                        // Points and Amount - Separate Highlighted Containers
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.end,
+                                          children: [
+                                            // Points Container
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 10,
+                                                    vertical: 6,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: DesignToken.secondary
+                                                    .withOpacity(0.2),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                border: Border.all(
+                                                  color: DesignToken.primary
+                                                      .withOpacity(0.3),
+                                                  width: 1.5,
                                                 ),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    Icons.monetization_on,
+                                                    size: 18,
+                                                    color:
+                                                        DesignToken.secondary,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    '${(amount / 1000).floor()} pts',
+                                                    style: AppTextStyles
+                                                        .nunitoBold
+                                                        .copyWith(
+                                                          fontSize: 15,
+                                                          color: DesignToken
+                                                              .secondary,
+                                                        ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            const SizedBox(height: 6),
+                                            // Amount Container
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 10,
+                                                    vertical: 6,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.green.withOpacity(
+                                                  0.15,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                border: Border.all(
+                                                  color: DesignToken.primary
+                                                      .withOpacity(0.3),
+                                                  width: 1.5,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                '₹${amount.toStringAsFixed(0)}',
+                                                style: AppTextStyles
+                                                    .nunitoSemiBold
+                                                    .copyWith(
+                                                      fontSize: 13,
+                                                      color:
+                                                          Colors.green.shade700,
+                                                    ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+
+                                    const SizedBox(height: 10),
+
+                                    // ------------ DATE ROW -------------
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.calendar_today,
+                                          size: 14,
+                                          color: Colors.grey[600],
+                                        ),
+                                        const SizedBox(width: 6),
+
+                                        Text(
+                                          createdAt != null
+                                              ? DateFormat(
+                                                  'dd MMM, hh:mm a',
+                                                ).format(createdAt.toDate())
+                                              : "",
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.grey[500],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+
+                                    // ------------ BILL IMAGE (if expanded) -------------
+                                    if (isExpanded && imageUrl.isNotEmpty) ...[
+                                      const SizedBox(height: 10),
+                                      GestureDetector(
+                                        onTap: () => _viewBillImage(imageUrl),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                          child: Image.network(
+                                            imageUrl,
+                                            height: 170,
+                                            width: double.infinity,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) =>
+                                                Container(
+                                                  height: 170,
+                                                  color: Colors.grey[200],
+                                                  child: Center(
+                                                    child: Column(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: [
+                                                        Icon(
+                                                          Icons.error_outline,
+                                                          color:
+                                                              Colors.grey[400],
+                                                          size: 40,
+                                                        ),
+                                                        const SizedBox(
+                                                          height: 8,
+                                                        ),
+                                                        Text(
+                                                          l10n.failedToLoadImage,
+                                                          style: TextStyle(
+                                                            color: Colors
+                                                                .grey[600],
+                                                            fontSize: 12,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+
+                                    const SizedBox(height: 10),
+
+                                    // ------------ ACTION BUTTONS -------------
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: ElevatedButton.icon(
+                                            onPressed: () =>
+                                                _rejectBill(billId),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.red[50],
+                                              elevation: 0,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 10,
+                                                  ),
+                                            ),
+                                            icon: const Icon(
+                                              Icons.close,
+                                              color: Colors.red,
+                                              size: 18,
+                                            ),
+                                            label: Text(
+                                              l10n.reject,
+                                              style: const TextStyle(
+                                                color: Colors.red,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: ElevatedButton.icon(
+                                            onPressed: () => _approveBill(bill),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.green,
+                                              foregroundColor: Colors.white,
+                                              elevation: 0,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 10,
+                                                  ),
+                                            ),
+                                            icon: const Icon(
+                                              Icons.check,
+                                              size: 18,
+                                            ),
+                                            label: Text(
+                                              l10n.approve,
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                              ),
+                                            ),
                                           ),
                                         ),
                                       ],
                                     ),
                                   ],
                                 ),
-
-                                const SizedBox(height: 10),
-
-                                // ------------ DATE ROW -------------
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.calendar_today,
-                                      size: 14,
-                                      color: Colors.grey[600],
-                                    ),
-                                    const SizedBox(width: 6),
-
-                                    Text(
-                                      createdAt != null
-                                          ? DateFormat(
-                                              'dd MMM, hh:mm a',
-                                            ).format(createdAt.toDate())
-                                          : "",
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.grey[500],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-
-                                // ------------ BILL IMAGE (if expanded) -------------
-                                if (isExpanded && imageUrl.isNotEmpty) ...[
-                                  const SizedBox(height: 10),
-                                  GestureDetector(
-                                    onTap: () => _viewBillImage(imageUrl),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(10),
-                                      child: Image.network(
-                                        imageUrl,
-                                        height: 170,
-                                        width: double.infinity,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => Container(
-                                          height: 170,
-                                          color: Colors.grey[200],
-                                          child: Center(
-                                            child: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Icon(
-                                                  Icons.error_outline,
-                                                  color: Colors.grey[400],
-                                                  size: 40,
-                                                ),
-                                                const SizedBox(height: 8),
-                                                Text(
-                                                  l10n.failedToLoadImage,
-                                                  style: TextStyle(
-                                                    color: Colors.grey[600],
-                                                    fontSize: 12,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-
-                                const SizedBox(height: 10),
-
-                                // ------------ ACTION BUTTONS -------------
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: ElevatedButton.icon(
-                                        onPressed: () => _rejectBill(billId),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.red[50],
-                                          elevation: 0,
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: 10,
-                                          ),
-                                        ),
-                                        icon: const Icon(
-                                          Icons.close,
-                                          color: Colors.red,
-                                          size: 18,
-                                        ),
-                                        label: Text(
-                                          l10n.reject,
-                                          style: const TextStyle(
-                                            color: Colors.red,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: ElevatedButton.icon(
-                                        onPressed: () => _approveBill(bill),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.green,
-                                          foregroundColor: Colors.white,
-                                          elevation: 0,
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: 10,
-                                          ),
-                                        ),
-                                        icon: const Icon(Icons.check, size: 18),
-                                        label: Text(
-                                          l10n.approve,
-                                          style: const TextStyle(fontSize: 14),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                              ),
                             ),
-                          ),
-                        ),
+                          );
+                        },
                       );
                     },
                   );
                 },
-              );
-            },
+              ),
+              // Floating Action Button
+              Positioned(
+                bottom: 20,
+                right: 20,
+                child: FloatingActionButton.extended(
+                  onPressed: () {
+                    context.push('/admin/add-bill');
+                  },
+                  backgroundColor: DesignToken.primary,
+                  icon: const Icon(Icons.add, color: Colors.white),
+                  label: Text(
+                    'Add Bill',
+                    style: AppTextStyles.nunitoBold.copyWith(
+                      color: Colors.white,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],

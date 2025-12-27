@@ -362,6 +362,30 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                                     ),
                                   const SizedBox(height: 8),
 
+                                  // Phone Number
+                                  if (_userData?['phone'] != null)
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.phone,
+                                          size: 16,
+                                          color: Colors.grey[600],
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          _userData!['phone'] as String,
+                                          style: AppTextStyles.nunitoRegular
+                                              .copyWith(
+                                                fontSize: 14,
+                                                color: Colors.grey[600],
+                                              ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ],
+                                    ),
+                                  const SizedBox(height: 8),
+
                                   // Points and Tier
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.center,

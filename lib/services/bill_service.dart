@@ -109,6 +109,84 @@ class BillService {
     }
   }
 
+  /// Submit bill for carpenter by admin
+  Future<bool> submitBillForCarpenter({
+    required String carpenterId,
+    required String carpenterPhone,
+    required double amount,
+    required String adminId,
+    required String adminPhone,
+    String? adminName,
+    File? imageFile,
+    DateTime? billDate,
+    String? storeName,
+    String? billNumber,
+    String? notes,
+  }) async {
+    try {
+      AppLogger.info('BillService: === ADMIN SUBMITTING BILL FOR CARPENTER ===');
+      AppLogger.info('  carpenterId: $carpenterId');
+      AppLogger.info('  carpenterPhone: $carpenterPhone');
+      AppLogger.info('  adminId: $adminId');
+      AppLogger.info('  adminPhone: $adminPhone');
+      AppLogger.info('  amount: $amount');
+      AppLogger.info('  storeName: $storeName');
+      AppLogger.info('  billNumber: $billNumber');
+
+      final billRef = _firestore.collection('bills').doc();
+      final billId = billRef.id;
+      AppLogger.info('  Generated billId: $billId');
+
+      String? imageUrl;
+      if (imageFile != null) {
+        AppLogger.info('  Uploading bill image...');
+        imageUrl = await uploadBillImage(imageFile, billId);
+        AppLogger.info('  Image uploaded: $imageUrl');
+      }
+
+      final billData = {
+        'billId': billId,
+        'carpenterId': carpenterId,
+        'carpenterPhone': carpenterPhone,
+        'amount': amount,
+        'imageUrl': imageUrl ?? '',
+        'status': 'pending',
+        'pointsEarned': 0,
+        'billDate': Timestamp.fromDate(billDate ?? DateTime.now()),
+        'storeName': storeName ?? '',
+        'billNumber': billNumber ?? '',
+        'notes': notes ?? '',
+        'submittedBy': 'admin',
+        'adminId': adminId,
+        'adminPhone': adminPhone,
+        if (adminName != null) 'adminName': adminName,
+        'createdAt': FieldValue.serverTimestamp(),
+      };
+
+      AppLogger.info('  Saving to Firestore: bills/$billId');
+      await billRef.set(billData);
+
+      // Verify the save by reading back
+      final verifyDoc = await billRef.get();
+      if (verifyDoc.exists) {
+        AppLogger.info('BillService: ✅ Admin bill saved and verified successfully!');
+        AppLogger.info(
+          '  Verified data: carpenterId=${verifyDoc.data()?['carpenterId']}, status=${verifyDoc.data()?['status']}, submittedBy=${verifyDoc.data()?['submittedBy']}',
+        );
+      } else {
+        AppLogger.error(
+          'BillService: ❌ Bill document not found after save!',
+          null,
+        );
+      }
+
+      return true;
+    } catch (e) {
+      AppLogger.error('BillService: ❌ Error submitting bill for carpenter', e);
+      return false;
+    }
+  }
+
   /// Approve bill (Admin)
   Future<bool> approveBill(
     String billId,

@@ -27,13 +27,6 @@ class TopCarpentersList extends StatelessWidget {
     return (firstInitial + lastInitial).toUpperCase();
   }
 
-  /// Check if URL is valid for NetworkImage (http or https)
-  bool _isValidImageUrl(String? url) {
-    if (url == null || url.isEmpty) return false;
-    final trimmed = url.trim();
-    return trimmed.startsWith('http://') || trimmed.startsWith('https://');
-  }
-
   @override
   Widget build(BuildContext context) {
     if (carpenters.isEmpty) {
@@ -129,52 +122,28 @@ class TopCarpentersList extends StatelessWidget {
           ),
           const SizedBox(width: 16),
 
-          // Profile Image or Initials
+          // Initials only (no profile images)
           Container(
             width: 50,
             height: 50,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color:
-                  carpenter.isCurrentUser &&
-                      _isValidImageUrl(carpenter.imageUrl)
-                  ? Colors.transparent
-                  : rankBgColor,
+              color: rankBgColor,
               border: Border.all(
                 color: DesignToken.secondary.withValues(alpha: 0.3),
                 width: 2,
               ),
             ),
-            child:
-                carpenter.isCurrentUser && _isValidImageUrl(carpenter.imageUrl)
-                ? ClipOval(
-                    child: Image.network(
-                      carpenter.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Center(
-                          child: Text(
-                            _getInitials(carpenter.name),
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: rankTextColor,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  )
-                : Center(
-                    child: Text(
-                      _getInitials(carpenter.name),
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: rankTextColor,
-                      ),
-                    ),
-                  ),
+            child: Center(
+              child: Text(
+                _getInitials(carpenter.name),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: rankTextColor,
+                ),
+              ),
+            ),
           ),
           const SizedBox(width: 16),
 

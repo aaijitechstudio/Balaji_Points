@@ -256,7 +256,7 @@ class _WalletPageState extends State<WalletPage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '1250',
+                      '',
                       style: AppTextStyles.nunitoBold.copyWith(
                         fontSize: 36,
                         color: Colors.white,

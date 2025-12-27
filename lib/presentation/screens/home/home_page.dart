@@ -122,7 +122,7 @@ class _OffersCarouselState extends State<OffersCarousel> {
     return Column(
       children: [
         SizedBox(
-          height: 260,
+          height: 200,
           child: PageView.builder(
             controller: _pageController,
             onPageChanged: (index) {
@@ -182,7 +182,18 @@ class _BannerOfferCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       clipBehavior: Clip.hardEdge,
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(18)),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [DesignToken.primary, DesignToken.secondary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: DesignToken.primary.withOpacity(0.3),
+          width: 2,
+        ),
+      ),
       child: Stack(
         children: [
           offer.bannerUrl.isNotEmpty
@@ -190,29 +201,52 @@ class _BannerOfferCard extends StatelessWidget {
                   offer.bannerUrl,
                   width: double.infinity,
                   height: double.infinity,
-                  fit: BoxFit.cover,
+                  fit: BoxFit.contain,
                   errorBuilder: (_, __, ___) => Container(
-                    color: Colors.grey.shade300,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [DesignToken.primary, DesignToken.secondary],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
                     child: const Center(
                       child: Icon(
                         Icons.image_not_supported,
                         size: 48,
-                        color: Colors.grey,
+                        color: Colors.white,
                       ),
                     ),
                   ),
                   loadingBuilder: (context, child, progress) {
                     if (progress == null) return child;
                     return Container(
-                      color: Colors.grey.shade300,
-                      child: const Center(child: CircularProgressIndicator()),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [DesignToken.primary, DesignToken.secondary],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: const Center(
+                        child: CircularProgressIndicator(color: Colors.white),
+                      ),
                     );
                   },
                 )
               : Container(
-                  color: Colors.grey.shade300,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [DesignToken.primary, DesignToken.secondary],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
                   child: const Center(
-                    child: Icon(Icons.image, size: 48, color: Colors.grey),
+                    child: Icon(Icons.image, size: 48, color: Colors.white),
                   ),
                 ),
           Positioned.fill(
@@ -229,7 +263,7 @@ class _BannerOfferCard extends StatelessWidget {
           Positioned(
             left: 16,
             right: 16,
-            bottom: 16,
+            bottom: 6,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -241,22 +275,13 @@ class _BannerOfferCard extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  offer.description,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: DesignToken.white70, fontSize: 14),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "${offer.points} Points",
-                  style: const TextStyle(
-                    color: DesignToken.yellowAccent,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                // const SizedBox(height: 6),
+                // Text(
+                //   offer.description,
+                //   maxLines: 2,
+                //   overflow: TextOverflow.ellipsis,
+                //   style: TextStyle(color: DesignToken.white70, fontSize: 14),
+                // ),
               ],
             ),
           ),
@@ -273,12 +298,14 @@ class _BasicOfferCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 300,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: DesignToken.transparent, // no white background
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: DesignToken.black12),
+        border: Border.all(
+          color: DesignToken.primary.withOpacity(0.3),
+          width: 2,
+        ),
         boxShadow: [
           BoxShadow(
             color: DesignToken.black12,
@@ -300,15 +327,6 @@ class _BasicOfferCard extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(fontSize: 14, color: DesignToken.black54),
-          ),
-          const Spacer(),
-          Text(
-            "${offer.points} Points",
-            style: const TextStyle(
-              color: DesignToken.blueAccent,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
           ),
         ],
       ),
@@ -381,6 +399,10 @@ class _FullWidthOfferCard extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: _getGradient(),
         borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: DesignToken.primary.withOpacity(0.4),
+          width: 2,
+        ),
         boxShadow: const [
           BoxShadow(
             color: DesignToken.black26,
@@ -413,40 +435,6 @@ class _FullWidthOfferCard extends StatelessWidget {
                     fontSize: 15,
                     color: DesignToken.white70,
                     height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.25),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.3),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.monetization_on,
-                        color: DesignToken.white,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        "${offer.points} Points",
-                        style: const TextStyle(
-                          color: DesignToken.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
                   ),
                 ),
               ],

@@ -1,4 +1,5 @@
 // filepath: lib/config/routes.dart
+import 'package:flutter/material.dart';
 import 'package:balaji_points/presentation/screens/dashboard/dashboard_page.dart';
 import 'package:balaji_points/presentation/screens/profile/edit_profile_page.dart';
 import 'package:balaji_points/presentation/screens/profile/profile_page.dart';
@@ -16,6 +17,7 @@ import 'package:balaji_points/presentation/screens/auth/reset_pin_page.dart';
 
 import 'package:balaji_points/presentation/screens/spin/daily_spin_page.dart';
 import 'package:balaji_points/presentation/screens/admin/admin_home_page.dart';
+import 'package:balaji_points/presentation/screens/admin/admin_add_bill_page.dart';
 import 'package:balaji_points/presentation/screens/bills/add_bill_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -28,6 +30,25 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Allow all navigation for PIN-based auth
       return null;
     },
+
+    errorBuilder: (context, state) => Scaffold(
+      appBar: AppBar(title: const Text('Page Not Found')),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            const SizedBox(height: 16),
+            Text('Page not found: ${state.uri}'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => context.go('/'),
+              child: const Text('Go Home'),
+            ),
+          ],
+        ),
+      ),
+    ),
 
     routes: [
       GoRoute(path: '/splash', builder: (context, _) => const SplashPage()),
@@ -77,6 +98,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/daily-spin',
         builder: (context, _) => const DailySpinPage(),
+      ),
+
+      // Admin routes - more specific routes first
+      GoRoute(
+        path: '/admin/add-bill',
+        builder: (context, _) => const AdminAddBillPage(),
       ),
 
       GoRoute(path: '/admin', builder: (context, _) => const AdminHomePage()),

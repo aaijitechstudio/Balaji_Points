@@ -11,13 +11,6 @@ class TopCarpentersDisplay extends StatelessWidget {
     this.currentUser,
   });
 
-  /// Check if URL is valid for NetworkImage (http or https)
-  bool _isValidImageUrl(String? url) {
-    if (url == null || url.isEmpty) return false;
-    final trimmed = url.trim();
-    return trimmed.startsWith('http://') || trimmed.startsWith('https://');
-  }
-
   /// Get initials from name (e.g., "Ramesh Kumar" -> "RK")
   String _getInitials(String name) {
     final parts = name.trim().split(' ');
@@ -107,26 +100,20 @@ class TopCarpentersDisplay extends StatelessWidget {
           ),
           const SizedBox(height: 4),
 
-          // Profile picture or initials
+          // Initials only (no profile images)
           CircleAvatar(
             radius: rank == 1 ? 35 : 30,
             backgroundColor: isCurrentUser
                 ? Colors.white
                 : trophyColor.withValues(alpha: 0.2),
-            backgroundImage:
-                isCurrentUser && _isValidImageUrl(carpenter.imageUrl)
-                ? NetworkImage(carpenter.imageUrl!)
-                : null,
-            child: isCurrentUser && _isValidImageUrl(carpenter.imageUrl)
-                ? null
-                : Text(
-                    _getInitials(carpenter.name),
-                    style: TextStyle(
-                      fontSize: rank == 1 ? 20 : 16,
-                      fontWeight: FontWeight.bold,
-                      color: trophyColor,
-                    ),
-                  ),
+            child: Text(
+              _getInitials(carpenter.name),
+              style: TextStyle(
+                fontSize: rank == 1 ? 20 : 16,
+                fontWeight: FontWeight.bold,
+                color: trophyColor,
+              ),
+            ),
           ),
           const SizedBox(height: 8),
 
