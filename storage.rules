@@ -33,6 +33,20 @@ service firebase.storage {
       allow delete: if true;
     }
 
+    // Offer banners - allow anyone to read, upload, and delete
+    match /offer_banners/{fileName} {
+      // Allow anyone to read offer banners
+      allow read: if true;
+
+      // Allow uploads for offer banners
+      // Security: File size limit (5MB) and content type validation
+      allow write: if request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+
+      // Allow deletion of offer banners
+      allow delete: if true;
+    }
+
     // Deny all other paths
     match /{allPaths=**} {
       allow read, write: if false;

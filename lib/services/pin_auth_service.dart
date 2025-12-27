@@ -159,6 +159,43 @@ class PinAuthService {
     }
   }
 
+  /// Check if a user exists (by phone number) in the users collection.
+  /// Returns true if user document exists, false otherwise.
+  Future<bool> userExists(String phone) async {
+    try {
+      final normalized = normalizePhone(phone);
+      print('🔍 [DEBUG] Checking if user exists for phone: "$normalized"');
+
+      // Check by phone field first
+      final queryByPhone = await _firestore
+          .collection('users')
+          .where('phone', isEqualTo: normalized)
+          .limit(1)
+          .get();
+
+      if (queryByPhone.docs.isNotEmpty) {
+        print('🔍 [DEBUG] ✅ User exists (found by phone field)');
+        return true;
+      }
+
+      // Also check by document ID (phone might be document ID)
+      final docRef = _firestore.collection('users').doc(normalized);
+      final doc = await docRef.get();
+
+      if (doc.exists) {
+        print('🔍 [DEBUG] ✅ User exists (found by document ID)');
+        return true;
+      }
+
+      print('🔍 [DEBUG] ❌ User does not exist');
+      return false;
+    } catch (e) {
+      print('🔍 [DEBUG] ❌ Error checking user existence: $e');
+      AppLogger.error('Error checking user existence for phone $phone', e);
+      return false;
+    }
+  }
+
   /// Check if a phone already has a PIN set.
   Future<bool> hasPin(String phone) async {
     try {
@@ -316,7 +353,8 @@ class PinAuthService {
   /// Create a new account with phone number as the unique identifier.
   /// Phone number is used as the document ID for easier lookups.
   /// Returns true if account creation is successful.
-  /// Returns false if account already exists (user should use Reset PIN instead).
+  /// Returns false if account already exists with a PIN (user should use Reset PIN instead).
+  /// If account exists but has no PIN, it will complete the account setup.
   /// firstName defaults to empty string - can be filled later via profile update.
   Future<bool> createAccount({
     required String phone,
@@ -326,36 +364,221 @@ class PinAuthService {
     String? profileImageUrl,
   }) async {
     try {
+      print('🔍 [DEBUG] createAccount called');
+      print('🔍 [DEBUG] Input phone: "$phone"');
+
       final normalized = normalizePhone(phone);
+      print('🔍 [DEBUG] Normalized phone: "$normalized"');
+
       final usersRef = _firestore.collection('users');
 
-      // Check if user already exists by querying phone field
-      final existingQuery = await usersRef
+      // Check if user exists by querying phone field (more reliable than document ID)
+      // Also check by document ID in case phone is used as document ID
+      print(
+        '🔍 [DEBUG] Querying users collection by phone field: "$normalized"',
+      );
+      final queryByPhone = await usersRef
           .where('phone', isEqualTo: normalized)
           .limit(1)
           .get();
 
-      if (existingQuery.docs.isNotEmpty) {
-        // User already exists - they should use Reset PIN instead
-        AppLogger.warning(
-          'Account already exists for phone $normalized. Use Reset PIN instead.',
+      print(
+        '🔍 [DEBUG] Query by phone field result: ${queryByPhone.docs.length} documents found',
+      );
+
+      DocumentSnapshot? userDoc;
+      DocumentReference? userDocRef;
+
+      if (queryByPhone.docs.isNotEmpty) {
+        // User found by phone field
+        userDoc = queryByPhone.docs.first;
+        userDocRef = userDoc.reference;
+        print('🔍 [DEBUG] ✅ User found by phone field query');
+        print('🔍 [DEBUG] Document ID: ${userDoc.id}');
+        AppLogger.info('User found by phone field query: ${userDoc.id}');
+      } else {
+        // Check by document ID (phone number might be document ID)
+        print(
+          '🔍 [DEBUG] No user found by phone field, checking by document ID: "$normalized"',
         );
-        return false;
+        final docRef = usersRef.doc(normalized);
+        userDoc = await docRef.get();
+        if (userDoc.exists) {
+          userDocRef = docRef;
+          print('🔍 [DEBUG] ✅ User found by document ID');
+          print('🔍 [DEBUG] Document ID: ${userDoc.id}');
+          AppLogger.info('User found by document ID: $normalized');
+        } else {
+          print('🔍 [DEBUG] ❌ No user found by document ID either');
+        }
+      }
+
+      if (userDoc != null && userDoc.exists && userDocRef != null) {
+        print('🔍 [DEBUG] User document exists, checking PIN status...');
+        final userData = userDoc.data() as Map<String, dynamic>?;
+        print('🔍 [DEBUG] User data keys: ${userData?.keys.toList()}');
+
+        // Check if PIN exists - must have both hash and salt, and they must not be empty
+        final pinHash = userData?['pinHash'] as String?;
+        final pinSalt = userData?['pinSalt'] as String?;
+
+        print(
+          '🔍 [DEBUG] PIN Hash: ${pinHash != null ? "present (type: ${pinHash.runtimeType}, length: ${pinHash.toString().length})" : "null"}',
+        );
+        print(
+          '🔍 [DEBUG] PIN Salt: ${pinSalt != null ? "present (type: ${pinSalt.runtimeType}, length: ${pinSalt.toString().length})" : "null"}',
+        );
+
+        if (pinHash != null) {
+          print(
+            '🔍 [DEBUG] PIN Hash value (first 10 chars): ${pinHash.toString().substring(0, pinHash.toString().length > 10 ? 10 : pinHash.toString().length)}...',
+          );
+        }
+        if (pinSalt != null) {
+          print(
+            '🔍 [DEBUG] PIN Salt value (first 10 chars): ${pinSalt.toString().substring(0, pinSalt.toString().length > 10 ? 10 : pinSalt.toString().length)}...',
+          );
+        }
+
+        final hasPin =
+            pinHash != null &&
+            pinHash.toString().trim().isNotEmpty &&
+            pinSalt != null &&
+            pinSalt.toString().trim().isNotEmpty;
+
+        print('🔍 [DEBUG] Has PIN check result: $hasPin');
+        print('🔍 [DEBUG] - pinHash != null: ${pinHash != null}');
+        print(
+          '🔍 [DEBUG] - pinHash not empty: ${pinHash != null && pinHash.toString().trim().isNotEmpty}',
+        );
+        print('🔍 [DEBUG] - pinSalt != null: ${pinSalt != null}');
+        print(
+          '🔍 [DEBUG] - pinSalt not empty: ${pinSalt != null && pinSalt.toString().trim().isNotEmpty}',
+        );
+
+        AppLogger.info(
+          'User document exists. PIN hash: ${pinHash != null ? "present (${pinHash.length} chars)" : "null"}, PIN salt: ${pinSalt != null ? "present (${pinSalt.length} chars)" : "null"}, Has PIN: $hasPin',
+        );
+
+        if (hasPin) {
+          // User already exists with PIN - they should use Reset PIN instead
+          print('🔍 [DEBUG] ❌ User already has PIN set - returning false');
+          AppLogger.warning(
+            'Account already exists with PIN for phone $normalized. Use Reset PIN instead.',
+          );
+          return false;
+        } else {
+          print(
+            '🔍 [DEBUG] ✅ User exists but NO PIN - completing account setup',
+          );
+          // User document exists but no PIN set - complete the account setup
+          print('🔍 [DEBUG] Generating new PIN hash and salt...');
+          AppLogger.info(
+            'User document exists but no PIN set. Completing account setup for $normalized.',
+          );
+
+          // Generate salt and hash for PIN
+          final salt = _generateSalt();
+          final pinHash = _hashPin(pin, salt);
+          print('🔍 [DEBUG] Generated PIN hash (length: ${pinHash.length})');
+          print('🔍 [DEBUG] Generated PIN salt (length: ${salt.length})');
+
+          // Update existing document with PIN and other missing fields
+          final updateData = <String, dynamic>{
+            'pinHash': pinHash,
+            'pinSalt': salt,
+            'pinUpdatedAt': FieldValue.serverTimestamp(),
+          };
+
+          // Only set fields if they don't exist or are empty
+          if (userData?['firstName'] == null ||
+              (userData?['firstName'] as String).isEmpty) {
+            updateData['firstName'] = firstName;
+          }
+          if (userData?['lastName'] == null ||
+              (userData?['lastName'] as String).isEmpty) {
+            updateData['lastName'] = lastName ?? '';
+          }
+          if (userData?['role'] == null) {
+            updateData['role'] = 'carpenter';
+          }
+          if (userData?['status'] == null) {
+            updateData['status'] = 'verified';
+          }
+          if (userData?['totalPoints'] == null) {
+            updateData['totalPoints'] = 0;
+          }
+          if (userData?['tier'] == null) {
+            updateData['tier'] = 'Bronze';
+          }
+          if (userData?['createdAt'] == null) {
+            updateData['createdAt'] = FieldValue.serverTimestamp();
+          }
+          if (userData?['verifiedAt'] == null) {
+            updateData['verifiedAt'] = FieldValue.serverTimestamp();
+          }
+          if (userData?['verifiedBy'] == null) {
+            updateData['verifiedBy'] = 'pin';
+          }
+
+          print(
+            '🔍 [DEBUG] Updating user document with PIN and other fields...',
+          );
+          print('🔍 [DEBUG] Update data keys: ${updateData.keys.toList()}');
+          await userDocRef.set(updateData, SetOptions(merge: true));
+          print('🔍 [DEBUG] ✅ User document updated successfully');
+
+          // Ensure user_points document exists
+          final userIdForPoints = userDoc.id; // Use the actual document ID
+          print(
+            '🔍 [DEBUG] Checking user_points document for: $userIdForPoints',
+          );
+          final pointsDocRef = _firestore
+              .collection('user_points')
+              .doc(userIdForPoints);
+          final pointsDoc = await pointsDocRef.get();
+          if (!pointsDoc.exists) {
+            print('🔍 [DEBUG] Creating user_points document...');
+            await pointsDocRef.set({
+              'userId': userIdForPoints,
+              'totalPoints': 0,
+              'tier': 'Bronze',
+              'lastUpdated': FieldValue.serverTimestamp(),
+              'pointsHistory': [],
+            });
+            print('🔍 [DEBUG] ✅ user_points document created');
+          } else {
+            print('🔍 [DEBUG] user_points document already exists');
+          }
+
+          print('🔍 [DEBUG] ✅ Account setup completed successfully');
+          AppLogger.info(
+            'Account setup completed for existing user: $normalized',
+          );
+          return true;
+        }
       }
 
       // Generate unique display ID for user (e.g., #BP41)
+      print('🔍 [DEBUG] Generating user display ID...');
       final userDisplayId = await _getNextUserDisplayId();
+      print('🔍 [DEBUG] Generated user display ID: $userDisplayId');
 
       // Generate salt and hash for PIN
+      print('🔍 [DEBUG] Generating PIN hash and salt for new account...');
       final salt = _generateSalt();
       final pinHash = _hashPin(pin, salt);
+      print('🔍 [DEBUG] Generated PIN hash (length: ${pinHash.length})');
+      print('🔍 [DEBUG] Generated PIN salt (length: ${salt.length})');
 
       // Use batch write for atomic operation - both succeed or both fail
+      print('🔍 [DEBUG] Creating batch write operation...');
       final batch = _firestore.batch();
 
       // Create new account with phone as document ID
-      final userDocRef = usersRef.doc(normalized);
-      batch.set(userDocRef, {
+      final newUserDocRef = usersRef.doc(normalized);
+      print('🔍 [DEBUG] Setting user document with ID: $normalized');
+      batch.set(newUserDocRef, {
         'phone': normalized, // Phone number is the unique identifier
         'userDisplayId': userDisplayId, // Display ID like 41 (shown as #BP41)
         'firstName': firstName,
@@ -373,7 +596,7 @@ class PinAuthService {
         'pinUpdatedAt': FieldValue.serverTimestamp(),
       });
 
-      // Initialize user_points document with same ID
+      // Initialize user_points document with same ID (phone number)
       final pointsDocRef = _firestore.collection('user_points').doc(normalized);
       batch.set(pointsDocRef, {
         'userId': normalized,
@@ -384,13 +607,36 @@ class PinAuthService {
       });
 
       // Commit batch - atomic operation
+      print('🔍 [DEBUG] Committing batch write...');
       await batch.commit();
+      print('🔍 [DEBUG] ✅ Batch write committed successfully');
 
+      print('🔍 [DEBUG] ✅ New account created successfully: $normalized');
       AppLogger.info('New account created successfully: $normalized');
       return true;
+    } on FirebaseException catch (e, st) {
+      print(
+        '🔍 [DEBUG] ❌ Firebase ERROR creating account: ${e.code} - ${e.message}',
+      );
+      print('🔍 [DEBUG] Stack trace: $st');
+      AppLogger.error(
+        'Firebase error creating account for phone $phone',
+        e,
+        st,
+      );
+
+      // Re-throw Firebase exceptions so they can be handled in UI
+      if (e.code == 'permission-denied') {
+        throw Exception(
+          'Firebase permission denied. Please check Firestore rules or contact support.',
+        );
+      }
+      throw Exception('Firebase error: ${e.message}');
     } catch (e, st) {
+      print('🔍 [DEBUG] ❌ ERROR creating account: $e');
+      print('🔍 [DEBUG] Stack trace: $st');
       AppLogger.error('Error creating account for phone $phone', e, st);
-      return false;
+      rethrow; // Re-throw so UI can handle it
     }
   }
 }

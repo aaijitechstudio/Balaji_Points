@@ -300,7 +300,6 @@ class _UsersListState extends State<UsersList> {
           child: StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('users')
-                .where('role', isEqualTo: 'carpenter')
                 .snapshots(),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
@@ -343,7 +342,22 @@ class _UsersListState extends State<UsersList> {
 
               var users = snapshot.data?.docs ?? [];
 
-              // Apply filters
+              // Filter to show only carpenters (exclude admins)
+              // Include users with role='carpenter' OR users without a role field (assumed to be carpenters)
+              users = users.where((doc) {
+                final user = doc.data() as Map<String, dynamic>;
+                final role = user['role'] as String?;
+
+                // Exclude admins, include carpenters and users without role
+                if (role == 'admin') {
+                  return false;
+                }
+
+                // Include if role is 'carpenter' or if role is null/empty (assumed carpenter)
+                return role == null || role.isEmpty || role == 'carpenter';
+              }).toList();
+
+              // Apply search and tier filters
               users = users.where((doc) {
                 final user = doc.data() as Map<String, dynamic>;
                 final firstName = (user['firstName'] ?? '')

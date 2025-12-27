@@ -21,9 +21,11 @@ service cloud.firestore {
 
       // Allow creating new user documents (registration)
       // Validation: Ensure required fields are present
+      // Note: Some fields like firstName, lastName may be empty strings initially
       allow create: if request.resource.data.phone != null
                     && request.resource.data.role != null
-                    && request.resource.data.keys().hasAll(['phone', 'role', 'totalPoints', 'tier']);
+                    && request.resource.data.totalPoints != null
+                    && request.resource.data.tier != null;
 
       // Allow users to update their own document
       // Security: Prevent users from changing their phone number (unique identifier)
@@ -216,8 +218,11 @@ service cloud.firestore {
       // Allow writing for user registration and other operations
       // This is needed for auto-incrementing user display IDs
       // Validation: Ensure counter value is a number
-      allow write: if request.resource.data.count != null
-                   && request.resource.data.count is int;
+      // Supports both 'count' and 'lastId' field names
+      allow write: if (request.resource.data.count != null
+                       && request.resource.data.count is int)
+                   || (request.resource.data.lastId != null
+                       && request.resource.data.lastId is int);
     }
 
     // ============================================

@@ -8,6 +8,7 @@ import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/core/utils/back_button_handler.dart';
+import 'package:balaji_points/services/pin_auth_service.dart';
 import '../../providers/locale_provider.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -24,6 +25,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
 
   final _phoneController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  final _pinAuthService = PinAuthService();
+  bool _isChecking = false;
 
   @override
   void initState() {
@@ -59,11 +62,53 @@ class _LoginPageState extends ConsumerState<LoginPage>
     super.dispose();
   }
 
-  void _goToPinLogin() {
+  Future<void> _checkUserAndNavigate() async {
     if (!_formKey.currentState!.validate()) return;
 
     final phone = _phoneController.text.trim();
-    context.push('/pin-login?phone=$phone');
+    final l10n = AppLocalizations.of(context)!;
+
+    if (phone.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _isChecking = true;
+    });
+
+    try {
+      // Check if user exists in Firestore
+      final userExists = await _pinAuthService.userExists(phone);
+
+      if (!mounted) return;
+
+      if (userExists) {
+        // User exists - navigate to PIN login page
+        print('🔍 [DEBUG] User exists, navigating to PIN login');
+        context.push('/pin-login?phone=$phone');
+      } else {
+        // User doesn't exist - navigate to PIN setup page
+        print('🔍 [DEBUG] User does not exist, navigating to PIN setup');
+        context.push('/pin-setup?phone=$phone');
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      print('🔍 [DEBUG] Error checking user: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${l10n.error}: ${e.toString()}'),
+          backgroundColor: DesignToken.error,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isChecking = false;
+        });
+      }
+    }
   }
 
   @override
@@ -336,7 +381,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                           ],
                                         ),
                                         child: ElevatedButton(
-                                          onPressed: _goToPinLogin,
+                                          onPressed: _isChecking
+                                              ? null
+                                              : _checkUserAndNavigate,
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor:
                                                 DesignToken.transparent,
@@ -350,15 +397,28 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                                   BorderRadius.circular(16),
                                             ),
                                           ),
-                                          child: Text(
-                                            l10n.continueWithPin,
-                                            style: AppTextStyles.nunitoBold
-                                                .copyWith(
-                                                  fontSize: 18,
-                                                  color: DesignToken.white,
-                                                  letterSpacing: 0.5,
+                                          child: _isChecking
+                                              ? const SizedBox(
+                                                  width: 24,
+                                                  height: 24,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                        color:
+                                                            DesignToken.white,
+                                                        strokeWidth: 2.5,
+                                                      ),
+                                                )
+                                              : Text(
+                                                  l10n.continueWithPin,
+                                                  style: AppTextStyles
+                                                      .nunitoBold
+                                                      .copyWith(
+                                                        fontSize: 18,
+                                                        color:
+                                                            DesignToken.white,
+                                                        letterSpacing: 0.5,
+                                                      ),
                                                 ),
-                                          ),
                                         ),
                                       ),
                                     ],

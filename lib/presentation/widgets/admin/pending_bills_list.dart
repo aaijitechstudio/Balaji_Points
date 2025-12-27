@@ -18,6 +18,13 @@ class _PendingBillsListState extends State<PendingBillsList> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   final Map<String, bool> _expanded = {};
+  final Map<String, Map<String, dynamic>?> _carpenterCache = {};
+
+  // Filter state
+  DateTime _selectedDate = DateTime.now();
+  final TextEditingController _carpenterNameController =
+      TextEditingController();
+  String _carpenterNameFilter = '';
 
   // ---------------- IMAGE VIEWER ----------------
   void _viewBillImage(String imageUrl) {
@@ -297,240 +304,665 @@ class _PendingBillsListState extends State<PendingBillsList> {
     );
   }
 
+  // ---------------- FETCH CARPENTER DATA ----------------
+  Future<Map<String, dynamic>?> _fetchCarpenterData(String carpenterId) async {
+    // Check cache first
+    if (_carpenterCache.containsKey(carpenterId)) {
+      return _carpenterCache[carpenterId];
+    }
+
+    try {
+      // Try to get by document ID first (phone number as doc ID)
+      final doc = await _firestore.collection('users').doc(carpenterId).get();
+
+      if (doc.exists) {
+        final data = doc.data();
+        _carpenterCache[carpenterId] = data;
+        return data;
+      }
+
+      // If not found by doc ID, try querying by phone field
+      final query = await _firestore
+          .collection('users')
+          .where('phone', isEqualTo: carpenterId)
+          .limit(1)
+          .get();
+
+      if (query.docs.isNotEmpty) {
+        final data = query.docs.first.data();
+        _carpenterCache[carpenterId] = data;
+        return data;
+      }
+
+      _carpenterCache[carpenterId] = null;
+      return null;
+    } catch (e) {
+      print('Error fetching carpenter data: $e');
+      _carpenterCache[carpenterId] = null;
+      return null;
+    }
+  }
+
+  // ---------------- DATE PICKER ----------------
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: DesignToken.primary,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: DesignToken.textDark,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
+
+  // ---------------- CLEAR FILTERS ----------------
+  void _clearFilters() {
+    setState(() {
+      _selectedDate = DateTime.now();
+      _carpenterNameController.clear();
+      _carpenterNameFilter = '';
+    });
+  }
+
+  // ---------------- HELPER: CHECK IF DATE IS TODAY ----------------
+  bool _isToday(DateTime date) {
+    final now = DateTime.now();
+    return date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
+  }
+
+  @override
+  void dispose() {
+    _carpenterNameController.dispose();
+    super.dispose();
+  }
+
+  // ---------------- FILTER BILLS ----------------
+  List<QueryDocumentSnapshot> _filterBills(List<QueryDocumentSnapshot> bills) {
+    return bills.where((billDoc) {
+      final bill = billDoc.data() as Map<String, dynamic>;
+
+      // Date filter (always applied since date is always set)
+      final billDate = bill['billDate'] as Timestamp?;
+      if (billDate == null) return false;
+      final billDateTime = billDate.toDate();
+      if (billDateTime.year != _selectedDate.year ||
+          billDateTime.month != _selectedDate.month ||
+          billDateTime.day != _selectedDate.day) {
+        return false;
+      }
+
+      // Carpenter name filter (will be applied after fetching carpenter data)
+      return true;
+    }).toList();
+  }
+
   // ---------------- UI ----------------
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    return StreamBuilder<QuerySnapshot>(
-      stream: _firestore
-          .collection('bills')
-          .where('status', isEqualTo: "pending")
-          .orderBy('createdAt', descending: true)
-          .snapshots(),
-      builder: (context, snap) {
-        if (snap.hasError) {
-          return Center(child: Text(l10n.errorLoadingBills));
-        }
-
-        if (!snap.hasData) {
-          return const Center(
-            child: const CircularProgressIndicator(color: DesignToken.primary),
-          );
-        }
-
-        final bills = snap.data!.docs;
-
-        if (bills.isEmpty) {
-          return Center(child: Text(l10n.noPendingBills));
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(12),
-          itemCount: bills.length,
-          itemBuilder: (_, i) {
-            final bill = bills[i].data() as Map<String, dynamic>;
-            bill['billId'] = bills[i].id;
-
-            final billId = bill['billId'];
-            final isExpanded = _expanded[billId] ?? false;
-
-            final amount = bill['amount'] ?? 0;
-            final name = bill['carpenterName'] ?? "Carpenter";
-            final phone = bill['carpenterPhone'] ?? "";
-            final imageUrl = bill['imageUrl'] ?? "";
-            final billDate = bill['billDate'] as Timestamp?;
-            final createdAt = bill['createdAt'] as Timestamp?;
-
-            return Card(
-              elevation: 2,
-              margin: const EdgeInsets.only(bottom: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+    return Column(
+      children: [
+        // Filter Section
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
               ),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () {
-                  setState(() {
-                    _expanded[billId] = !isExpanded;
-                  });
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // ------------ HEADER -------------
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: DesignToken.primary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Icon(
-                              Icons.receipt_long,
-                              color: DesignToken.primary,
-                              size: 22,
-                            ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // Filters in One Row
+              Row(
+                children: [
+                  // Date Filter
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => _selectDate(context),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: DesignToken.primary.withOpacity(0.3),
+                            width: 1,
                           ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_today,
+                              size: 20,
+                              color: DesignToken.primary,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                DateFormat('dd MMM yyyy').format(_selectedDate),
+                                style: AppTextStyles.nunitoRegular.copyWith(
+                                  fontSize: 14,
+                                  color: DesignToken.textDark,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _selectedDate = DateTime.now();
+                                });
+                              },
+                              child: Icon(
+                                Icons.close,
+                                size: 18,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Carpenter Name Filter
+                  Expanded(
+                    child: TextField(
+                      controller: _carpenterNameController,
+                      onChanged: (value) {
+                        setState(() {
+                          _carpenterNameFilter = value.toLowerCase();
+                        });
+                      },
+                      style: AppTextStyles.nunitoRegular.copyWith(fontSize: 14),
+                      decoration: InputDecoration(
+                        hintText: 'Carpenter Name',
+                        hintStyle: AppTextStyles.nunitoRegular.copyWith(
+                          color: Colors.grey[400],
+                          fontSize: 14,
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.person_search,
+                          color: DesignToken.primary,
+                          size: 20,
+                        ),
+                        suffixIcon: _carpenterNameFilter.isNotEmpty
+                            ? InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    _carpenterNameController.clear();
+                                    _carpenterNameFilter = '';
+                                  });
+                                },
+                                child: const Icon(
+                                  Icons.close,
+                                  size: 18,
+                                  color: Colors.grey,
+                                ),
+                              )
+                            : null,
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              // Clear Filters Button
+              if (_carpenterNameFilter.isNotEmpty ||
+                  !_isToday(_selectedDate)) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton.icon(
+                    onPressed: _clearFilters,
+                    icon: const Icon(
+                      Icons.clear_all,
+                      size: 18,
+                      color: DesignToken.primary,
+                    ),
+                    label: Text(
+                      'Clear Filters',
+                      style: AppTextStyles.nunitoSemiBold.copyWith(
+                        fontSize: 14,
+                        color: DesignToken.primary,
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        // Bills List
+        Expanded(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: _firestore
+                .collection('bills')
+                .where('status', isEqualTo: "pending")
+                .orderBy('createdAt', descending: true)
+                .snapshots(),
+            builder: (context, snap) {
+              if (snap.hasError) {
+                return Center(child: Text(l10n.errorLoadingBills));
+              }
 
-                          const SizedBox(width: 10),
+              if (!snap.hasData) {
+                return const Center(
+                  child: const CircularProgressIndicator(
+                    color: DesignToken.primary,
+                  ),
+                );
+              }
 
-                          // Info
-                          Expanded(
+              var bills = snap.data!.docs;
+
+              // Apply date filter
+              bills = _filterBills(bills);
+
+              if (bills.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.filter_alt_off,
+                        size: 64,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        _carpenterNameFilter.isNotEmpty ||
+                                !_isToday(_selectedDate)
+                            ? 'No bills found matching filters'
+                            : l10n.noPendingBills,
+                        style: AppTextStyles.nunitoRegular.copyWith(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.all(12),
+                itemCount: bills.length,
+                itemBuilder: (_, i) {
+                  final bill = bills[i].data() as Map<String, dynamic>;
+                  bill['billId'] = bills[i].id;
+
+                  final billId = bill['billId'];
+                  final isExpanded = _expanded[billId] ?? false;
+                  final carpenterId = bill['carpenterId'] ?? '';
+                  final amount = bill['amount'] ?? 0;
+                  final phone = bill['carpenterPhone'] ?? "";
+                  final imageUrl = bill['imageUrl'] ?? "";
+                  final billDate = bill['billDate'] as Timestamp?;
+                  final createdAt = bill['createdAt'] as Timestamp?;
+
+                  return FutureBuilder<Map<String, dynamic>?>(
+                    future: _fetchCarpenterData(carpenterId),
+                    builder: (context, carpenterSnapshot) {
+                      // Get carpenter name and profile image
+                      String carpenterName = "Carpenter";
+                      String? profileImageUrl;
+
+                      if (carpenterSnapshot.hasData &&
+                          carpenterSnapshot.data != null) {
+                        final carpenterData = carpenterSnapshot.data!;
+                        final firstName = carpenterData['firstName'] ?? '';
+                        final lastName = carpenterData['lastName'] ?? '';
+                        carpenterName = ('$firstName $lastName').trim();
+                        if (carpenterName.isEmpty) {
+                          carpenterName = "Carpenter";
+                        }
+                        profileImageUrl =
+                            carpenterData['profileImage'] as String?;
+                      }
+
+                      // Apply carpenter name filter
+                      if (_carpenterNameFilter.isNotEmpty) {
+                        final fullName = carpenterName.toLowerCase();
+                        if (!fullName.contains(_carpenterNameFilter)) {
+                          return const SizedBox.shrink();
+                        }
+                      }
+
+                      return Card(
+                        elevation: 2,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            setState(() {
+                              _expanded[billId] = !isExpanded;
+                            });
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                // ------------ CARPENTER PROFILE ROW -------------
                                 Row(
                                   children: [
-                                    Text(
-                                      '${(amount / 1000).floor()} pts',
-                                      style: AppTextStyles.nunitoBold.copyWith(
-                                        fontSize: 18,
-                                        color: DesignToken.primary,
+                                    // Profile Image
+                                    Container(
+                                      width: 50,
+                                      height: 50,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: DesignToken.primary.withOpacity(
+                                          0.1,
+                                        ),
+                                        border: Border.all(
+                                          color: DesignToken.primary
+                                              .withOpacity(0.3),
+                                          width: 2,
+                                        ),
+                                      ),
+                                      child:
+                                          profileImageUrl != null &&
+                                              profileImageUrl.isNotEmpty
+                                          ? ClipOval(
+                                              child: Image.network(
+                                                profileImageUrl,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (_, __, ___) =>
+                                                    Icon(
+                                                      Icons.person,
+                                                      color:
+                                                          DesignToken.primary,
+                                                      size: 28,
+                                                    ),
+                                              ),
+                                            )
+                                          : Icon(
+                                              Icons.person,
+                                              color: DesignToken.primary,
+                                              size: 28,
+                                            ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    // Name
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            carpenterName,
+                                            style: AppTextStyles.nunitoBold
+                                                .copyWith(
+                                                  fontSize: 16,
+                                                  color: DesignToken.textDark,
+                                                ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          if (phone.isNotEmpty)
+                                            Text(
+                                              phone,
+                                              style: AppTextStyles.nunitoRegular
+                                                  .copyWith(
+                                                    fontSize: 12,
+                                                    color: Colors.grey[600],
+                                                  ),
+                                            ),
+                                        ],
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      '₹${amount.toStringAsFixed(0)}',
-                                      style: AppTextStyles.nunitoRegular
-                                          .copyWith(
-                                            fontSize: 12,
-                                            color: Colors.grey[600],
+                                    // Points and Amount - Separate Highlighted Containers
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: [
+                                        // Points Container
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 6,
                                           ),
+                                          decoration: BoxDecoration(
+                                            color: DesignToken.secondary
+                                                .withOpacity(0.2),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            border: Border.all(
+                                              color: DesignToken.primary
+                                                  .withOpacity(0.3),
+                                              width: 1.5,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.monetization_on,
+                                                size: 18,
+                                                color: DesignToken.secondary,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                '${(amount / 1000).floor()} pts',
+                                                style: AppTextStyles.nunitoBold
+                                                    .copyWith(
+                                                      fontSize: 15,
+                                                      color:
+                                                          DesignToken.secondary,
+                                                    ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        // Amount Container
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.green.withOpacity(
+                                              0.15,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            border: Border.all(
+                                              color: DesignToken.primary
+                                                  .withOpacity(0.3),
+                                              width: 1.5,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '₹${amount.toStringAsFixed(0)}',
+                                            style: AppTextStyles.nunitoSemiBold
+                                                .copyWith(
+                                                  fontSize: 13,
+                                                  color: Colors.green.shade700,
+                                                ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
-                                Text(
-                                  name,
-                                  style: AppTextStyles.nunitoMedium.copyWith(
-                                    fontSize: 12,
-                                  ),
+
+                                const SizedBox(height: 10),
+
+                                // ------------ DATE ROW -------------
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.calendar_today,
+                                      size: 14,
+                                      color: Colors.grey[600],
+                                    ),
+                                    const SizedBox(width: 6),
+
+                                    Text(
+                                      createdAt != null
+                                          ? DateFormat(
+                                              'dd MMM, hh:mm a',
+                                            ).format(createdAt.toDate())
+                                          : "",
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey[500],
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                Text(
-                                  phone,
-                                  style: AppTextStyles.nunitoRegular.copyWith(
-                                    fontSize: 10,
-                                    color: Colors.grey[600],
+
+                                // ------------ BILL IMAGE (if expanded) -------------
+                                if (isExpanded && imageUrl.isNotEmpty) ...[
+                                  const SizedBox(height: 10),
+                                  GestureDetector(
+                                    onTap: () => _viewBillImage(imageUrl),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Image.network(
+                                        imageUrl,
+                                        height: 170,
+                                        width: double.infinity,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => Container(
+                                          height: 170,
+                                          color: Colors.grey[200],
+                                          child: Center(
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  Icons.error_outline,
+                                                  color: Colors.grey[400],
+                                                  size: 40,
+                                                ),
+                                                const SizedBox(height: 8),
+                                                Text(
+                                                  l10n.failedToLoadImage,
+                                                  style: TextStyle(
+                                                    color: Colors.grey[600],
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                   ),
+                                ],
+
+                                const SizedBox(height: 10),
+
+                                // ------------ ACTION BUTTONS -------------
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: ElevatedButton.icon(
+                                        onPressed: () => _rejectBill(billId),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.red[50],
+                                          elevation: 0,
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 10,
+                                          ),
+                                        ),
+                                        icon: const Icon(
+                                          Icons.close,
+                                          color: Colors.red,
+                                          size: 18,
+                                        ),
+                                        label: Text(
+                                          l10n.reject,
+                                          style: const TextStyle(
+                                            color: Colors.red,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: ElevatedButton.icon(
+                                        onPressed: () => _approveBill(bill),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.green,
+                                          foregroundColor: Colors.white,
+                                          elevation: 0,
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 10,
+                                          ),
+                                        ),
+                                        icon: const Icon(Icons.check, size: 18),
+                                        label: Text(
+                                          l10n.approve,
+                                          style: const TextStyle(fontSize: 14),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                           ),
-
-                          // Expand Arrow
-                          IconButton(
-                            icon: Icon(
-                              isExpanded
-                                  ? Icons.keyboard_arrow_up
-                                  : Icons.keyboard_arrow_down,
-                              size: 24,
-                            ),
-                            onPressed: () {
-                              setState(() => _expanded[billId] = !isExpanded);
-                            },
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 6),
-
-                      // ------------ DATE ROW -------------
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_today,
-                            size: 13,
-                            color: Colors.grey[600],
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            billDate != null
-                                ? DateFormat(
-                                    'dd MMM yyyy',
-                                  ).format(billDate.toDate())
-                                : l10n.noDate,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            createdAt != null
-                                ? DateFormat(
-                                    'dd MMM, hh:mm a',
-                                  ).format(createdAt.toDate())
-                                : "",
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey[500],
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      if (isExpanded && imageUrl.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        GestureDetector(
-                          onTap: () => _viewBillImage(imageUrl),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: Image.network(
-                              imageUrl,
-                              height: 170,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
                         ),
-                      ],
-
-                      const SizedBox(height: 12),
-
-                      // ------------ ACTION BUTTONS -------------
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () => _rejectBill(billId),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red[50],
-                                elevation: 0,
-                              ),
-                              icon: const Icon(Icons.close, color: Colors.red),
-                              label: Text(
-                                l10n.reject,
-                                style: const TextStyle(color: Colors.red),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () => _approveBill(bill),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                              ),
-                              icon: const Icon(Icons.check),
-                              label: Text(l10n.approve),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
+                      );
+                    },
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

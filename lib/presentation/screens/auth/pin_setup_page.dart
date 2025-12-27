@@ -87,54 +87,94 @@ class _PINSetupPageState extends State<PINSetupPage>
 
     setState(() => _isSaving = true);
 
-    // Create account with minimal information - carpenter can fill details later
-    final success = await _pinAuthService.createAccount(
-      phone: phone,
-      pin: pin,
-      firstName: '', // Empty for now - can be filled later
-    );
-
-    if (!mounted) return;
-
-    if (success) {
-      // Save session with minimal information
-      await _sessionService.saveSession(
-        phoneNumber: phone,
-        userId: phone,
-        role: 'carpenter',
+    try {
+      // Create account with minimal information - carpenter can fill details later
+      final success = await _pinAuthService.createAccount(
+        phone: phone,
+        pin: pin,
+        firstName: '', // Empty for now - can be filled later
       );
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.pinCreatedSuccess),
-          backgroundColor: DesignToken.success,
-        ),
-      );
+      if (success) {
+        // Save session with minimal information
+        await _sessionService.saveSession(
+          phoneNumber: phone,
+          userId: phone,
+          role: 'carpenter',
+        );
 
-      context.go('/');
-    } else {
-      // Account already exists - guide user to Reset PIN
-      if (!mounted) return;
+        if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.accountExistsUseReset),
-          backgroundColor: DesignToken.orange,
-          duration: const Duration(seconds: 4),
-          action: SnackBarAction(
-            label: l10n.resetPin,
-            textColor: DesignToken.white,
-            onPressed: () {
-              context.push('/reset-pin', extra: phone);
-            },
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.pinCreatedSuccess),
+            backgroundColor: DesignToken.success,
           ),
+        );
+
+        context.go('/');
+      } else {
+        // Account already exists - guide user to Reset PIN
+        if (!mounted) return;
+
+        // Clear any existing snackbars first
+        ScaffoldMessenger.of(context).clearSnackBars();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.accountExistsUseReset),
+            backgroundColor: DesignToken.orange,
+            duration: const Duration(seconds: 6),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            dismissDirection: DismissDirection.horizontal,
+            action: SnackBarAction(
+              label: l10n.resetPin,
+              textColor: DesignToken.white,
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                context.push('/reset-pin', extra: phone);
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      print('🔍 [DEBUG] Error in _savePin: $e');
+
+      // Clear any existing snackbars first
+      ScaffoldMessenger.of(context).clearSnackBars();
+
+      // Show user-friendly error message
+      String errorMessage = l10n.error;
+      if (e.toString().contains('permission-denied')) {
+        errorMessage =
+            'Permission denied. Please check Firebase configuration or contact support.';
+      } else if (e.toString().contains('network')) {
+        errorMessage = l10n.networkError;
+      } else {
+        errorMessage = '${l10n.error}: ${e.toString()}';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: DesignToken.error,
+          duration: const Duration(seconds: 5),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          dismissDirection: DismissDirection.horizontal,
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
-
-    setState(() => _isSaving = false);
   }
 
   bool _hasFormData() {

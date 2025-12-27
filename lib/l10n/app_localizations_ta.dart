@@ -195,74 +195,76 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get mustBeLoggedInToResetPin =>
-      'You must be logged in to reset your PIN. Please login first.';
+      'உங்கள் PIN ஐ மீட்டமைக்க நீங்கள் உள்நுழைய வேண்டும். முதலில் உள்நுழையவும்.';
 
   @override
   String get canOnlyResetOwnPin =>
-      'You can only reset your own PIN. Phone number must match your logged-in account.';
+      'நீங்கள் உங்கள் சொந்த PIN ஐ மட்டுமே மீட்டமைக்க முடியும். தொலைபேசி எண் உங்கள் உள்நுழைந்த கணக்குடன் பொருந்த வேண்டும்.';
 
   @override
   String get enterCurrentPin =>
-      'Please enter your current PIN to verify ownership.';
+      'உரிமையை சரிபார்க்க உங்கள் தற்போதைய PIN ஐ உள்ளிடவும்.';
 
   @override
-  String get currentPinLabel => 'Current PIN';
+  String get currentPinLabel => 'தற்போதைய PIN';
 
   @override
   String get newPinMustBeDifferent =>
-      'New PIN must be different from your current PIN.';
+      'புதிய PIN உங்கள் தற்போதைய PIN இலிருந்து வேறுபட்டதாக இருக்க வேண்டும்.';
 
   @override
   String get contactAdminForPinReset =>
-      'You must be logged in to reset your PIN. If you forgot your PIN, please contact admin for assistance.';
+      'உங்கள் PIN ஐ மீட்டமைக்க நீங்கள் உள்நுழைய வேண்டும். உங்கள் PIN ஐ மறந்துவிட்டால், உதவிக்காக நிர்வாகியைத் தொடர்பு கொள்ளவும்.';
 
   @override
-  String get forgotCurrentPin => 'Forgot your current PIN?';
+  String get forgotCurrentPin => 'உங்கள் தற்போதைய PIN ஐ மறந்துவிட்டீர்களா?';
 
   @override
   String get forgotPinHelp =>
-      'If you don\'t remember your current PIN, please contact our support team for assistance.';
+      'உங்கள் தற்போதைய PIN ஐ நீங்கள் நினைவில் இல்லையென்றால், உதவிக்காக எங்கள் ஆதரவு குழுவைத் தொடர்பு கொள்ளவும்.';
 
   @override
-  String get adminSupportInfo => 'Admin Support';
+  String get adminSupportInfo => 'நிர்வாகி ஆதரவு';
 
   @override
-  String get callSupport => 'Call Support';
+  String get callSupport => 'ஆதரவை அழைக்கவும்';
 
   @override
-  String get adminResetPin => 'Reset PIN';
+  String get adminResetPin => 'PIN மீட்டமைக்கவும்';
 
   @override
   String adminResetPinTitle(String carpenterName) {
-    return 'Reset PIN for $carpenterName';
+    return '$carpenterName க்கான PIN மீட்டமைக்கவும்';
   }
 
   @override
   String get adminResetPinSubtitle =>
-      'Enter a new 4-digit PIN for this carpenter.';
+      'இந்த தச்சருக்கு புதிய 4 இலக்க PIN ஐ உள்ளிடவும்.';
 
   @override
   String adminResetPinConfirm(String carpenterName) {
-    return 'Are you sure you want to reset the PIN for $carpenterName?';
+    return 'நீங்கள் $carpenterName க்கான PIN ஐ மீட்டமைக்க விரும்புகிறீர்களா?';
   }
 
   @override
   String adminResetPinSuccess(String carpenterName) {
-    return 'PIN reset successfully for $carpenterName';
+    return '$carpenterName க்கான PIN வெற்றிகரமாக மீட்டமைக்கப்பட்டது';
   }
 
   @override
-  String get adminResetPinFailed => 'Failed to reset PIN. Please try again.';
+  String get adminResetPinFailed =>
+      'PIN மீட்டமைக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.';
 
   @override
   String get adminNotAuthorized =>
-      'You are not authorized to perform this action.';
+      'இந்த செயலைச் செய்ய உங்களுக்கு அனுமதி இல்லை.';
 
   @override
-  String get enterNewPinForCarpenter => 'Enter new 4-digit PIN';
+  String get enterNewPinForCarpenter => 'புதிய 4 இலக்க PIN ஐ உள்ளிடவும்';
 
   @override
-  String get confirmNewPinForCarpenter => 'Confirm new 4-digit PIN';
+  String get confirmNewPinForCarpenter =>
+      'புதிய 4 இலக்க PIN ஐ உறுதிப்படுத்தவும்';
 
   @override
   String get newPinLabel => 'புதிய 4 இலக்க PIN';
@@ -294,7 +296,7 @@ class AppLocalizationsTa extends AppLocalizations {
   String get enter4Digits => '4 இலக்கங்களை உள்ளிடவும்';
 
   @override
-  String get pinMismatch => 'PINs do not match';
+  String get pinMismatch => 'PIN கள் பொருந்தவில்லை';
 
   @override
   String get enterValidFirstName => 'செல்லுபடியான முதல் பெயரை உள்ளிடவும்';
@@ -1022,24 +1024,24 @@ class AppLocalizationsTa extends AppLocalizations {
   String get addCarpenter => 'தச்சரை சேர்க்கவும்';
 
   @override
-  String get deleteCarpenter => 'Delete Carpenter';
+  String get deleteCarpenter => 'தச்சரை நீக்கவும்';
 
   @override
   String get deleteCarpenterConfirmation =>
-      'Are you sure you want to delete this carpenter? This will permanently delete:\n\n• User account\n• All points and transaction history\n• All submitted bills\n• All offer redemptions\n\nThis action cannot be undone.';
+      'இந்த தச்சரை நீக்க விரும்புகிறீர்களா? இது நிரந்தரமாக நீக்கும்:\n\n• பயனர் கணக்கு\n• அனைத்து பாயிண்ட்ஸ் மற்றும் பரிவர்த்தனை வரலாறு\n• அனைத்து சமர்ப்பிக்கப்பட்ட பில்கள்\n• அனைத்து ஆஃபர் ரீடீம்கள்\n\nஇந்த செயலை ரத்து செய்ய முடியாது.';
 
   @override
   String get deleteCarpenterWarning =>
-      'Deleting a carpenter will permanently remove all their data from the system. This action cannot be undone.';
+      'தச்சரை நீக்குவது அவர்களின் அனைத்து தரவையும் கணினியிலிருந்து நிரந்தரமாக அகற்றும். இந்த செயலை ரத்து செய்ய முடியாது.';
 
   @override
-  String get carpenterDeletedSuccess => 'Carpenter deleted successfully';
+  String get carpenterDeletedSuccess => 'தச்சர் வெற்றிகரமாக நீக்கப்பட்டார்';
 
   @override
-  String get failedToDeleteCarpenter => 'Failed to delete carpenter';
+  String get failedToDeleteCarpenter => 'தச்சரை நீக்க முடியவில்லை';
 
   @override
-  String get dangerZone => 'Danger Zone';
+  String get dangerZone => 'ஆபத்து மண்டலம்';
 
   @override
   String get phoneNumberLabel => 'கைபேசி எண்';
@@ -1170,81 +1172,85 @@ class AppLocalizationsTa extends AppLocalizations {
   String get statusRejected => 'நிராகரி';
 
   @override
-  String get exitApp => 'Exit App?';
+  String get exitApp => 'ஆப் இலிருந்து வெளியேறவா?';
 
   @override
-  String get exitAppMessage => 'Do you want to exit the app?';
+  String get exitAppMessage =>
+      'நீங்கள் ஆப்பிலிருந்து வெளியேற விரும்புகிறீர்களா?';
 
   @override
-  String get exit => 'Exit';
+  String get exit => 'வெளியேறு';
 
   @override
-  String get discardChanges => 'Discard Changes?';
+  String get discardChanges => 'மாற்றங்களை நிராகரிக்கவா?';
 
   @override
   String get discardChangesMessage =>
-      'You have unsaved changes. Do you want to discard them?';
+      'நீங்கள் சேமிக்கப்படாத மாற்றங்கள் உள்ளன. அவற்றை நிராகரிக்க விரும்புகிறீர்களா?';
 
   @override
-  String get discard => 'Discard';
+  String get discard => 'நிராகரி';
 
   @override
-  String get pressBackAgainToExit => 'Press back again to exit';
+  String get pressBackAgainToExit => 'வெளியேற மீண்டும் பின் செல்லவும்';
 
   @override
-  String get pleaseWait => 'Please wait...';
+  String get pleaseWait => 'தயவுசெய்து காத்திருக்கவும்...';
 
   @override
-  String get pleaseWaitForSpin => 'Please wait for spin to complete';
+  String get pleaseWaitForSpin => 'ஸ்பின் முடியும் வரை காத்திருக்கவும்';
 
   @override
-  String get discardBill => 'Discard Bill?';
+  String get discardBill => 'பிலை நிராகரிக்கவா?';
 
   @override
   String get discardBillMessage =>
-      'You have unsaved bill data. Do you want to discard it?';
+      'நீங்கள் சேமிக்கப்படாத பில் தரவு உள்ளது. அதை நிராகரிக்க விரும்புகிறீர்களா?';
 
   @override
-  String get pleaseCompleteProfile => 'Please complete your profile';
+  String get pleaseCompleteProfile =>
+      'தயவுசெய்து உங்கள் சுயவிவரத்தை நிறைவு செய்யவும்';
 
   @override
-  String get rewardsLoyaltyProgram => 'Rewards & Loyalty Program';
+  String get rewardsLoyaltyProgram => 'வெகுமதிகள் & விசுவாச திட்டம்';
 
   @override
-  String get billImage => 'Bill Image';
+  String get billImage => 'பில் படம்';
 
   @override
-  String get billDateOptional => 'Bill Date (Optional)';
+  String get billDateOptional => 'பில் தேதி (விருப்பம்)';
 
   @override
-  String get storeVendorNameOptional => 'Store/Vendor Name (Optional)';
+  String get storeVendorNameOptional => 'கடை/விற்பனையாளர் பெயர் (விருப்பம்)';
 
   @override
-  String get billInvoiceNumberOptional => 'Bill/Invoice Number (Optional)';
+  String get billInvoiceNumberOptional => 'பில்/விலைப்பட்டியல் எண் (விருப்பம்)';
 
   @override
-  String get notesOptional => 'Notes (Optional)';
+  String get notesOptional => 'குறிப்புகள் (விருப்பம்)';
 
   @override
-  String get tapToAddBillImage => 'Tap to add bill image';
+  String get tapToAddBillImage => 'பில் படத்தைச் சேர்க்க தட்டவும்';
 
   @override
-  String get selectBillDateOptional => 'Select bill date (optional)';
+  String get selectBillDateOptional =>
+      'பில் தேதியைத் தேர்ந்தெடுக்கவும் (விருப்பம்)';
 
   @override
   String get enterStoreOrVendorNameOptional =>
-      'Enter store or vendor name (optional)';
+      'கடை அல்லது விற்பனையாளர் பெயரை உள்ளிடவும் (விருப்பம்)';
 
   @override
   String get enterBillOrInvoiceNumberOptional =>
-      'Enter bill or invoice number (optional)';
+      'பில் அல்லது விலைப்பட்டியல் எண்ணை உள்ளிடவும் (விருப்பம்)';
 
   @override
-  String get addAnyAdditionalNotes => 'Add any additional notes...';
+  String get addAnyAdditionalNotes =>
+      'எந்த கூடுதல் குறிப்புகளையும் சேர்க்கவும்...';
 
   @override
-  String get submitBill => 'Submit Bill';
+  String get submitBill => 'பிலை சமர்ப்பிக்கவும்';
 
   @override
-  String get saveChanges => 'Save Changes';
+  String get saveChanges => 'மாற்றங்களை சேமிக்கவும்';
 }

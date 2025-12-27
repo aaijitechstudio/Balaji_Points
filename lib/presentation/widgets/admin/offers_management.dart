@@ -578,9 +578,25 @@ class _CreateOfferDialogState extends State<CreateOfferDialog> {
     try {
       final title = _titleController.text.trim();
       final description = _descriptionController.text.trim();
-      final points = int.parse(_pointsController.text.trim());
+
+      // Points is optional
+      final pointsText = _pointsController.text.trim();
+      int? points;
+      if (pointsText.isNotEmpty) {
+        points = int.tryParse(pointsText);
+        if (points == null) {
+          throw Exception('Please enter a valid number for points');
+        }
+      }
+      // If points is empty and in edit mode, we'll pass null to preserve existing value
+      // If points is empty and in create mode, we'll use 0
 
       String? bannerUrl = _existingBannerUrl;
+
+      // Banner is mandatory for new offers - check if we have one
+      if (!isEditMode && _bannerFile == null && bannerUrl == null) {
+        throw Exception('Please upload a banner image');
+      }
 
       // Upload new banner if selected
       if (_bannerFile != null) {
@@ -605,7 +621,7 @@ class _CreateOfferDialogState extends State<CreateOfferDialog> {
         success = await _offerService.updateOffer(
           offerId: widget.offer!['offerId'],
           title: title,
-          description: description,
+          description: description.isEmpty ? null : description,
           points: points,
           bannerUrl: bannerUrl,
           isActive: _isActive,
@@ -615,8 +631,8 @@ class _CreateOfferDialogState extends State<CreateOfferDialog> {
       } else {
         success = await _offerService.createOffer(
           title: title,
-          description: description,
-          points: points,
+          description: description.isEmpty ? null : description,
+          points: points ?? 0,
           bannerUrl: bannerUrl,
           isActive: _isActive,
           validUntil: _validUntil,
@@ -834,7 +850,7 @@ class _CreateOfferDialogState extends State<CreateOfferDialog> {
 
                       const SizedBox(height: 16),
 
-                      // Points
+                      // Points (Optional)
                       TextFormField(
                         controller: _pointsController,
                         style: AppTextStyles.nunitoRegular.copyWith(
@@ -842,7 +858,7 @@ class _CreateOfferDialogState extends State<CreateOfferDialog> {
                         ),
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(
-                          labelText: l10n.pointsRequiredLabel,
+                          labelText: l10n.pointsRequiredLabel.replaceAll('*', '').trim(),
                           labelStyle: AppTextStyles.nunitoMedium.copyWith(
                             color: DesignToken.primary,
                           ),
@@ -863,11 +879,11 @@ class _CreateOfferDialogState extends State<CreateOfferDialog> {
                           ),
                         ),
                         validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return l10n.enterPointsError;
-                          }
-                          if (int.tryParse(value) == null) {
-                            return l10n.enterValidNumber;
+                          // Points is optional, but if provided, must be a valid number
+                          if (value != null && value.trim().isNotEmpty) {
+                            if (int.tryParse(value) == null) {
+                              return l10n.enterValidNumber;
+                            }
                           }
                           return null;
                         },

@@ -72,8 +72,8 @@ class OfferService {
   /// Create a new offer
   Future<bool> createOffer({
     required String title,
-    required String description,
-    required int points,
+    String? description,
+    int points = 0,
     String? bannerUrl,
     bool isActive = true,
     DateTime? validUntil,
@@ -91,7 +91,7 @@ class OfferService {
       await offerRef.set({
         'offerId': offerId, // Add offerId field for consistency
         'title': title,
-        'description': description,
+        'description': description ?? '',
         'points': points,
         'bannerUrl': bannerUrl ?? '',
         'isActive': isActive,
@@ -122,8 +122,8 @@ class OfferService {
   Future<bool> updateOffer({
     required String offerId,
     required String title,
-    required String description,
-    required int points,
+    String? description,
+    int? points,
     String? bannerUrl,
     bool isActive = true,
     DateTime? validUntil,
@@ -147,13 +147,21 @@ class OfferService {
 
       final updateData = <String, dynamic>{
         'title': title,
-        'description': description,
-        'points': points,
         'isActive': isActive,
         'updatedAt': FieldValue.serverTimestamp(),
         'updatedBy': adminUserId,
         'updatedByPhone': adminPhone,
       };
+
+      // Only update description if provided
+      if (description != null) {
+        updateData['description'] = description;
+      }
+
+      // Only update points if provided
+      if (points != null) {
+        updateData['points'] = points;
+      }
 
       // Only update bannerUrl if provided
       if (bannerUrl != null) {
