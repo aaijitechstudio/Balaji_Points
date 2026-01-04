@@ -365,7 +365,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                                   // Phone Number
                                   if (_userData?['phone'] != null)
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         Icon(
                                           Icons.phone,
@@ -490,6 +491,16 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
 
                                   // Theme Toggle Button
                                   _buildThemeToggleButton(ref),
+                                  const SizedBox(height: 12),
+
+                                  // Notification Settings Button
+                                  _buildSimpleButton(
+                                    icon: Icons.notifications,
+                                    title: 'Notification Settings',
+                                    onTap: () {
+                                      context.push('/notification-settings');
+                                    },
+                                  ),
 
                                   const SizedBox(height: 24),
 

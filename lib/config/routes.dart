@@ -18,7 +18,9 @@ import 'package:balaji_points/presentation/screens/auth/reset_pin_page.dart';
 import 'package:balaji_points/presentation/screens/spin/daily_spin_page.dart';
 import 'package:balaji_points/presentation/screens/admin/admin_home_page.dart';
 import 'package:balaji_points/presentation/screens/admin/admin_add_bill_page.dart';
+import 'package:balaji_points/presentation/screens/admin/diagnostic_page.dart';
 import 'package:balaji_points/presentation/screens/bills/add_bill_page.dart';
+import 'package:balaji_points/presentation/screens/settings/notification_settings_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -100,10 +102,30 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, _) => const DailySpinPage(),
       ),
 
+      GoRoute(
+        path: '/notification-settings',
+        builder: (context, _) => const NotificationSettingsPage(),
+      ),
+
       // Admin routes - more specific routes first
       GoRoute(
         path: '/admin/add-bill',
         builder: (context, _) => const AdminAddBillPage(),
+      ),
+
+      // TEMPORARY: Diagnostic route - Remove after verification
+      GoRoute(
+        path: '/admin/diagnostic',
+        name: 'admin-diagnostic',
+        builder: (context, state) {
+          // Extract phone number from query parameters
+          // URL decoding is handled automatically by GoRouter
+          final phoneParam = state.uri.queryParameters['phone'];
+          final phone = phoneParam != null && phoneParam.isNotEmpty
+              ? phoneParam
+              : '9894223355';
+          return DiagnosticPage(phoneNumber: phone);
+        },
       ),
 
       GoRoute(path: '/admin', builder: (context, _) => const AdminHomePage()),

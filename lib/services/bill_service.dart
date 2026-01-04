@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../core/logger.dart';
 import 'session_service.dart';
+import 'notification_service.dart';
 
 class BillService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -124,7 +125,9 @@ class BillService {
     String? notes,
   }) async {
     try {
-      AppLogger.info('BillService: === ADMIN SUBMITTING BILL FOR CARPENTER ===');
+      AppLogger.info(
+        'BillService: === ADMIN SUBMITTING BILL FOR CARPENTER ===',
+      );
       AppLogger.info('  carpenterId: $carpenterId');
       AppLogger.info('  carpenterPhone: $carpenterPhone');
       AppLogger.info('  adminId: $adminId');
@@ -169,7 +172,9 @@ class BillService {
       // Verify the save by reading back
       final verifyDoc = await billRef.get();
       if (verifyDoc.exists) {
-        AppLogger.info('BillService: ✅ Admin bill saved and verified successfully!');
+        AppLogger.info(
+          'BillService: ✅ Admin bill saved and verified successfully!',
+        );
         AppLogger.info(
           '  Verified data: carpenterId=${verifyDoc.data()?['carpenterId']}, status=${verifyDoc.data()?['status']}, submittedBy=${verifyDoc.data()?['submittedBy']}',
         );
@@ -345,8 +350,14 @@ class BillService {
       AppLogger.info('  ✓ Current points (int): $currentPoints');
       AppLogger.info('  ✓ Points to add: $pointsEarned');
 
+      // Get old tier before calculating new tier (for tier upgrade notification)
+      final oldTier = userDoc.exists
+          ? (userDoc.data()?['tier'] as String? ?? 'Bronze')
+          : 'Bronze';
+
       final newTotalPoints = currentPoints + pointsEarned;
       final newTier = _calculateTier(newTotalPoints);
+      AppLogger.info('  ✓ Old tier: $oldTier');
       AppLogger.info('  ✓ New total points: $newTotalPoints');
       AppLogger.info('  ✓ New tier: $newTier');
 
@@ -491,6 +502,40 @@ class BillService {
         print('═══════════════════════════════════════════════════════════');
         print('✅ APPROVE BILL SUCCESS');
         print('═══════════════════════════════════════════════════════════');
+
+        // Send notification after successful approval
+        try {
+          final notificationService = NotificationService();
+          await notificationService.sendBillApprovedNotification(
+            userId: finalCarpenterId,
+            amount: amount,
+            points: pointsEarned,
+            billId: billId,
+          );
+
+          // Check for tier upgrade and send notification if tier changed
+          if (oldTier != newTier) {
+            AppLogger.info('Tier upgraded from $oldTier to $newTier');
+            await notificationService.sendTierUpgradedNotification(
+              userId: finalCarpenterId,
+              newTier: newTier,
+              points: newTotalPoints,
+            );
+          }
+
+          // Check for points milestone
+          await _checkAndNotifyMilestone(
+            notificationService,
+            finalCarpenterId,
+            newTotalPoints,
+          );
+        } catch (e) {
+          // Don't fail the approval if notification fails
+          AppLogger.warning(
+            'Failed to send notification after bill approval: $e',
+          );
+        }
+
         return true;
       } on FirebaseException catch (fe) {
         print('🔥🔥🔥 FIREBASE EXCEPTION DURING BATCH.COMMIT() 🔥🔥🔥');
@@ -545,6 +590,12 @@ class BillService {
       final adminPhone = await _sessionService.getPhoneNumber() ?? 'admin';
       final adminUserId = await _sessionService.getUserId() ?? 'admin';
 
+      // Get bill data to extract amount and carpenterId
+      final billDoc = await _firestore.collection('bills').doc(billId).get();
+      final billData = billDoc.data();
+      final carpenterId = billData?['carpenterId'] as String? ?? '';
+      final amount = (billData?['amount'] as num?)?.toDouble() ?? 0.0;
+
       await _firestore.collection('bills').doc(billId).update({
         'status': 'rejected',
         'rejectedAt': FieldValue.serverTimestamp(),
@@ -553,9 +604,207 @@ class BillService {
       });
 
       AppLogger.info('Bill rejected: $billId');
+
+      // Send notification after successful rejection
+      if (carpenterId.isNotEmpty) {
+        try {
+          final notificationService = NotificationService();
+          await notificationService.sendBillRejectedNotification(
+            userId: carpenterId,
+            amount: amount,
+            billId: billId,
+          );
+        } catch (e) {
+          // Don't fail the rejection if notification fails
+          AppLogger.warning(
+            'Failed to send notification after bill rejection: $e',
+          );
+        }
+      }
+
       return true;
     } catch (e) {
       AppLogger.error('Error rejecting bill', e);
+      return false;
+    }
+  }
+
+  /// Withdraw/Cancel approved bill (Admin)
+  /// Reverses the points that were added when the bill was approved
+  Future<bool> withdrawBill(String billId) async {
+    AppLogger.info('=== WITHDRAW BILL START ===');
+    AppLogger.info('Input params: billId=$billId');
+
+    try {
+      // Step 1: Get bill document
+      final billRef = _firestore.collection('bills').doc(billId);
+      final billDoc = await billRef.get();
+
+      if (!billDoc.exists) {
+        AppLogger.error('withdrawBill: ❌ Bill not found', billId);
+        return false;
+      }
+
+      final billData = billDoc.data()!;
+      final status = billData['status'] as String? ?? '';
+      final amount = (billData['amount'] as num?)?.toDouble() ?? 0.0;
+
+      if (status != 'approved') {
+        AppLogger.error(
+          'withdrawBill: ❌ Bill is not approved (status: $status)',
+          billId,
+        );
+        return false;
+      }
+
+      final carpenterId = billData['carpenterId'] as String? ?? '';
+      if (carpenterId.isEmpty) {
+        AppLogger.error('withdrawBill: ❌ Carpenter ID is empty', billId);
+        return false;
+      }
+
+      final pointsEarned = (billData['pointsEarned'] as num?)?.toInt() ?? 0;
+
+      if (pointsEarned <= 0) {
+        AppLogger.error(
+          'withdrawBill: ❌ Invalid points earned: $pointsEarned',
+          billId,
+        );
+        return false;
+      }
+
+      AppLogger.info(
+        '  Bill found: carpenterId=$carpenterId, points=$pointsEarned',
+      );
+
+      // Step 2: Get user document
+      final userRef = _firestore.collection('users').doc(carpenterId);
+      final userDoc = await userRef.get();
+
+      final currentPointsRaw = userDoc.exists
+          ? (userDoc.data()?['totalPoints'] ?? 0)
+          : 0;
+      final int currentPoints = currentPointsRaw is num
+          ? currentPointsRaw.toInt()
+          : int.tryParse(currentPointsRaw.toString()) ?? 0;
+
+      if (currentPoints < pointsEarned) {
+        AppLogger.error(
+          'withdrawBill: ❌ Insufficient points to withdraw (current: $currentPoints, required: $pointsEarned)',
+          billId,
+        );
+        return false;
+      }
+
+      final newTotalPoints = currentPoints - pointsEarned;
+      final newTier = _calculateTier(newTotalPoints);
+
+      AppLogger.info('  Current points: $currentPoints');
+      AppLogger.info('  Points to withdraw: $pointsEarned');
+      AppLogger.info('  New total points: $newTotalPoints');
+      AppLogger.info('  New tier: $newTier');
+
+      // Step 3: Get user_points document
+      final userPointsRef = _firestore
+          .collection('user_points')
+          .doc(carpenterId);
+      final userPointsDoc = await userPointsRef.get();
+
+      // Step 4: Find and remove the history entry for this bill
+      List<dynamic> updatedHistory = [];
+      if (userPointsDoc.exists) {
+        final existingData = userPointsDoc.data() ?? {};
+        final existingHistory =
+            existingData['pointsHistory'] as List<dynamic>? ?? [];
+
+        // Remove the entry that matches this billId
+        updatedHistory = existingHistory.where((entry) {
+          final entryMap = entry as Map<String, dynamic>;
+          final entryBillId = entryMap['billId'] as String?;
+          return entryBillId != billId;
+        }).toList();
+
+        AppLogger.info(
+          '  History entries: ${existingHistory.length} -> ${updatedHistory.length}',
+        );
+      }
+
+      // Step 5: Get admin info
+      final fbUser = FirebaseAuth.instance.currentUser;
+      final sessionPhone = await _sessionService.getPhoneNumber();
+      final sessionUserId = await _sessionService.getUserId();
+      final adminPhone = sessionPhone ?? fbUser?.phoneNumber ?? 'admin';
+      final adminUserId = sessionUserId ?? fbUser?.uid ?? 'admin';
+
+      // Step 6: Create batch operations
+      final batch = _firestore.batch();
+
+      // 1. Update bill status to 'withdrawn'
+      batch.update(billRef, {
+        'status': 'withdrawn',
+        'withdrawnAt': FieldValue.serverTimestamp(),
+        'withdrawnBy': adminUserId,
+        'withdrawnByPhone': adminPhone,
+      });
+
+      // 2. Update user document
+      batch.set(userRef, {
+        'totalPoints': newTotalPoints,
+        'tier': newTier,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      // 3. Update user_points document
+      if (userPointsDoc.exists) {
+        batch.set(userPointsRef, {
+          'userId': carpenterId,
+          'totalPoints': newTotalPoints,
+          'tier': newTier,
+          'lastUpdated': FieldValue.serverTimestamp(),
+          'pointsHistory': updatedHistory,
+        }, SetOptions(merge: false));
+      } else {
+        // Create new document if it doesn't exist
+        batch.set(userPointsRef, {
+          'userId': carpenterId,
+          'totalPoints': newTotalPoints,
+          'tier': newTier,
+          'lastUpdated': FieldValue.serverTimestamp(),
+          'pointsHistory': updatedHistory,
+        });
+      }
+
+      // Step 7: Commit batch
+      await batch.commit();
+
+      AppLogger.info('✅ Bill withdrawn successfully: $billId');
+      AppLogger.info(
+        '✅ Points withdrawn: $pointsEarned from user $carpenterId',
+      );
+      AppLogger.info('=== WITHDRAW BILL SUCCESS ===');
+
+      // Send notification after successful withdrawal
+      try {
+        final notificationService = NotificationService();
+        await notificationService.sendPointsWithdrawnNotification(
+          userId: carpenterId,
+          points: pointsEarned,
+          amount: amount,
+          billId: billId,
+        );
+      } catch (e) {
+        // Don't fail the withdrawal if notification fails
+        AppLogger.warning(
+          'Failed to send notification after points withdrawal: $e',
+        );
+      }
+
+      return true;
+    } catch (e, st) {
+      AppLogger.error('❌ Exception in withdrawBill', 'Error: $e');
+      AppLogger.error('  StackTrace:\n$st');
+      AppLogger.error('  Bill ID: $billId');
+      AppLogger.error('=== WITHDRAW BILL FAILED ===');
       return false;
     }
   }
@@ -588,5 +837,57 @@ class BillService {
     if (points >= 5000) return 'Gold';
     if (points >= 2000) return 'Silver';
     return 'Bronze';
+  }
+
+  /// Check for points milestone and send notification if reached
+  Future<void> _checkAndNotifyMilestone(
+    NotificationService notificationService,
+    String userId,
+    int newPoints,
+  ) async {
+    try {
+      // Define milestone thresholds
+      const milestones = [
+        1000,
+        2500,
+        5000,
+        7500,
+        10000,
+        15000,
+        20000,
+        25000,
+        50000,
+      ];
+
+      // Check if new points crossed any milestone
+      for (final milestone in milestones) {
+        // Get user's last milestone from Firestore
+        final userDoc = await _firestore.collection('users').doc(userId).get();
+        final lastMilestone = userDoc.exists
+            ? (userDoc.data()?['lastMilestone'] as int? ?? 0)
+            : 0;
+
+        // If we crossed this milestone and haven't notified for it yet
+        if (newPoints >= milestone && lastMilestone < milestone) {
+          // Send milestone notification
+          await notificationService.sendPointsMilestoneNotification(
+            userId: userId,
+            points: newPoints,
+            milestone: milestone,
+          );
+
+          // Update last milestone in Firestore
+          await _firestore.collection('users').doc(userId).set({
+            'lastMilestone': milestone,
+          }, SetOptions(merge: true));
+
+          AppLogger.info('Milestone notification sent: $milestone points');
+          break; // Only notify for the highest milestone reached
+        }
+      }
+    } catch (e) {
+      AppLogger.warning('Error checking milestone: $e');
+      // Don't throw - milestone checking is not critical
+    }
   }
 }

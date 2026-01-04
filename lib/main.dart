@@ -14,10 +14,16 @@ import 'services/fcm_service.dart';
 /// -------------------------------
 /// BACKGROUND FCM HANDLER (TOP LEVEL)
 /// -------------------------------
+/// This handler is called when app is in background or terminated
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   AppLogger.info('💬 Background FCM Message: ${message.notification?.title}');
+  AppLogger.info('   Body: ${message.notification?.body}');
+  AppLogger.info('   Data: ${message.data}');
+
+  // Note: Local notifications are automatically shown by the system
+  // when app is in background. We just log here for debugging.
 }
 
 void main() {

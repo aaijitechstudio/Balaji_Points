@@ -3,6 +3,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 import '../core/logger.dart';
 import 'session_service.dart';
+import 'notification_service.dart';
 
 class OfferService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -105,6 +106,23 @@ class OfferService {
       });
 
       AppLogger.info('Offer created successfully: $offerId');
+
+      // Send broadcast notification to all users if offer is active
+      if (isActive) {
+        try {
+          final notificationService = NotificationService();
+          await notificationService.sendBroadcastNewOfferNotification(
+            offerTitle: title,
+            points: points,
+          );
+        } catch (e) {
+          // Don't fail offer creation if notification fails
+          AppLogger.warning(
+            'Failed to send broadcast notification for new offer: $e',
+          );
+        }
+      }
+
       return true;
     } on FirebaseException catch (e) {
       AppLogger.error(
@@ -289,13 +307,21 @@ class OfferService {
       }
 
       final newTotalPoints = currentPoints - pointsRequired;
+      final newTier = _calculateTier(newTotalPoints);
+
+      // Get offer details for notification
+      final offerDoc = await _firestore.collection('offers').doc(offerId).get();
+      final offerTitle = offerDoc.exists
+          ? (offerDoc.data()?['title'] as String? ?? 'Offer')
+          : 'Offer';
 
       // Use batch for atomic operations
       final batch = _firestore.batch();
 
-      // 1. Update user points
+      // 1. Update user points and tier
       batch.set(userRef, {
         'totalPoints': newTotalPoints,
+        'tier': newTier,
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
@@ -324,6 +350,7 @@ class OfferService {
       if (userPointsDoc.exists) {
         batch.update(userPointsRef, {
           'totalPoints': newTotalPoints,
+          'tier': newTier,
           'lastUpdated': FieldValue.serverTimestamp(),
           'pointsHistory': FieldValue.arrayUnion([newHistoryEntry]),
         });
@@ -331,6 +358,7 @@ class OfferService {
         batch.set(userPointsRef, {
           'userId': carpenterId,
           'totalPoints': newTotalPoints,
+          'tier': newTier,
           'lastUpdated': FieldValue.serverTimestamp(),
           'pointsHistory': [newHistoryEntry],
         });
@@ -339,6 +367,25 @@ class OfferService {
       await batch.commit();
 
       AppLogger.info('Offer redeemed successfully: $offerId');
+
+      // Send notification after successful redemption
+      try {
+        final notificationService = NotificationService();
+        await notificationService.sendOfferRedeemedNotification(
+          userId: carpenterId,
+          offerTitle: offerTitle,
+          points: pointsRequired,
+        );
+
+        // Check for tier downgrade (unlikely but possible) - we don't notify on downgrade
+        // Tier upgrade is already handled in bill approval
+      } catch (e) {
+        // Don't fail the redemption if notification fails
+        AppLogger.warning(
+          'Failed to send notification after offer redemption: $e',
+        );
+      }
+
       return true;
     } on FirebaseException catch (e) {
       AppLogger.error(
@@ -367,6 +414,19 @@ class OfferService {
     } catch (e) {
       AppLogger.error('Error getting redemption history', e);
       return [];
+    }
+  }
+
+  /// Calculate tier based on points
+  String _calculateTier(int points) {
+    if (points >= 10000) {
+      return 'Platinum';
+    } else if (points >= 5000) {
+      return 'Gold';
+    } else if (points >= 2000) {
+      return 'Silver';
+    } else {
+      return 'Bronze';
     }
   }
 }

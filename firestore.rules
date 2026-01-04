@@ -33,6 +33,12 @@ service cloud.firestore {
       allow update: if request.resource.data.phone == resource.data.phone
                     && request.resource.data.phone != null;
 
+      // Allow users to update notification preferences
+      // Users can update only the notificationPreferences field
+      allow update: if request.resource.data.phone == resource.data.phone
+                    && request.resource.data.keys().hasAll(['notificationPreferences'])
+                    && request.resource.data.notificationPreferences is map;
+
       // Allow admin updates (validated at app level)
       // Admin operations include: updating points, tier, profile info
       // App validates admin status before making these requests
@@ -96,14 +102,15 @@ service cloud.firestore {
                     && request.resource.data.amount != null
                     && request.resource.data.status == 'pending';
 
-      // Allow admin to update bills (approve/reject)
+      // Allow admin to update bills (approve/reject/withdraw)
       // Validation: Ensure immutable fields (carpenterId, amount) are not changed
       // Allow adding new fields for approval (status, pointsEarned, approvedBy, etc.)
       allow update: if resource.data.carpenterId == request.resource.data.carpenterId
                     && resource.data.amount == request.resource.data.amount
                     && (request.resource.data.status == 'approved'
                          || request.resource.data.status == 'rejected'
-                         || request.resource.data.status == 'pending');
+                         || request.resource.data.status == 'pending'
+                         || request.resource.data.status == 'withdrawn');
 
       // Allow admin to delete bills (validated at app level)
       allow delete: if true; // App-level validation ensures only admins can delete
@@ -261,6 +268,37 @@ service cloud.firestore {
 
       // Allow admin to update/delete redemptions (validated at app level)
       allow update, delete: if true; // App-level validation ensures only admins can modify
+    }
+
+    // ============================================
+    // NOTIFICATION QUEUE COLLECTION
+    // ============================================
+    match /notification_queue/{notificationId} {
+      // Allow creating notification queue entries (for Cloud Functions to process)
+      allow create: if request.resource.data.userId != null
+                    && request.resource.data.fcmToken != null
+                    && request.resource.data.type != null
+                    && request.resource.data.title != null
+                    && request.resource.data.body != null;
+
+      // Allow reading for debugging/admin purposes
+      allow read: if true;
+
+      // Allow Cloud Functions to update status
+      allow update: if request.resource.data.status != null;
+    }
+
+    // ============================================
+    // NOTIFICATION LOGS COLLECTION
+    // ============================================
+    match /notification_logs/{logId} {
+      // Allow creating notification logs (for analytics)
+      allow create: if request.resource.data.type != null
+                    && request.resource.data.title != null
+                    && request.resource.data.body != null;
+
+      // Allow reading for analytics/admin purposes
+      allow read: if true;
     }
 
     // ============================================

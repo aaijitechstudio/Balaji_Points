@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import '../../services/notification_service.dart';
+import '../../core/logger.dart';
 
 class DailySpinState {
   final bool canSpin;
@@ -148,13 +150,18 @@ class DailySpinNotifier extends Notifier<DailySpinState> {
       final prizeQuery = await _firestore
           .collection('daily_prize_winners')
           .where('prizePoints', isEqualTo: finalPointsWon)
-          .where('wonDate', isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart))
+          .where(
+            'wonDate',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart),
+          )
           .limit(1)
           .get();
 
       if (prizeQuery.docs.isNotEmpty) {
         // This prize was already won today, give them a consolation prize
-        debugPrint('Prize $finalPointsWon already won today, giving consolation prize');
+        debugPrint(
+          'Prize $finalPointsWon already won today, giving consolation prize',
+        );
         finalPointsWon = 5; // Consolation prize
       }
 
@@ -169,6 +176,7 @@ class DailySpinNotifier extends Notifier<DailySpinState> {
 
       final userData = userDoc.data()!;
       final currentPoints = (userData['totalPoints'] ?? 0) as int;
+      final oldTier = userData['tier'] as String? ?? 'Bronze';
       final newTotalPoints = currentPoints + finalPointsWon;
       final newTier = _calculateTier(newTotalPoints);
 
@@ -224,7 +232,9 @@ class DailySpinNotifier extends Notifier<DailySpinState> {
 
       // 4. Record prize winner (only if not consolation prize)
       if (finalPointsWon > 5) {
-        final prizeWinnerRef = _firestore.collection('daily_prize_winners').doc();
+        final prizeWinnerRef = _firestore
+            .collection('daily_prize_winners')
+            .doc();
         batch.set(prizeWinnerRef, {
           'userId': user.uid,
           'userName': userData['name'] ?? 'Unknown',
@@ -240,6 +250,35 @@ class DailySpinNotifier extends Notifier<DailySpinState> {
       debugPrint(
         'Spin completed successfully: $finalPointsWon points saved to Firebase',
       );
+
+      // Send notification after successful spin
+      try {
+        final notificationService = NotificationService();
+        await notificationService.sendDailySpinWonNotification(
+          userId: user.uid,
+          points: finalPointsWon,
+        );
+
+        // Check for tier upgrade and send notification if tier changed
+        if (oldTier != newTier) {
+          AppLogger.info('Tier upgraded from $oldTier to $newTier');
+          await notificationService.sendTierUpgradedNotification(
+            userId: user.uid,
+            newTier: newTier,
+            points: newTotalPoints,
+          );
+        }
+
+        // Check for points milestone
+        await _checkAndNotifyMilestone(
+          notificationService,
+          user.uid,
+          newTotalPoints,
+        );
+      } catch (e) {
+        // Don't fail the spin if notification fails
+        AppLogger.warning('Failed to send notification after daily spin: $e');
+      }
 
       state = state.copyWith(
         canSpin: false,
@@ -276,6 +315,58 @@ class DailySpinNotifier extends Notifier<DailySpinState> {
       return 'Silver';
     } else {
       return 'Bronze';
+    }
+  }
+
+  /// Check for points milestone and send notification if reached
+  Future<void> _checkAndNotifyMilestone(
+    NotificationService notificationService,
+    String userId,
+    int newPoints,
+  ) async {
+    try {
+      // Define milestone thresholds
+      const milestones = [
+        1000,
+        2500,
+        5000,
+        7500,
+        10000,
+        15000,
+        20000,
+        25000,
+        50000,
+      ];
+
+      // Check if new points crossed any milestone
+      for (final milestone in milestones) {
+        // Get user's last milestone from Firestore
+        final userDoc = await _firestore.collection('users').doc(userId).get();
+        final lastMilestone = userDoc.exists
+            ? (userDoc.data()?['lastMilestone'] as int? ?? 0)
+            : 0;
+
+        // If we crossed this milestone and haven't notified for it yet
+        if (newPoints >= milestone && lastMilestone < milestone) {
+          // Send milestone notification
+          await notificationService.sendPointsMilestoneNotification(
+            userId: userId,
+            points: newPoints,
+            milestone: milestone,
+          );
+
+          // Update last milestone in Firestore
+          await _firestore.collection('users').doc(userId).set({
+            'lastMilestone': milestone,
+          }, SetOptions(merge: true));
+
+          AppLogger.info('Milestone notification sent: $milestone points');
+          break; // Only notify for the highest milestone reached
+        }
+      }
+    } catch (e) {
+      AppLogger.warning('Error checking milestone: $e');
+      // Don't throw - milestone checking is not critical
     }
   }
 

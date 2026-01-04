@@ -22,7 +22,8 @@ class _PendingBillsListState extends State<PendingBillsList> {
   final Map<String, Map<String, dynamic>?> _carpenterCache = {};
 
   // Filter state
-  DateTime _selectedDate = DateTime.now();
+  DateTime? _startDate;
+  DateTime? _endDate;
   final TextEditingController _carpenterNameController =
       TextEditingController();
   String _carpenterNameFilter = '';
@@ -345,11 +346,42 @@ class _PendingBillsListState extends State<PendingBillsList> {
   }
 
   // ---------------- DATE PICKER ----------------
-  Future<void> _selectDate(BuildContext context) async {
+  Future<void> _selectStartDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate,
+      initialDate: _startDate ?? DateTime.now(),
       firstDate: DateTime(2020),
+      lastDate: _endDate ?? DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: DesignToken.primary,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: DesignToken.textDark,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        _startDate = picked;
+        // If end date is before start date, reset end date
+        if (_endDate != null && _endDate!.isBefore(picked)) {
+          _endDate = null;
+        }
+      });
+    }
+  }
+
+  Future<void> _selectEndDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _endDate ?? _startDate ?? DateTime.now(),
+      firstDate: _startDate ?? DateTime(2020),
       lastDate: DateTime.now(),
       builder: (context, child) {
         return Theme(
@@ -365,9 +397,9 @@ class _PendingBillsListState extends State<PendingBillsList> {
         );
       },
     );
-    if (picked != null && picked != _selectedDate) {
+    if (picked != null) {
       setState(() {
-        _selectedDate = picked;
+        _endDate = picked;
       });
     }
   }
@@ -375,18 +407,18 @@ class _PendingBillsListState extends State<PendingBillsList> {
   // ---------------- CLEAR FILTERS ----------------
   void _clearFilters() {
     setState(() {
-      _selectedDate = DateTime.now();
+      _startDate = null;
+      _endDate = null;
       _carpenterNameController.clear();
       _carpenterNameFilter = '';
     });
   }
 
-  // ---------------- HELPER: CHECK IF DATE IS TODAY ----------------
-  bool _isToday(DateTime date) {
-    final now = DateTime.now();
-    return date.year == now.year &&
-        date.month == now.month &&
-        date.day == now.day;
+  // ---------------- HELPER: CHECK IF FILTERS ARE ACTIVE ----------------
+  bool _hasActiveFilters() {
+    return _carpenterNameFilter.isNotEmpty ||
+        _startDate != null ||
+        _endDate != null;
   }
 
   @override
@@ -400,14 +432,45 @@ class _PendingBillsListState extends State<PendingBillsList> {
     return bills.where((billDoc) {
       final bill = billDoc.data() as Map<String, dynamic>;
 
-      // Date filter (always applied since date is always set)
-      final billDate = bill['billDate'] as Timestamp?;
-      if (billDate == null) return false;
-      final billDateTime = billDate.toDate();
-      if (billDateTime.year != _selectedDate.year ||
-          billDateTime.month != _selectedDate.month ||
-          billDateTime.day != _selectedDate.day) {
-        return false;
+      // Date range filter
+      if (_startDate != null || _endDate != null) {
+        final billDate = bill['billDate'] as Timestamp?;
+        final createdAt = bill['createdAt'] as Timestamp?;
+
+        // Use billDate if available, otherwise use createdAt
+        final dateToCheck = billDate ?? createdAt;
+        if (dateToCheck == null) return false;
+
+        final billDateTime = dateToCheck.toDate();
+        final billDateOnly = DateTime(
+          billDateTime.year,
+          billDateTime.month,
+          billDateTime.day,
+        );
+
+        // Check start date
+        if (_startDate != null) {
+          final startDateOnly = DateTime(
+            _startDate!.year,
+            _startDate!.month,
+            _startDate!.day,
+          );
+          if (billDateOnly.isBefore(startDateOnly)) {
+            return false;
+          }
+        }
+
+        // Check end date
+        if (_endDate != null) {
+          final endDateOnly = DateTime(
+            _endDate!.year,
+            _endDate!.month,
+            _endDate!.day,
+          );
+          if (billDateOnly.isAfter(endDateOnly)) {
+            return false;
+          }
+        }
       }
 
       // Carpenter name filter (will be applied after fetching carpenter data)
@@ -437,13 +500,13 @@ class _PendingBillsListState extends State<PendingBillsList> {
           ),
           child: Column(
             children: [
-              // Filters in One Row
+              // Date Range Filters
               Row(
                 children: [
-                  // Date Filter
+                  // Start Date Filter
                   Expanded(
                     child: InkWell(
-                      onTap: () => _selectDate(context),
+                      onTap: () => _selectStartDate(context),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
@@ -461,92 +524,186 @@ class _PendingBillsListState extends State<PendingBillsList> {
                           children: [
                             Icon(
                               Icons.calendar_today,
-                              size: 20,
+                              size: 18,
                               color: DesignToken.primary,
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: 10),
                             Expanded(
-                              child: Text(
-                                DateFormat('dd MMM yyyy').format(_selectedDate),
-                                style: AppTextStyles.nunitoRegular.copyWith(
-                                  fontSize: 14,
-                                  color: DesignToken.textDark,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'From',
+                                    style: AppTextStyles.nunitoRegular.copyWith(
+                                      fontSize: 11,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _startDate != null
+                                        ? DateFormat(
+                                            'dd MMM yyyy',
+                                          ).format(_startDate!)
+                                        : 'Select Date',
+                                    style: AppTextStyles.nunitoSemiBold
+                                        .copyWith(
+                                          fontSize: 13,
+                                          color: _startDate != null
+                                              ? DesignToken.textDark
+                                              : Colors.grey[500],
+                                        ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (_startDate != null)
+                              InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    _startDate = null;
+                                  });
+                                },
+                                child: Icon(
+                                  Icons.close,
+                                  size: 16,
+                                  color: Colors.grey[600],
                                 ),
-                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                            InkWell(
-                              onTap: () {
-                                setState(() {
-                                  _selectedDate = DateTime.now();
-                                });
-                              },
-                              child: Icon(
-                                Icons.close,
-                                size: 18,
-                                color: Colors.grey[600],
-                              ),
-                            ),
                           ],
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  // Carpenter Name Filter
+                  const SizedBox(width: 8),
+                  // End Date Filter
                   Expanded(
-                    child: TextField(
-                      controller: _carpenterNameController,
-                      onChanged: (value) {
-                        setState(() {
-                          _carpenterNameFilter = value.toLowerCase();
-                        });
-                      },
-                      style: AppTextStyles.nunitoRegular.copyWith(fontSize: 14),
-                      decoration: InputDecoration(
-                        hintText: 'Carpenter Name',
-                        hintStyle: AppTextStyles.nunitoRegular.copyWith(
-                          color: Colors.grey[400],
-                          fontSize: 14,
-                        ),
-                        prefixIcon: const Icon(
-                          Icons.person_search,
-                          color: DesignToken.primary,
-                          size: 20,
-                        ),
-                        suffixIcon: _carpenterNameFilter.isNotEmpty
-                            ? InkWell(
-                                onTap: () {
-                                  setState(() {
-                                    _carpenterNameController.clear();
-                                    _carpenterNameFilter = '';
-                                  });
-                                },
-                                child: const Icon(
-                                  Icons.close,
-                                  size: 18,
-                                  color: Colors.grey,
-                                ),
-                              )
-                            : null,
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
+                    child: InkWell(
+                      onTap: () => _selectEndDate(context),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 14,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: DesignToken.primary.withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.event,
+                              size: 18,
+                              color: DesignToken.primary,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'To',
+                                    style: AppTextStyles.nunitoRegular.copyWith(
+                                      fontSize: 11,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _endDate != null
+                                        ? DateFormat(
+                                            'dd MMM yyyy',
+                                          ).format(_endDate!)
+                                        : 'Select Date',
+                                    style: AppTextStyles.nunitoSemiBold
+                                        .copyWith(
+                                          fontSize: 13,
+                                          color: _endDate != null
+                                              ? DesignToken.textDark
+                                              : Colors.grey[500],
+                                        ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (_endDate != null)
+                              InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    _endDate = null;
+                                  });
+                                },
+                                child: Icon(
+                                  Icons.close,
+                                  size: 16,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     ),
                   ),
                 ],
               ),
+              const SizedBox(height: 12),
+              // Carpenter Name Filter
+              TextField(
+                controller: _carpenterNameController,
+                onChanged: (value) {
+                  setState(() {
+                    _carpenterNameFilter = value.toLowerCase();
+                  });
+                },
+                style: AppTextStyles.nunitoRegular.copyWith(fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Search by Carpenter Name',
+                  hintStyle: AppTextStyles.nunitoRegular.copyWith(
+                    color: Colors.grey[400],
+                    fontSize: 14,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.person_search,
+                    color: DesignToken.primary,
+                    size: 20,
+                  ),
+                  suffixIcon: _carpenterNameFilter.isNotEmpty
+                      ? InkWell(
+                          onTap: () {
+                            setState(() {
+                              _carpenterNameController.clear();
+                              _carpenterNameFilter = '';
+                            });
+                          },
+                          child: const Icon(
+                            Icons.close,
+                            size: 18,
+                            color: Colors.grey,
+                          ),
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: Colors.grey[100],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                ),
+              ),
               // Clear Filters Button
-              if (_carpenterNameFilter.isNotEmpty ||
-                  !_isToday(_selectedDate)) ...[
+              if (_hasActiveFilters()) ...[
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
@@ -558,7 +715,7 @@ class _PendingBillsListState extends State<PendingBillsList> {
                       color: DesignToken.primary,
                     ),
                     label: Text(
-                      'Clear Filters',
+                      'Clear All Filters',
                       style: AppTextStyles.nunitoSemiBold.copyWith(
                         fontSize: 14,
                         color: DesignToken.primary,
@@ -613,8 +770,7 @@ class _PendingBillsListState extends State<PendingBillsList> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            _carpenterNameFilter.isNotEmpty ||
-                                    !_isToday(_selectedDate)
+                            _hasActiveFilters()
                                 ? 'No bills found matching filters'
                                 : l10n.noPendingBills,
                             style: AppTextStyles.nunitoRegular.copyWith(
@@ -641,6 +797,8 @@ class _PendingBillsListState extends State<PendingBillsList> {
                       final phone = bill['carpenterPhone'] ?? "";
                       final imageUrl = bill['imageUrl'] ?? "";
                       final createdAt = bill['createdAt'] as Timestamp?;
+                      final billDate = bill['billDate'] as Timestamp?;
+                      final approvedAt = bill['approvedAt'] as Timestamp?;
 
                       return FutureBuilder<Map<String, dynamic>?>(
                         future: _fetchCarpenterData(carpenterId),
@@ -843,26 +1001,103 @@ class _PendingBillsListState extends State<PendingBillsList> {
                                     const SizedBox(height: 10),
 
                                     // ------------ DATE ROW -------------
-                                    Row(
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Icon(
-                                          Icons.calendar_today,
-                                          size: 14,
-                                          color: Colors.grey[600],
-                                        ),
-                                        const SizedBox(width: 6),
-
-                                        Text(
-                                          createdAt != null
-                                              ? DateFormat(
-                                                  'dd MMM, hh:mm a',
-                                                ).format(createdAt.toDate())
-                                              : "",
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: Colors.grey[500],
+                                        // Bill Date
+                                        if (billDate != null)
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.receipt_long,
+                                                size: 14,
+                                                color: Colors.blue[600],
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                'Bill Date: ',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: Colors.grey[600],
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                              Text(
+                                                DateFormat(
+                                                  'dd MMM yyyy',
+                                                ).format(billDate.toDate()),
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: Colors.blue[700],
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                        ),
+                                        // Approved Date (if available)
+                                        if (approvedAt != null) ...[
+                                          if (billDate != null)
+                                            const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.check_circle,
+                                                size: 14,
+                                                color: Colors.green[600],
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                'Approved: ',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: Colors.grey[600],
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                              Text(
+                                                DateFormat(
+                                                  'dd MMM yyyy, hh:mm a',
+                                                ).format(approvedAt.toDate()),
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: Colors.green[700],
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                        // Submitted Date (if bill date not available, show createdAt)
+                                        if (billDate == null &&
+                                            createdAt != null)
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.schedule,
+                                                size: 14,
+                                                color: Colors.grey[600],
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                'Submitted: ',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: Colors.grey[600],
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                              Text(
+                                                DateFormat(
+                                                  'dd MMM yyyy, hh:mm a',
+                                                ).format(createdAt.toDate()),
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: Colors.grey[500],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                       ],
                                     ),
 

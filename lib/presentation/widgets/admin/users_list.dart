@@ -5,6 +5,7 @@ import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/services/pin_auth_service.dart';
+import 'package:balaji_points/services/bill_service.dart';
 import 'package:intl/intl.dart';
 
 /// Full single-file implementation:
@@ -28,10 +29,14 @@ class _UsersListState extends State<UsersList> {
   final _userService = UserService();
 
   void _showUserDetails(Map<String, dynamic> user) {
-    showDialog(
-      context: context,
-      builder: (context) =>
-          UserDetailsDialog(user: user, onDelete: () => _deleteCarpenter(user)),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => UserDetailsScreen(
+          user: user,
+          onDelete: () => _deleteCarpenter(user),
+        ),
+      ),
     );
   }
 
@@ -298,9 +303,7 @@ class _UsersListState extends State<UsersList> {
         // Users List
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('users')
-                .snapshots(),
+            stream: FirebaseFirestore.instance.collection('users').snapshots(),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
                 final l10n = AppLocalizations.of(context)!;
@@ -910,13 +913,418 @@ class _AddCarpenterDialogState extends State<AddCarpenterDialog> {
 }
 
 /// ---------------------------
-/// User Details Dialog (unchanged)
+/// Approved Bills List Widget
 /// ---------------------------
 
-class UserDetailsDialog extends StatelessWidget {
+class _ApprovedBillsList extends StatelessWidget {
+  final String carpenterId;
+  const _ApprovedBillsList({required this.carpenterId});
+
+  @override
+  Widget build(BuildContext context) {
+    final billService = BillService();
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('bills')
+          .where('carpenterId', isEqualTo: carpenterId)
+          .where('status', isEqualTo: 'approved')
+          .orderBy('createdAt', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(20.0),
+              child: CircularProgressIndicator(color: DesignToken.primary),
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.red[50],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'Error loading bills: ${snapshot.error}',
+              style: AppTextStyles.nunitoRegular.copyWith(
+                fontSize: 14,
+                color: DesignToken.error,
+              ),
+            ),
+          );
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'No approved bills yet',
+              style: AppTextStyles.nunitoRegular.copyWith(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          );
+        }
+
+        final bills = snapshot.data!.docs;
+
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: bills.length,
+          itemBuilder: (context, index) {
+            final bill = bills[index].data() as Map<String, dynamic>;
+            final billId = bills[index].id;
+            final amount = (bill['amount'] as num?)?.toDouble() ?? 0.0;
+            final pointsEarned = (bill['pointsEarned'] as num?)?.toInt() ?? 0;
+            final approvedAt = bill['approvedAt'] as Timestamp?;
+            final billDate = bill['billDate'] as Timestamp?;
+            final storeName = bill['storeName'] as String? ?? '';
+            final billNumber = bill['billNumber'] as String? ?? '';
+
+            DateTime? displayDate;
+            if (approvedAt != null) {
+              displayDate = approvedAt.toDate();
+            } else if (billDate != null) {
+              displayDate = billDate.toDate();
+            }
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[200]!),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (storeName.isNotEmpty)
+                              Text(
+                                storeName,
+                                style: AppTextStyles.nunitoBold.copyWith(
+                                  fontSize: 16,
+                                  color: DesignToken.textDark,
+                                ),
+                              ),
+                            if (billNumber.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                'Bill #$billNumber',
+                                style: AppTextStyles.nunitoRegular.copyWith(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                            if (displayDate != null) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.calendar_today,
+                                    size: 14,
+                                    color: Colors.grey[600],
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    DateFormat(
+                                      'dd MMM yyyy, hh:mm a',
+                                    ).format(displayDate),
+                                    style: AppTextStyles.nunitoRegular.copyWith(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '₹${amount.toStringAsFixed(0)}',
+                            style: AppTextStyles.nunitoBold.copyWith(
+                              fontSize: 18,
+                              color: DesignToken.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.stars,
+                                size: 16,
+                                color: DesignToken.secondary,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$pointsEarned Points',
+                                style: AppTextStyles.nunitoSemiBold.copyWith(
+                                  fontSize: 14,
+                                  color: DesignToken.secondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showWithdrawConfirmation(
+                        context,
+                        billService,
+                        billId,
+                        amount,
+                        pointsEarned,
+                      ),
+                      icon: const Icon(Icons.undo, size: 18),
+                      label: const Text('Withdraw Points'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: DesignToken.error,
+                        side: BorderSide(color: DesignToken.error, width: 1.5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _showWithdrawConfirmation(
+    BuildContext context,
+    BillService billService,
+    String billId,
+    double amount,
+    int points,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(
+              Icons.warning_amber_rounded,
+              color: DesignToken.error,
+              size: 28,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Withdraw Points',
+                style: AppTextStyles.nunitoBold.copyWith(
+                  fontSize: 20,
+                  color: DesignToken.error,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to withdraw points from this bill?',
+              style: AppTextStyles.nunitoRegular.copyWith(
+                fontSize: 16,
+                color: DesignToken.textDark,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Amount:',
+                        style: AppTextStyles.nunitoSemiBold.copyWith(
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        '₹${amount.toStringAsFixed(0)}',
+                        style: AppTextStyles.nunitoBold.copyWith(
+                          fontSize: 14,
+                          color: DesignToken.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Points to withdraw:',
+                        style: AppTextStyles.nunitoSemiBold.copyWith(
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        '$points',
+                        style: AppTextStyles.nunitoBold.copyWith(
+                          fontSize: 14,
+                          color: DesignToken.error,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'This action cannot be undone. The points will be deducted from the carpenter\'s account.',
+              style: AppTextStyles.nunitoRegular.copyWith(
+                fontSize: 13,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              l10n.cancel,
+              style: AppTextStyles.nunitoSemiBold.copyWith(
+                color: DesignToken.textDark,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: DesignToken.error,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(
+              'Withdraw',
+              style: AppTextStyles.nunitoBold.copyWith(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    // Show loading indicator
+    if (!context.mounted) return;
+
+    // Show loading dialog and store reference
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => PopScope(
+        canPop: false, // Prevent back button from closing
+        child: const Center(
+          child: CircularProgressIndicator(color: DesignToken.primary),
+        ),
+      ),
+    );
+
+    try {
+      final success = await billService.withdrawBill(billId);
+
+      // Close loading dialog - ensure we close it
+      if (context.mounted) {
+        Navigator.of(context, rootNavigator: false).pop();
+      }
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              success
+                  ? 'Points withdrawn successfully'
+                  : 'Failed to withdraw points. Please try again.',
+            ),
+            backgroundColor: success ? DesignToken.success : DesignToken.error,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      // Ensure loading dialog is closed even on error
+      if (context.mounted) {
+        Navigator.of(context, rootNavigator: false).pop();
+      }
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error withdrawing points: ${e.toString()}'),
+            backgroundColor: DesignToken.error,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+}
+
+/// ---------------------------
+/// User Details Screen (Full Screen)
+/// ---------------------------
+
+class UserDetailsScreen extends StatelessWidget {
   final Map<String, dynamic> user;
   final VoidCallback? onDelete;
-  const UserDetailsDialog({super.key, required this.user, this.onDelete});
+  const UserDetailsScreen({super.key, required this.user, this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -927,202 +1335,287 @@ class UserDetailsDialog extends StatelessWidget {
     final totalPoints = user['totalPoints'] ?? 0;
     final tier = user['tier'] ?? 'Bronze';
     final profileImage = user['profileImage'] ?? '';
-    final createdAt = user['createdAt'] is Timestamp
-        ? (user['createdAt'] as Timestamp).toDate()
-        : (user['createdAt'] is DateTime
-              ? user['createdAt'] as DateTime
-              : null);
 
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [DesignToken.primary, DesignToken.secondary],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Column(
+        children: [
+          // Header
+          Container(
+            padding: EdgeInsets.only(
+              top: MediaQuery.of(context).padding.top + 8,
+              bottom: 20,
+              left: 20,
+              right: 20,
+            ),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [DesignToken.primary, DesignToken.secondary],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              child: Row(
-                children: [
-                  ClipOval(
-                    child: profileImage != null && profileImage != ''
-                        ? Image.network(
-                            profileImage,
-                            width: 60,
-                            height: 60,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                width: 60,
-                                height: 60,
-                                color: Colors.white,
-                                child: Icon(
-                                  Icons.person,
-                                  size: 35,
-                                  color: DesignToken.primary,
-                                ),
-                              );
-                            },
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Container(
-                                width: 60,
-                                height: 60,
-                                color: Colors.white,
-                                child: Center(
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.5,
-                                    value:
-                                        loadingProgress.expectedTotalBytes !=
-                                            null
-                                        ? loadingProgress
-                                                  .cumulativeBytesLoaded /
-                                              loadingProgress
-                                                  .expectedTotalBytes!
-                                        : null,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      DesignToken.primary,
-                                    ),
+            ),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                ClipOval(
+                  child: profileImage != null && profileImage != ''
+                      ? Image.network(
+                          profileImage,
+                          width: 60,
+                          height: 60,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              width: 60,
+                              height: 60,
+                              color: Colors.white,
+                              child: Icon(
+                                Icons.person,
+                                size: 35,
+                                color: DesignToken.primary,
+                              ),
+                            );
+                          },
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Container(
+                              width: 60,
+                              height: 60,
+                              color: Colors.white,
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  value:
+                                      loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                            loadingProgress.expectedTotalBytes!
+                                      : null,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    DesignToken.primary,
                                   ),
                                 ),
-                              );
-                            },
-                          )
-                        : Container(
-                            width: 60,
-                            height: 60,
-                            color: Colors.white,
-                            child: Icon(
-                              Icons.person,
-                              size: 35,
-                              color: DesignToken.primary,
-                            ),
+                              ),
+                            );
+                          },
+                        )
+                      : Container(
+                          width: 60,
+                          height: 60,
+                          color: Colors.white,
+                          child: Icon(
+                            Icons.person,
+                            size: 35,
+                            color: DesignToken.primary,
                           ),
+                        ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$firstName $lastName',
+                        style: AppTextStyles.nunitoBold.copyWith(
+                          fontSize: 20,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Text(
+                        phone,
+                        style: AppTextStyles.nunitoRegular.copyWith(
+                          fontSize: 14,
+                          color: Colors.white.withOpacity(0.9),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
+                ),
+              ],
+            ),
+          ),
+
+          // Content
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Points Summary Card (Real-time updates)
+                  StreamBuilder<DocumentSnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(user['userId'])
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      int currentPoints = totalPoints;
+                      String currentTier = tier;
+
+                      if (snapshot.hasData && snapshot.data!.exists) {
+                        final userData =
+                            snapshot.data!.data() as Map<String, dynamic>;
+                        currentPoints =
+                            (userData['totalPoints'] as num?)?.toInt() ??
+                            totalPoints;
+                        currentTier = userData['tier'] as String? ?? tier;
+                      }
+
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              DesignToken.primary.withOpacity(0.1),
+                              DesignToken.secondary.withOpacity(0.1),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: DesignToken.primary.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.stars,
+                                  size: 32,
+                                  color: DesignToken.secondary,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  '$currentPoints',
+                                  style: AppTextStyles.nunitoBold.copyWith(
+                                    fontSize: 36,
+                                    color: DesignToken.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              l10n.totalPointsLabel,
+                              style: AppTextStyles.nunitoRegular.copyWith(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _getTierColor(currentTier),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                l10n.tierLabel(currentTier),
+                                style: AppTextStyles.nunitoBold.copyWith(
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+
+                  // Reset PIN Button Section
+                  const SizedBox(height: 24),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: DesignToken.primary.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: DesignToken.primary.withOpacity(0.2),
+                        width: 1,
+                      ),
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.lock_reset,
+                              color: DesignToken.primary,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              l10n.adminResetPin,
+                              style: AppTextStyles.nunitoBold.copyWith(
+                                fontSize: 16,
+                                color: DesignToken.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
                         Text(
-                          '$firstName $lastName',
-                          style: AppTextStyles.nunitoBold.copyWith(
-                            fontSize: 20,
-                            color: Colors.white,
+                          l10n.adminResetPinSubtitle,
+                          style: AppTextStyles.nunitoRegular.copyWith(
+                            fontSize: 13,
+                            color: DesignToken.textDark.withOpacity(0.7),
                           ),
                         ),
-                        Text(
-                          phone,
-                          style: AppTextStyles.nunitoRegular.copyWith(
-                            fontSize: 14,
-                            color: Colors.white.withOpacity(0.9),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) =>
+                                    AdminResetPINDialog(user: user),
+                              );
+                            },
+                            icon: const Icon(Icons.vpn_key, size: 18),
+                            label: Text(l10n.adminResetPin),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: DesignToken.primary,
+                              side: BorderSide(
+                                color: DesignToken.primary,
+                                width: 1.5,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-            ),
 
-            // Content
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Points Summary Card
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            DesignToken.primary.withOpacity(0.1),
-                            DesignToken.secondary.withOpacity(0.1),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: DesignToken.primary.withOpacity(0.3),
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.stars,
-                                size: 32,
-                                color: DesignToken.secondary,
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                '$totalPoints',
-                                style: AppTextStyles.nunitoBold.copyWith(
-                                  fontSize: 36,
-                                  color: DesignToken.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            l10n.totalPointsLabel,
-                            style: AppTextStyles.nunitoRegular.copyWith(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _getTierColor(tier),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              l10n.tierLabel(tier),
-                              style: AppTextStyles.nunitoBold.copyWith(
-                                fontSize: 16,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Reset PIN Button Section
+                  // Delete Button Section
+                  if (onDelete != null) ...[
                     const SizedBox(height: 24),
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: DesignToken.primary.withOpacity(0.05),
+                        color: DesignToken.error.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: DesignToken.primary.withOpacity(0.2),
+                          color: DesignToken.error.withOpacity(0.3),
                           width: 1,
                         ),
                       ),
@@ -1132,23 +1625,23 @@ class UserDetailsDialog extends StatelessWidget {
                           Row(
                             children: [
                               Icon(
-                                Icons.lock_reset,
-                                color: DesignToken.primary,
+                                Icons.warning_amber_rounded,
+                                color: DesignToken.error,
                                 size: 20,
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                l10n.adminResetPin,
+                                l10n.dangerZone,
                                 style: AppTextStyles.nunitoBold.copyWith(
                                   fontSize: 16,
-                                  color: DesignToken.primary,
+                                  color: DesignToken.error,
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            l10n.adminResetPinSubtitle,
+                            l10n.deleteCarpenterWarning,
                             style: AppTextStyles.nunitoRegular.copyWith(
                               fontSize: 13,
                               color: DesignToken.textDark.withOpacity(0.7),
@@ -1161,19 +1654,15 @@ class UserDetailsDialog extends StatelessWidget {
                               onPressed: () {
                                 Navigator.of(
                                   context,
-                                ).pop(); // Close current dialog
-                                showDialog(
-                                  context: context,
-                                  builder: (context) =>
-                                      AdminResetPINDialog(user: user),
-                                );
+                                ).pop(); // Close screen first
+                                onDelete?.call();
                               },
-                              icon: const Icon(Icons.vpn_key, size: 18),
-                              label: Text(l10n.adminResetPin),
+                              icon: const Icon(Icons.delete_outline, size: 18),
+                              label: Text(l10n.deleteCarpenter),
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: DesignToken.primary,
+                                foregroundColor: DesignToken.error,
                                 side: BorderSide(
-                                  color: DesignToken.primary,
+                                  color: DesignToken.error,
                                   width: 1.5,
                                 ),
                                 shape: RoundedRectangleBorder(
@@ -1188,248 +1677,24 @@ class UserDetailsDialog extends StatelessWidget {
                         ],
                       ),
                     ),
-
-                    // Delete Button Section
-                    if (onDelete != null) ...[
-                      const SizedBox(height: 24),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: DesignToken.error.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: DesignToken.error.withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.warning_amber_rounded,
-                                  color: DesignToken.error,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  l10n.dangerZone,
-                                  style: AppTextStyles.nunitoBold.copyWith(
-                                    fontSize: 16,
-                                    color: DesignToken.error,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              l10n.deleteCarpenterWarning,
-                              style: AppTextStyles.nunitoRegular.copyWith(
-                                fontSize: 13,
-                                color: DesignToken.textDark.withOpacity(0.7),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton.icon(
-                                onPressed: () {
-                                  Navigator.of(
-                                    context,
-                                  ).pop(); // Close dialog first
-                                  onDelete?.call();
-                                },
-                                icon: const Icon(
-                                  Icons.delete_outline,
-                                  size: 18,
-                                ),
-                                label: Text(l10n.deleteCarpenter),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: DesignToken.error,
-                                  side: BorderSide(
-                                    color: DesignToken.error,
-                                    width: 1.5,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-
-                    const SizedBox(height: 24),
-                    Text(
-                      l10n.recentActivity,
-                      style: AppTextStyles.nunitoBold.copyWith(
-                        fontSize: 18,
-                        color: DesignToken.textDark,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    StreamBuilder<DocumentSnapshot>(
-                      stream: FirebaseFirestore.instance
-                          .collection('user_points')
-                          .doc(user['userId'])
-                          .snapshots(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(20.0),
-                              child: CircularProgressIndicator(
-                                color: DesignToken.primary,
-                              ),
-                            ),
-                          );
-                        }
-
-                        if (!snapshot.hasData || !snapshot.data!.exists) {
-                          final l10n = AppLocalizations.of(context)!;
-                          return Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[100],
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              l10n.noActivityYet,
-                              style: AppTextStyles.nunitoRegular.copyWith(
-                                fontSize: 14,
-                                color: Colors.grey[600],
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          );
-                        }
-
-                        final data =
-                            snapshot.data!.data() as Map<String, dynamic>;
-                        final history = (data['pointsHistory'] ?? []) as List;
-
-                        if (history.isEmpty) {
-                          final l10n = AppLocalizations.of(context)!;
-                          return Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[100],
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              l10n.noActivityYet,
-                              style: AppTextStyles.nunitoRegular.copyWith(
-                                fontSize: 14,
-                                color: Colors.grey[600],
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          );
-                        }
-
-                        final recentHistory = history.reversed
-                            .take(10)
-                            .toList();
-
-                        return ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: recentHistory.length,
-                          itemBuilder: (context, index) {
-                            final transaction =
-                                recentHistory[index] as Map<String, dynamic>;
-                            final points = transaction['points'] ?? 0;
-                            final reason = transaction['reason'] ?? 'Unknown';
-                            final date = transaction['date'] is Timestamp
-                                ? (transaction['date'] as Timestamp).toDate()
-                                : null;
-                            final isPositive = points > 0;
-
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.grey[200]!),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: isPositive
-                                          ? Colors.green.withOpacity(0.1)
-                                          : Colors.red.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Icon(
-                                      isPositive ? Icons.add : Icons.remove,
-                                      color: isPositive
-                                          ? Colors.green
-                                          : Colors.red,
-                                      size: 20,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          reason,
-                                          style: AppTextStyles.nunitoMedium
-                                              .copyWith(
-                                                fontSize: 14,
-                                                color: DesignToken.textDark,
-                                              ),
-                                        ),
-                                        if (date != null)
-                                          Text(
-                                            DateFormat(
-                                              'dd MMM yyyy, hh:mm a',
-                                            ).format(date),
-                                            style: AppTextStyles.nunitoRegular
-                                                .copyWith(
-                                                  fontSize: 12,
-                                                  color: Colors.grey[600],
-                                                ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                  Text(
-                                    '${isPositive ? '+' : ''}$points',
-                                    style: AppTextStyles.nunitoBold.copyWith(
-                                      fontSize: 16,
-                                      color: isPositive
-                                          ? Colors.green
-                                          : Colors.red,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ),
                   ],
-                ),
+
+                  // Approved Bills Section
+                  const SizedBox(height: 24),
+                  Text(
+                    'Points History',
+                    style: AppTextStyles.nunitoBold.copyWith(
+                      fontSize: 18,
+                      color: DesignToken.textDark,
+                    ),
+                  ),
+
+                  _ApprovedBillsList(carpenterId: user['userId']),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
