@@ -505,13 +505,28 @@ class BillService {
 
         // Send notification after successful approval
         try {
+          AppLogger.info('📤 Attempting to send bill approved notification...');
+          AppLogger.info('   userId: $finalCarpenterId');
+          AppLogger.info('   amount: $amount');
+          AppLogger.info('   points: $pointsEarned');
+          AppLogger.info('   billId: $billId');
+
           final notificationService = NotificationService();
-          await notificationService.sendBillApprovedNotification(
-            userId: finalCarpenterId,
-            amount: amount,
-            points: pointsEarned,
-            billId: billId,
-          );
+          final notificationSent = await notificationService
+              .sendBillApprovedNotification(
+                userId: finalCarpenterId,
+                amount: amount,
+                points: pointsEarned,
+                billId: billId,
+              );
+
+          if (notificationSent) {
+            AppLogger.info('✅ Bill approved notification sent successfully');
+          } else {
+            AppLogger.warning(
+              '⚠️ Bill approved notification failed to send (check logs above)',
+            );
+          }
 
           // Check for tier upgrade and send notification if tier changed
           if (oldTier != newTier) {

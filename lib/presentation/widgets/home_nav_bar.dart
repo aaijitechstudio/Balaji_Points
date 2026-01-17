@@ -9,7 +9,9 @@ class HomeNavBar extends StatelessWidget {
   final String? subtitle;
   final bool showProfileButton;
   final bool showLogo;
+  final bool showBackButton;
   final VoidCallback? onProfileTap;
+  final VoidCallback? onBackTap;
   final List<Widget>? actions;
 
   const HomeNavBar({
@@ -19,7 +21,9 @@ class HomeNavBar extends StatelessWidget {
     this.subtitle,
     this.showProfileButton = true,
     this.showLogo = true,
+    this.showBackButton = false,
     this.onProfileTap,
+    this.onBackTap,
     this.actions,
   });
 
@@ -58,9 +62,11 @@ class HomeNavBar extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // Left side - Profile Image or Back Button
+              // Left side - Profile Image, Back Button, or empty space
               if (showProfileButton)
                 _buildProfileButton(context)
+              else if (showBackButton)
+                _buildBackButton(context)
               else
                 const SizedBox(width: 44),
 
@@ -104,7 +110,9 @@ class HomeNavBar extends StatelessWidget {
                     Flexible(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: showLogo ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+                        crossAxisAlignment: showLogo
+                            ? CrossAxisAlignment.start
+                            : CrossAxisAlignment.center,
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
@@ -158,10 +166,12 @@ class HomeNavBar extends StatelessWidget {
 
   Widget _buildProfileButton(BuildContext context) {
     return GestureDetector(
-      onTap: onProfileTap ?? () {
-        debugPrint('Profile button tapped, navigating to /profile');
-        context.push('/profile');
-      },
+      onTap:
+          onProfileTap ??
+          () {
+            debugPrint('Profile button tapped, navigating to /profile');
+            context.push('/profile');
+          },
       child: Container(
         width: 44,
         height: 44,
@@ -203,7 +213,7 @@ class HomeNavBar extends StatelessWidget {
                           child: CircularProgressIndicator(
                             value: loadingProgress.expectedTotalBytes != null
                                 ? loadingProgress.cumulativeBytesLoaded /
-                                    loadingProgress.expectedTotalBytes!
+                                      loadingProgress.expectedTotalBytes!
                                 : null,
                             strokeWidth: 2,
                             valueColor: const AlwaysStoppedAnimation<Color>(
@@ -250,6 +260,20 @@ class HomeNavBar extends StatelessWidget {
                 ),
         ),
       ),
+    );
+  }
+
+  Widget _buildBackButton(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+      onPressed:
+          onBackTap ??
+          () {
+            if (Navigator.of(context).canPop()) {
+              context.pop();
+            }
+          },
+      tooltip: 'Back',
     );
   }
 }

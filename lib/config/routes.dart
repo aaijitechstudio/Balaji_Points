@@ -21,6 +21,7 @@ import 'package:balaji_points/presentation/screens/admin/admin_add_bill_page.dar
 import 'package:balaji_points/presentation/screens/admin/diagnostic_page.dart';
 import 'package:balaji_points/presentation/screens/bills/add_bill_page.dart';
 import 'package:balaji_points/presentation/screens/settings/notification_settings_page.dart';
+import 'package:balaji_points/presentation/screens/notifications/notifications_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -105,6 +106,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/notification-settings',
         builder: (context, _) => const NotificationSettingsPage(),
+      ),
+
+      GoRoute(
+        path: '/notifications',
+        name: 'notifications',
+        builder: (context, _) => const NotificationsPage(),
       ),
 
       // Admin routes - more specific routes first

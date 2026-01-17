@@ -490,6 +490,8 @@ class _HomePageState extends State<HomePage>
   Map<String, dynamic>? _currentUserData;
   int? _currentUserRank;
   int _currentUserPoints = 0;
+  bool _isCarpenter = false;
+  String? _currentUserId;
 
   // animation for add points button
   late AnimationController _animationController;
@@ -668,9 +670,11 @@ class _HomePageState extends State<HomePage>
             setState(() {
               _currentUserData = data;
               _currentUserPoints = (data?['totalPoints'] ?? 0) as int;
+              _isCarpenter = (data?['role'] ?? '') == 'carpenter';
+              _currentUserId = userId;
             });
             debugPrint(
-              'User data refreshed: totalPoints=${_currentUserPoints}, profileImage=${data?['profileImage']}',
+              'User data refreshed: totalPoints=${_currentUserPoints}, profileImage=${data?['profileImage']}, isCarpenter=$_isCarpenter',
             );
           }
           return;
@@ -681,20 +685,26 @@ class _HomePageState extends State<HomePage>
 
       // Fallback to service method
       final data = await _user_service_getCurrentUserDataSafe();
+      final fallbackUserId = await _sessionService.getUserId();
       if (mounted)
         setState(() {
           _currentUserData = data;
           _currentUserPoints = (data?['totalPoints'] ?? 0) as int;
+          _isCarpenter = (data?['role'] ?? '') == 'carpenter';
+          _currentUserId = fallbackUserId;
         });
     } catch (e) {
       debugPrint('Error loading current user data: $e');
       // Fallback to service method on error
       try {
         final data = await _user_service_getCurrentUserDataSafe();
+        final errorFallbackUserId = await _sessionService.getUserId();
         if (mounted)
           setState(() {
             _currentUserData = data;
             _currentUserPoints = (data?['totalPoints'] ?? 0) as int;
+            _isCarpenter = (data?['role'] ?? '') == 'carpenter';
+            _currentUserId = errorFallbackUserId;
           });
       } catch (e2) {
         debugPrint('Error in fallback user data load: $e2');
@@ -891,9 +901,6 @@ class _HomePageState extends State<HomePage>
   Widget build(BuildContext context) {
     // Note: currentUserRankObj is now async, handled in FutureBuilder below
     final top3 = _topCarpenters.take(3).toList();
-    final remaining = _topCarpenters.length > 3
-        ? _topCarpenters.sublist(3)
-        : <CarpenterRank>[];
 
     return Scaffold(
       backgroundColor: DesignToken.primary,
@@ -901,7 +908,70 @@ class _HomePageState extends State<HomePage>
         children: [
           Column(
             children: [
-              HomeNavBar(userImageUrl: _getUserProfileImage()),
+              HomeNavBar(
+                userImageUrl: _getUserProfileImage(),
+                actions: _isCarpenter && _currentUserId != null
+                    ? [
+                        // Notification button with badge
+                        StreamBuilder<QuerySnapshot>(
+                          stream: FirebaseFirestore.instance
+                              .collection('notification_logs')
+                              .where('userId', isEqualTo: _currentUserId)
+                              .snapshots(),
+                          builder: (context, snapshot) {
+                            final notificationCount = snapshot.hasData
+                                ? snapshot.data!.docs.length
+                                : 0;
+
+                            return Stack(
+                              children: [
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.notifications_outlined,
+                                    color: Colors.white,
+                                    size: 24,
+                                  ),
+                                  onPressed: () {
+                                    debugPrint('Navigating to /notifications');
+                                    context.push('/notifications');
+                                  },
+                                  tooltip: 'Notifications',
+                                ),
+                                if (notificationCount > 0)
+                                  Positioned(
+                                    right: 8,
+                                    top: 8,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.red,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      constraints: const BoxConstraints(
+                                        minWidth: 16,
+                                        minHeight: 16,
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          notificationCount > 99
+                                              ? '99+'
+                                              : '$notificationCount',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
+                        ),
+                      ]
+                    : null,
+              ),
 
               Expanded(
                 child: Container(

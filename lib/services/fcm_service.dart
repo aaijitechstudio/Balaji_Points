@@ -36,15 +36,31 @@ class FCMService {
         provisional: false,
       );
 
+      AppLogger.info(
+        'Notification permission status: ${settings.authorizationStatus}',
+      );
+
       if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-        AppLogger.info('Notification permissions granted');
+        AppLogger.info('✅ Notification permissions granted');
       } else if (settings.authorizationStatus ==
           AuthorizationStatus.provisional) {
-        AppLogger.info('Notification permissions provisionally granted');
+        AppLogger.info('⚠️ Notification permissions provisionally granted');
       } else {
-        AppLogger.warning('Notification permissions denied');
-        return;
+        AppLogger.warning(
+          '❌ Notification permissions denied: ${settings.authorizationStatus}',
+        );
+        // Don't return - still initialize token for background notifications
       }
+
+      // Set iOS notification presentation options for foreground notifications
+      // This ensures notifications show even when app is in foreground
+      await _messaging.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
+      AppLogger.info('✅ iOS foreground notification presentation options set');
 
       // Get FCM token
       await _getToken();
@@ -110,13 +126,37 @@ class FCMService {
         return;
       }
 
+      // Save token to the user document
       await _firestore.collection('users').doc(userId).set({
         'fcmToken': token,
         'lastTokenUpdate': FieldValue.serverTimestamp(),
         'platform': defaultTargetPlatform.name,
       }, SetOptions(merge: true));
 
-      AppLogger.info('FCM token saved to Firestore for user: $userId');
+      AppLogger.info('✅ FCM token saved to Firestore for user: $userId');
+      AppLogger.info('   Token preview: ${token.substring(0, 20)}...');
+      AppLogger.info('   Platform: ${defaultTargetPlatform.name}');
+
+      // Also try to save to any document that matches this user's phone number
+      // This helps if the userId format doesn't match
+      try {
+        final phoneNumber = await _sessionService.getPhoneNumber();
+        if (phoneNumber != null &&
+            phoneNumber.isNotEmpty &&
+            phoneNumber != userId) {
+          // Also save to phone number document if different
+          await _firestore.collection('users').doc(phoneNumber).set({
+            'fcmToken': token,
+            'lastTokenUpdate': FieldValue.serverTimestamp(),
+            'platform': defaultTargetPlatform.name,
+          }, SetOptions(merge: true));
+          AppLogger.info(
+            '✅ FCM token also saved to phone number document: $phoneNumber',
+          );
+        }
+      } catch (e) {
+        AppLogger.warning('Could not save token to phone number document: $e');
+      }
     } catch (e) {
       AppLogger.error('Error saving FCM token to Firestore', e);
     }

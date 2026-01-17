@@ -45,19 +45,76 @@ class NotificationService {
       AppLogger.info('📤 Sending notification: $type to user: $userId');
 
       // Get user's FCM token
-      final userDoc = await _firestore.collection('users').doc(userId).get();
+      // Try multiple userId formats to find the user document
+      DocumentSnapshot? userDoc;
+      String? actualUserId;
+
+      // First try: direct userId lookup
+      userDoc = await _firestore.collection('users').doc(userId).get();
+      if (userDoc.exists) {
+        actualUserId = userId;
+        AppLogger.info('Found user with direct userId: $userId');
+      } else {
+        // Second try: search by phone number if userId is phone number format
+        if (userId.length >= 10 && RegExp(r'^\d+$').hasMatch(userId)) {
+          // userId might be phone number, try searching by phone field
+          final phoneQuery = await _firestore
+              .collection('users')
+              .where('phone', isEqualTo: userId)
+              .limit(1)
+              .get();
+
+          if (phoneQuery.docs.isNotEmpty) {
+            userDoc = phoneQuery.docs.first;
+            actualUserId = userDoc.id;
+            AppLogger.info(
+              'Found user by phone number: $userId -> document ID: $actualUserId',
+            );
+          }
+        }
+
+        // Third try: search by carpenterId field
+        if (!userDoc.exists) {
+          final carpenterQuery = await _firestore
+              .collection('users')
+              .where('carpenterId', isEqualTo: userId)
+              .limit(1)
+              .get();
+
+          if (carpenterQuery.docs.isNotEmpty) {
+            userDoc = carpenterQuery.docs.first;
+            actualUserId = userDoc.id;
+            AppLogger.info(
+              'Found user by carpenterId: $userId -> document ID: $actualUserId',
+            );
+          }
+        }
+      }
+
       if (!userDoc.exists) {
-        AppLogger.warning('User not found: $userId');
+        AppLogger.error(
+          'User not found: $userId (tried direct lookup, phone, and carpenterId)',
+        );
         return false;
       }
 
-      final userData = userDoc.data();
+      final userData = userDoc.data() as Map<String, dynamic>?;
       final fcmToken = userData?['fcmToken'] as String?;
 
       if (fcmToken == null || fcmToken.isEmpty) {
-        AppLogger.warning('No FCM token found for user: $userId');
+        AppLogger.error(
+          'No FCM token found for user: $userId (document ID: ${actualUserId ?? userDoc.id})',
+        );
+        AppLogger.info('User data keys: ${userData?.keys.toList()}');
+        AppLogger.info(
+          'User has fcmToken field: ${userData?.containsKey('fcmToken')}',
+        );
         return false;
       }
+
+      AppLogger.info(
+        'FCM token found for user: $userId (document ID: ${actualUserId ?? userDoc.id})',
+      );
 
       // Check notification preferences (if enabled)
       final notificationPrefs =
@@ -88,10 +145,13 @@ class NotificationService {
         ...?data,
       };
 
+      // Use actualUserId if we found it, otherwise use original userId
+      final finalUserId = actualUserId ?? userId;
+
       // Queue notification in Firestore for Cloud Functions to process
       // This is the recommended approach for production
       await _queueNotificationInFirestore(
-        userId: userId,
+        userId: finalUserId,
         fcmToken: fcmToken,
         type: type,
         title: title,

@@ -142,6 +142,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
             title: 'Notification Settings',
             showLogo: false,
             showProfileButton: false,
+            showBackButton: true,
           ),
           // Content
           Expanded(
