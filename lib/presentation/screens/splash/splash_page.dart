@@ -6,6 +6,7 @@ import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/services/session_service.dart';
+import 'package:balaji_points/services/fcm_service.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -87,6 +88,15 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
       if (!mounted) return;
 
       if (isLoggedIn) {
+        // Check if app was opened from a notification
+        final fcmService = FCMService();
+        fcmService.processPendingNavigation();
+
+        // Small delay to ensure navigation is processed
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        if (!mounted) return;
+
         // User is logged in - check role and navigate accordingly
         final role = await _sessionService.getUserRole();
 

@@ -273,9 +273,9 @@ class NotificationService {
           'Your bill of ₹${amount.toStringAsFixed(0)} has been approved. You earned $points points!',
       data: {
         'billId': billId,
-        'amount': amount,
-        'points': points,
-        'screen': '/bills', // Navigate to bills screen
+        'amount': amount.toString(),
+        'points': points.toString(),
+        'screen': '/notifications', // Navigate to notifications screen
       },
     );
   }
@@ -295,7 +295,7 @@ class NotificationService {
       data: {
         'billId': billId,
         'amount': amount,
-        'screen': '/bills', // Navigate to bills screen
+        'screen': '/notifications', // Navigate to notifications screen
       },
     );
   }
@@ -317,7 +317,7 @@ class NotificationService {
         'billId': billId,
         'points': points,
         'amount': amount,
-        'screen': '/bills', // Navigate to bills screen
+        'screen': '/notifications', // Navigate to notifications screen
       },
     );
   }
@@ -337,7 +337,7 @@ class NotificationService {
       data: {
         'tier': newTier,
         'points': points,
-        'screen': '/profile', // Navigate to profile screen
+        'screen': '/notifications', // Navigate to notifications screen
       },
     );
   }
@@ -354,7 +354,7 @@ class NotificationService {
       body: 'You won $points points from today\'s spin!',
       data: {
         'points': points,
-        'screen': '/daily-spin', // Navigate to daily spin screen
+        'screen': '/notifications', // Navigate to notifications screen
       },
     );
   }
@@ -374,7 +374,7 @@ class NotificationService {
       data: {
         'offerTitle': offerTitle,
         'points': points,
-        'screen': '/offers', // Navigate to offers screen
+        'screen': '/notifications', // Navigate to notifications screen
       },
     );
   }
@@ -393,7 +393,7 @@ class NotificationService {
       data: {
         'offerTitle': offerTitle,
         'points': points,
-        'screen': '/offers', // Navigate to offers screen
+        'screen': '/notifications', // Navigate to notifications screen
       },
     );
   }
@@ -464,7 +464,7 @@ class NotificationService {
               'timestamp': FieldValue.serverTimestamp(),
               'offerTitle': offerTitle,
               'points': points,
-              'screen': '/offers',
+              'screen': '/notifications',
             },
           );
           successCount++;
@@ -511,7 +511,7 @@ class NotificationService {
       data: {
         'points': points,
         'milestone': milestone,
-        'screen': '/profile', // Navigate to profile screen
+        'screen': '/notifications', // Navigate to notifications screen
       },
     );
   }
@@ -557,7 +557,7 @@ class NotificationService {
           'Your bill of ₹${amount.toStringAsFixed(0)} has been submitted and is pending approval.',
       data: {
         'amount': amount,
-        'screen': '/bills', // Navigate to bills screen
+        'screen': '/notifications', // Navigate to notifications screen
       },
     );
   }
@@ -662,7 +662,7 @@ class NotificationService {
         'billId': billId,
         'carpenterPhone': carpenterPhone,
         'amount': amount,
-        'screen': '/admin', // Navigate to admin panel
+        'screen': '/notifications', // Navigate to notifications screen
       },
     );
   }
@@ -680,7 +680,7 @@ class NotificationService {
       data: {
         'userId': userId,
         'userPhone': userPhone,
-        'screen': '/admin', // Navigate to admin panel
+        'screen': '/notifications', // Navigate to notifications screen
       },
     );
   }

@@ -2,7 +2,9 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:go_router/go_router.dart';
 import '../core/logger.dart';
+import '../config/routes.dart';
 import 'session_service.dart';
 import 'local_notification_service.dart';
 
@@ -174,11 +176,21 @@ class FCMService {
         debugPrint('Notification: ${message.notification!.title}');
         debugPrint('Body: ${message.notification!.body}');
 
+        // Determine channel based on notification type
+        String channelId = 'balaji_points_default';
+        final notificationType = message.data['type'] as String?;
+        if (notificationType == 'billApproved' ||
+            notificationType == 'tierUpgraded' ||
+            notificationType == 'pointsWithdrawn') {
+          channelId = 'balaji_points_important';
+        }
+
         // Show local notification when app is in foreground
         await _localNotificationService.showNotification(
           title: message.notification!.title ?? 'Notification',
           body: message.notification!.body ?? '',
           payload: message.data.toString(),
+          channelId: channelId,
         );
       }
     });
@@ -204,34 +216,38 @@ class FCMService {
       final data = message.data;
       AppLogger.info('Handling notification navigation with data: $data');
 
-      // Get the screen route from notification data
-      final screen = data['screen'] as String?;
-      if (screen == null || screen.isEmpty) {
-        AppLogger.info(
-          'No screen route in notification data, skipping navigation',
-        );
-        return;
-      }
-
-      // Use a global navigator key or context to navigate
-      // For now, we'll use a callback approach
-      // The app should register a navigation callback during initialization
-      _navigateToScreen(screen, data);
+      // Always navigate to notifications screen when notification is tapped
+      // This ensures users can see all notifications
+      _navigateToNotifications();
     } catch (e) {
       AppLogger.error('Error handling notification navigation', e);
+      // Fallback: still try to navigate to notifications screen
+      _navigateToNotifications();
     }
   }
 
-  /// Navigate to a specific screen based on route
-  /// This will be called from the app's navigation context
-  void _navigateToScreen(String route, Map<String, dynamic> data) {
-    // Navigation will be handled by the app using GoRouter
-    // We'll store the navigation intent and let the app handle it
-    AppLogger.info('Navigation intent: $route with data: $data');
+  /// Navigate to notifications screen
+  /// This is called when a notification is tapped in any app state
+  void _navigateToNotifications() {
+    try {
+      AppLogger.info('Navigating to notifications screen');
 
-    // Store navigation intent for the app to process
-    // The app should check this on startup or when resuming
-    _pendingNavigation = {'route': route, 'data': data};
+      // Use the global navigator key to navigate
+      final context = navigatorKey.currentContext;
+      if (context != null) {
+        // Use pushNamed to navigate to notifications screen
+        context.pushNamed('notifications');
+        AppLogger.info('✅ Navigated to notifications screen');
+      } else {
+        AppLogger.warning('Navigator context not available, storing navigation intent');
+        // Store navigation intent if context is not available yet
+        _pendingNavigation = {'route': '/notifications', 'data': {}};
+      }
+    } catch (e) {
+      AppLogger.error('Error navigating to notifications screen', e);
+      // Store as pending navigation
+      _pendingNavigation = {'route': '/notifications', 'data': {}};
+    }
   }
 
   /// Pending navigation data (to be processed by the app)
@@ -242,6 +258,15 @@ class FCMService {
     final nav = _pendingNavigation;
     _pendingNavigation = null;
     return nav;
+  }
+
+  /// Process pending navigation if any
+  void processPendingNavigation() {
+    final nav = getPendingNavigation();
+    if (nav != null) {
+      AppLogger.info('Processing pending navigation: ${nav['route']}');
+      _navigateToNotifications();
+    }
   }
 
   /// Delete FCM token (on logout)
@@ -305,10 +330,4 @@ class FCMService {
       AppLogger.error('Error unsubscribing from topic', e);
     }
   }
-}
-
-/// Background message handler (must be top-level function)
-@pragma('vm:entry-point')
-Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  AppLogger.info('Background message: ${message.notification?.title}');
 }

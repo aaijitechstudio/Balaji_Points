@@ -10,6 +10,7 @@ import 'app.dart';
 import 'firebase_options.dart';
 import 'core/logger.dart';
 import 'services/fcm_service.dart';
+import 'services/local_notification_service.dart';
 
 /// -------------------------------
 /// BACKGROUND FCM HANDLER (TOP LEVEL)
@@ -22,8 +23,34 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   AppLogger.info('   Body: ${message.notification?.body}');
   AppLogger.info('   Data: ${message.data}');
 
-  // Note: Local notifications are automatically shown by the system
-  // when app is in background. We just log here for debugging.
+  // For Android, explicitly show local notification when app is in background
+  // This ensures notifications appear even if FCM payload format varies
+  if (message.notification != null) {
+    try {
+      final localNotificationService = LocalNotificationService();
+      await localNotificationService.initialize();
+
+      // Determine channel based on priority or type
+      String channelId = 'balaji_points_default';
+      if (message.data['type'] == 'billApproved' ||
+          message.data['type'] == 'tierUpgraded' ||
+          message.data['type'] == 'pointsWithdrawn') {
+        channelId = 'balaji_points_important';
+      }
+
+      await localNotificationService.showNotification(
+        title: message.notification!.title ?? 'Notification',
+        body: message.notification!.body ?? '',
+        payload: message.data.toString(),
+        channelId: channelId,
+      );
+
+      AppLogger.info('✅ Background notification shown via LocalNotificationService');
+    } catch (e) {
+      AppLogger.error('Error showing background notification', e);
+      // Continue - FCM might still show it automatically
+    }
+  }
 }
 
 void main() {

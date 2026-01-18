@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/l10n/app_localizations.dart';
@@ -27,6 +28,15 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+  }
+
+  /// Get filtered notifications stream based on user role
+  Stream<QuerySnapshot> _getFilteredNotificationsStream() {
+    // For admins, show all notifications
+    return FirebaseFirestore.instance
+        .collection('notification_logs')
+        .orderBy('sentAt', descending: true)
+        .snapshots();
   }
 
   @override
@@ -127,17 +137,61 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
               showLogo: true,
               showProfileButton: false,
               actions: [
-                // Notifications button
-                IconButton(
-                  icon: const Icon(
-                    Icons.notifications_outlined,
-                    color: DesignToken.white,
-                    size: 22,
-                  ),
-                  onPressed: () {
-                    context.push('/notifications');
+                // Notifications button with badge
+                StreamBuilder<QuerySnapshot>(
+                  stream: _getFilteredNotificationsStream(),
+                  builder: (context, snapshot) {
+                    int notificationCount = 0;
+
+                    if (snapshot.hasData) {
+                      // For admins, show all notifications (no filtering needed)
+                      notificationCount = snapshot.data!.docs.length;
+                    }
+
+                    return Stack(
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.notifications_outlined,
+                            color: DesignToken.white,
+                            size: 22,
+                          ),
+                          onPressed: () {
+                            context.push('/notifications');
+                          },
+                          tooltip: 'Notifications',
+                        ),
+                        if (notificationCount > 0)
+                          Positioned(
+                            right: 8,
+                            top: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  notificationCount > 99
+                                      ? '99+'
+                                      : '$notificationCount',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
                   },
-                  tooltip: 'Notifications',
                 ),
                 IconButton(
                   icon: const Icon(

@@ -1,6 +1,8 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:io' show Platform;
+import 'package:go_router/go_router.dart';
 import '../core/logger.dart';
+import '../config/routes.dart';
 
 /// Local Notification Service for displaying notifications
 /// when app is in foreground or for scheduled notifications
@@ -120,10 +122,22 @@ class LocalNotificationService {
     }
 
     try {
+      // Determine channel name and description based on channelId
+      String channelName;
+      String channelDescription;
+
+      if (channelId == 'balaji_points_important') {
+        channelName = 'Important Notifications';
+        channelDescription = 'Important notifications like bill approvals and tier upgrades';
+      } else {
+        channelName = 'Balaji Points Notifications';
+        channelDescription = 'General notifications from Balaji Points app';
+      }
+
       final androidDetails = AndroidNotificationDetails(
-        'balaji_points_default',
-        'Balaji Points Notifications',
-        channelDescription: 'General notifications from Balaji Points app',
+        channelId,
+        channelName,
+        channelDescription: channelDescription,
         importance: importance,
         priority: priority,
         showWhen: true,
@@ -162,8 +176,19 @@ class LocalNotificationService {
   /// Handle notification tap
   void _onNotificationTapped(NotificationResponse response) {
     AppLogger.info('Notification tapped: ${response.payload}');
-    // Navigation will be handled by FCM service's _handleMessageNavigation
-    // This is just for logging
+
+    // Navigate to notifications screen when notification is tapped
+    try {
+      final context = navigatorKey.currentContext;
+      if (context != null) {
+        context.pushNamed('notifications');
+        AppLogger.info('✅ Navigated to notifications screen from local notification tap');
+      } else {
+        AppLogger.warning('Navigator context not available for notification tap');
+      }
+    } catch (e) {
+      AppLogger.error('Error navigating from notification tap', e);
+    }
   }
 
   /// Cancel all notifications

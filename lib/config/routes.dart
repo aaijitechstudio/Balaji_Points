@@ -23,8 +23,12 @@ import 'package:balaji_points/presentation/screens/bills/add_bill_page.dart';
 import 'package:balaji_points/presentation/screens/settings/notification_settings_page.dart';
 import 'package:balaji_points/presentation/screens/notifications/notifications_page.dart';
 
+// Global navigator key for navigation from anywhere (including notification handlers)
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
+    navigatorKey: navigatorKey,
     initialLocation: '/splash',
 
     // NOTE: PIN-based authentication - no route guards for now

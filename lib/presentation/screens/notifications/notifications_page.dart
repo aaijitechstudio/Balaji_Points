@@ -665,42 +665,45 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                       false;
                                 },
                                 // Modern iOS-style notification card
-                                child: Container(
-                                  margin: const EdgeInsets.only(bottom: 12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(14),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.04,
+                                child: InkWell(
+                                  onTap: () => _handleNotificationTap(data, type),
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: Container(
+                                    margin: const EdgeInsets.only(bottom: 12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(14),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(
+                                            alpha: 0.04,
+                                          ),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 2),
                                         ),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                      BoxShadow(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.02,
+                                        BoxShadow(
+                                          color: Colors.black.withValues(
+                                            alpha: 0.02,
+                                          ),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 1),
                                         ),
-                                        blurRadius: 4,
-                                        offset: const Offset(0, 1),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(14),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        border: Border(
-                                          left: BorderSide(
-                                            color: notificationColor,
-                                            width: 4,
+                                      ],
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(14),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          border: Border(
+                                            left: BorderSide(
+                                              color: notificationColor,
+                                              width: 4,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(14),
-                                        child: Row(
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(14),
+                                          child: Row(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
@@ -796,17 +799,93 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                     ),
                                   ),
                                 ),
-                              );
-                            },
-                          ),
-                        );
-                      },
-                    ),
-              ),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  /// Handle notification tap - navigate based on notification type and role
+  void _handleNotificationTap(Map<String, dynamic> data, String? type) {
+    try {
+      // Get screen route from notification data
+      final screen = data['screen'] as String?;
+
+      // If no screen specified, stay on notifications page
+      if (screen == null || screen.isEmpty) {
+        return;
+      }
+
+      // Navigate based on notification type and role
+      if (_userRole == 'admin') {
+        // Admin navigation
+        switch (type) {
+          case 'newPendingBill':
+            // Navigate to admin home with pending bills tab
+            context.go('/admin');
+            break;
+          case 'newUserRegistered':
+            // Navigate to admin home with users tab
+            context.go('/admin');
+            break;
+          default:
+            // Use screen from data
+            if (screen == '/admin' || screen == '/notifications') {
+              context.go(screen);
+            } else {
+              // For other screens, navigate to admin home
+              context.go('/admin');
+            }
+        }
+      } else {
+        // Carpenter navigation
+        switch (type) {
+          case 'billApproved':
+          case 'billRejected':
+          case 'pointsWithdrawn':
+          case 'billSubmitted':
+            // Navigate to home (bills are shown there)
+            context.go('/');
+            break;
+          case 'tierUpgraded':
+          case 'pointsMilestone':
+            // Navigate to profile
+            context.go('/profile');
+            break;
+          case 'dailySpinWon':
+            // Navigate to daily spin
+            context.go('/daily-spin');
+            break;
+          case 'offerRedeemed':
+          case 'newOfferAvailable':
+            // Navigate to home (offers are shown there)
+            context.go('/');
+            break;
+          default:
+            // Use screen from data, fallback to home
+            if (screen == '/notifications') {
+              // Already on notifications page
+              return;
+            } else if (screen == '/profile' || screen == '/daily-spin') {
+              context.go(screen);
+            } else {
+              // Default to home
+              context.go('/');
+            }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error navigating from notification: $e');
+      // On error, stay on notifications page
+    }
   }
 }

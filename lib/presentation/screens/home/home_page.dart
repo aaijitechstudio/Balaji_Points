@@ -492,6 +492,7 @@ class _HomePageState extends State<HomePage>
   int _currentUserPoints = 0;
   bool _isCarpenter = false;
   String? _currentUserId;
+  String? _userRole;
 
   // animation for add points button
   late AnimationController _animationController;
@@ -671,6 +672,7 @@ class _HomePageState extends State<HomePage>
               _currentUserData = data;
               _currentUserPoints = (data?['totalPoints'] ?? 0) as int;
               _isCarpenter = (data?['role'] ?? '') == 'carpenter';
+              _userRole = (data?['role'] ?? '') as String?;
               _currentUserId = userId;
             });
             debugPrint(
@@ -691,6 +693,7 @@ class _HomePageState extends State<HomePage>
           _currentUserData = data;
           _currentUserPoints = (data?['totalPoints'] ?? 0) as int;
           _isCarpenter = (data?['role'] ?? '') == 'carpenter';
+          _userRole = (data?['role'] ?? '') as String?;
           _currentUserId = fallbackUserId;
         });
     } catch (e) {
@@ -704,6 +707,7 @@ class _HomePageState extends State<HomePage>
             _currentUserData = data;
             _currentUserPoints = (data?['totalPoints'] ?? 0) as int;
             _isCarpenter = (data?['role'] ?? '') == 'carpenter';
+            _userRole = (data?['role'] ?? '') as String?;
             _currentUserId = errorFallbackUserId;
           });
       } catch (e2) {
@@ -718,6 +722,35 @@ class _HomePageState extends State<HomePage>
     } catch (_) {
       return null;
     }
+  }
+
+  /// Get filtered notifications stream based on user role
+  /// For carpenters: user-specific notifications (excluding admin-only types)
+  /// For admins: all notifications
+  Stream<QuerySnapshot> _getFilteredNotificationsStream() {
+    if (_currentUserId == null) {
+      // Return empty stream if no user ID - use a dummy query that returns empty
+      return FirebaseFirestore.instance
+          .collection('notification_logs')
+          .where('userId', isEqualTo: '__dummy__')
+          .snapshots();
+    }
+
+    // For admins, show all notifications
+    if (_userRole == 'admin') {
+      return FirebaseFirestore.instance
+          .collection('notification_logs')
+          .orderBy('sentAt', descending: true)
+          .snapshots();
+    }
+
+    // For carpenters, show only user-specific notifications
+    // Admin-only types will be filtered in the StreamBuilder
+    return FirebaseFirestore.instance
+        .collection('notification_logs')
+        .where('userId', isEqualTo: _currentUserId)
+        .orderBy('sentAt', descending: true)
+        .snapshots();
   }
 
   // ------------------ Current user rank ------------------
@@ -914,14 +947,26 @@ class _HomePageState extends State<HomePage>
                     ? [
                         // Notification button with badge
                         StreamBuilder<QuerySnapshot>(
-                          stream: FirebaseFirestore.instance
-                              .collection('notification_logs')
-                              .where('userId', isEqualTo: _currentUserId)
-                              .snapshots(),
+                          stream: _getFilteredNotificationsStream(),
                           builder: (context, snapshot) {
-                            final notificationCount = snapshot.hasData
-                                ? snapshot.data!.docs.length
-                                : 0;
+                            int notificationCount = 0;
+
+                            if (snapshot.hasData) {
+                              // Filter out admin-only notification types for carpenters
+                              final docs = snapshot.data!.docs.where((doc) {
+                                final data = doc.data() as Map<String, dynamic>;
+                                final type = data['type'] as String?;
+                                // Hide admin-only notifications from carpenters
+                                const adminOnlyTypes = [
+                                  'dailySpinReminder',
+                                  'newPendingBill',
+                                  'newUserRegistered',
+                                ];
+                                return !adminOnlyTypes.contains(type);
+                              }).toList();
+
+                              notificationCount = docs.length;
+                            }
 
                             return Stack(
                               children: [
