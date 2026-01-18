@@ -127,26 +127,17 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
               showLogo: true,
               showProfileButton: false,
               actions: [
-                // TEMPORARY: Diagnostic button - Remove after verification
+                // Notifications button
                 IconButton(
                   icon: const Icon(
-                    Icons.bug_report,
+                    Icons.notifications_outlined,
                     color: DesignToken.white,
                     size: 22,
                   ),
                   onPressed: () {
-                    // Try named route first, fallback to path
-                    try {
-                      context.pushNamed(
-                        'admin-diagnostic',
-                        queryParameters: {'phone': '9894223355'},
-                      );
-                    } catch (e) {
-                      // Fallback to path-based navigation
-                      context.push('/admin/diagnostic?phone=9894223355');
-                    }
+                    context.push('/notifications');
                   },
-                  tooltip: 'Diagnostic (Temp)',
+                  tooltip: 'Notifications',
                 ),
                 IconButton(
                   icon: const Icon(
@@ -185,18 +176,21 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
               ),
             ),
 
-            // Tab Content
+            // Tab Content with bottom safe area
             Expanded(
               child: Container(
                 color: DesignToken.woodenBackground,
-                child: TabBarView(
-                  controller: _tabController,
-                  children: const [
-                    PendingBillsList(),
-                    OffersManagement(),
-                    UsersList(),
-                    DailySpinManagement(),
-                  ],
+                child: SafeArea(
+                  top: false,
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: const [
+                      PendingBillsList(),
+                      OffersManagement(),
+                      UsersList(),
+                      DailySpinManagement(),
+                    ],
+                  ),
                 ),
               ),
             ),

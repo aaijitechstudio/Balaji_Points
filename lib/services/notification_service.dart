@@ -11,6 +11,9 @@ enum NotificationType {
   offerRedeemed,
   newOfferAvailable,
   billSubmitted,
+  // Admin notification types
+  newPendingBill,
+  newUserRegistered,
 }
 
 /// Notification Service for sending push notifications
@@ -225,6 +228,10 @@ class NotificationService {
         return 'newOffers';
       case NotificationType.billSubmitted:
         return 'billApproved'; // Use same preference as bill approval
+      case NotificationType.newPendingBill:
+        return 'adminNotifications'; // Admin notification preference
+      case NotificationType.newUserRegistered:
+        return 'adminNotifications'; // Admin notification preference
     }
   }
 
@@ -234,6 +241,8 @@ class NotificationService {
       case NotificationType.billApproved:
       case NotificationType.tierUpgraded:
       case NotificationType.pointsWithdrawn:
+      case NotificationType.newPendingBill:
+      case NotificationType.newUserRegistered:
         return 'high';
       case NotificationType.billRejected:
       case NotificationType.dailySpinWon:
@@ -549,6 +558,129 @@ class NotificationService {
       data: {
         'amount': amount,
         'screen': '/bills', // Navigate to bills screen
+      },
+    );
+  }
+
+  // ============================================
+  // ADMIN NOTIFICATION METHODS
+  // ============================================
+
+  /// Send notification to all admin users
+  Future<int> _sendNotificationToAllAdmins({
+    required NotificationType type,
+    required String title,
+    required String body,
+    Map<String, dynamic>? data,
+  }) async {
+    try {
+      AppLogger.info('📢 Sending notification to all admins: $title');
+
+      // Get all admin users with FCM tokens
+      final usersQuery = await _firestore.collection('users').get();
+
+      // Filter to only include admins with FCM tokens
+      final adminUsers = usersQuery.docs.where((doc) {
+        final userData = doc.data();
+        final role = userData['role'] as String?;
+        final fcmToken = userData['fcmToken'] as String?;
+        return role == 'admin' && fcmToken != null && fcmToken.isNotEmpty;
+      }).toList();
+
+      if (adminUsers.isEmpty) {
+        AppLogger.warning('No admin users found with FCM tokens');
+        return 0;
+      }
+
+      int successCount = 0;
+      int skippedCount = 0;
+
+      // Send notification to each admin
+      for (final adminDoc in adminUsers) {
+        final adminId = adminDoc.id;
+        final adminData = adminDoc.data();
+        final fcmToken = adminData['fcmToken'] as String?;
+
+        // Check notification preferences
+        final notificationPrefs =
+            adminData['notificationPreferences'] as Map<String, dynamic>?;
+        if (notificationPrefs != null) {
+          final enabled = notificationPrefs['enabled'] as bool? ?? true;
+          if (!enabled) {
+            skippedCount++;
+            continue;
+          }
+        }
+
+        // Queue notification for this admin
+        try {
+          await _queueNotificationInFirestore(
+            userId: adminId,
+            fcmToken: fcmToken!,
+            type: type,
+            title: title,
+            body: body,
+            data: {
+              'type': type.name,
+              'notificationId': _generateNotificationId(),
+              'timestamp': FieldValue.serverTimestamp(),
+              ...?data,
+            },
+          );
+          successCount++;
+        } catch (e) {
+          AppLogger.warning(
+            'Failed to queue admin notification for $adminId: $e',
+          );
+          skippedCount++;
+        }
+      }
+
+      AppLogger.info(
+        '📢 Admin notification complete: $successCount sent, $skippedCount skipped',
+      );
+
+      return successCount;
+    } catch (e) {
+      AppLogger.error('Error sending notification to admins', e);
+      return 0;
+    }
+  }
+
+  /// Notify all admins about a new pending bill
+  Future<int> notifyAdminsNewPendingBill({
+    required String carpenterName,
+    required String carpenterPhone,
+    required double amount,
+    required String billId,
+  }) async {
+    return await _sendNotificationToAllAdmins(
+      type: NotificationType.newPendingBill,
+      title: '📋 New Bill Pending',
+      body: '$carpenterName submitted a bill of ₹${amount.toStringAsFixed(0)}',
+      data: {
+        'billId': billId,
+        'carpenterPhone': carpenterPhone,
+        'amount': amount,
+        'screen': '/admin', // Navigate to admin panel
+      },
+    );
+  }
+
+  /// Notify all admins about a new user registration
+  Future<int> notifyAdminsNewUserRegistered({
+    required String userName,
+    required String userPhone,
+    required String userId,
+  }) async {
+    return await _sendNotificationToAllAdmins(
+      type: NotificationType.newUserRegistered,
+      title: '👤 New Carpenter Registered',
+      body: '$userName ($userPhone) just registered',
+      data: {
+        'userId': userId,
+        'userPhone': userPhone,
+        'screen': '/admin', // Navigate to admin panel
       },
     );
   }

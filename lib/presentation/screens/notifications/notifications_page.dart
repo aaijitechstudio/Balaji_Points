@@ -21,6 +21,7 @@ class NotificationsPage extends StatefulWidget {
 class _NotificationsPageState extends State<NotificationsPage> {
   final SessionService _sessionService = SessionService();
   String? _userId;
+  String? _userRole;
   bool _isLoading = true;
 
   // Stream controllers for merging queries
@@ -32,13 +33,15 @@ class _NotificationsPageState extends State<NotificationsPage> {
   @override
   void initState() {
     super.initState();
-    _loadUserId();
+    _loadUserData();
   }
 
-  Future<void> _loadUserId() async {
+  Future<void> _loadUserData() async {
     final userId = await _sessionService.getUserId();
+    final userRole = await _sessionService.getUserRole();
     setState(() {
       _userId = userId;
+      _userRole = userRole;
       _isLoading = false;
     });
 
@@ -54,16 +57,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
     _broadcastNotificationsSubscription?.cancel();
     _streamController?.close();
 
-    // Create streams for user-specific and broadcast notifications
+    // Create stream for user-specific notifications
     final userNotificationsStream = FirebaseFirestore.instance
         .collection('notification_logs')
         .where('userId', isEqualTo: userId)
-        .orderBy('sentAt', descending: true)
-        .snapshots();
-
-    final broadcastNotificationsStream = FirebaseFirestore.instance
-        .collection('notification_logs')
-        .where('isBroadcast', isEqualTo: true)
         .orderBy('sentAt', descending: true)
         .snapshots();
 
@@ -74,7 +71,23 @@ class _NotificationsPageState extends State<NotificationsPage> {
     final Map<String, QueryDocumentSnapshot> combined = {};
 
     void updateCombined() {
-      final List<QueryDocumentSnapshot> result = combined.values.toList();
+      List<QueryDocumentSnapshot> result = combined.values.toList();
+
+      // Filter out admin-only notification types for carpenters
+      if (_userRole != 'admin') {
+        result = result.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final type = data['type'] as String?;
+          // Hide daily spin reminders and other admin-only notifications from carpenters
+          const adminOnlyTypes = [
+            'dailySpinReminder',
+            'newPendingBill',
+            'newUserRegistered',
+          ];
+          return !adminOnlyTypes.contains(type);
+        }).toList();
+      }
+
       result.sort((a, b) {
         final aData = a.data() as Map<String, dynamic>;
         final bData = b.data() as Map<String, dynamic>;
@@ -93,7 +106,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
       }
     }
 
-    // Listen to user notifications
+    // Listen to user notifications (notifications sent specifically to this user)
     _userNotificationsSubscription = userNotificationsStream.listen((snapshot) {
       // Update combined map with user notifications
       for (var doc in snapshot.docs) {
@@ -102,16 +115,25 @@ class _NotificationsPageState extends State<NotificationsPage> {
       updateCombined();
     });
 
-    // Listen to broadcast notifications
-    _broadcastNotificationsSubscription = broadcastNotificationsStream.listen((
-      snapshot,
-    ) {
-      // Update combined map with broadcast notifications
-      for (var doc in snapshot.docs) {
-        combined[doc.id] = doc;
-      }
-      updateCombined();
-    });
+    // Only admins should see broadcast notification logs (analytics/summary logs)
+    // Carpenters only see their own user-specific notifications
+    if (_userRole == 'admin') {
+      final broadcastNotificationsStream = FirebaseFirestore.instance
+          .collection('notification_logs')
+          .where('isBroadcast', isEqualTo: true)
+          .orderBy('sentAt', descending: true)
+          .snapshots();
+
+      _broadcastNotificationsSubscription = broadcastNotificationsStream.listen((
+        snapshot,
+      ) {
+        // Update combined map with broadcast notifications
+        for (var doc in snapshot.docs) {
+          combined[doc.id] = doc;
+        }
+        updateCombined();
+      });
+    }
 
     _mergedNotificationsStream = _streamController!.stream;
 
@@ -226,23 +248,24 @@ class _NotificationsPageState extends State<NotificationsPage> {
         );
       }
 
-      // Get all notifications for this user (both user-specific and broadcast)
-      // We need to get user-specific notifications and broadcast notifications separately
-      // since Firestore doesn't support OR queries
+      // Get user-specific notifications
       final userSnapshot = await FirebaseFirestore.instance
           .collection('notification_logs')
           .where('userId', isEqualTo: _userId)
           .get();
 
-      final broadcastSnapshot = await FirebaseFirestore.instance
-          .collection('notification_logs')
-          .where('isBroadcast', isEqualTo: true)
-          .get();
-
-      // Combine both snapshots
+      // Combine notifications based on role
       final allDocs = <QueryDocumentSnapshot>[];
       allDocs.addAll(userSnapshot.docs);
-      allDocs.addAll(broadcastSnapshot.docs);
+
+      // Only admins can delete broadcast notification logs
+      if (_userRole == 'admin') {
+        final broadcastSnapshot = await FirebaseFirestore.instance
+            .collection('notification_logs')
+            .where('isBroadcast', isEqualTo: true)
+            .get();
+        allDocs.addAll(broadcastSnapshot.docs);
+      }
 
       // Remove duplicates by document ID
       final uniqueDocs = <String, QueryDocumentSnapshot>{};
@@ -337,6 +360,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
         return Icons.notifications_active;
       case 'pointsMilestone':
         return Icons.emoji_events;
+      // Admin notification types
+      case 'newPendingBill':
+        return Icons.receipt_long;
+      case 'newUserRegistered':
+        return Icons.person_add;
+      case 'dailySpinReminder':
+        return Icons.casino;
       default:
         return Icons.notifications;
     }
@@ -360,6 +390,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
         return DesignToken.primary;
       case 'pointsMilestone':
         return Colors.amber.shade700;
+      // Admin notification types
+      case 'newPendingBill':
+        return Colors.blue.shade600;
+      case 'newUserRegistered':
+        return Colors.teal;
+      case 'dailySpinReminder':
+        return Colors.amber.shade600;
       default:
         return DesignToken.primary;
     }
@@ -451,9 +488,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
           Expanded(
             child: Container(
               color: DesignToken.woodenBackground,
-              child: _mergedNotificationsStream == null
-                  ? const Center(child: CircularProgressIndicator())
-                  : StreamBuilder<List<QueryDocumentSnapshot>>(
+              child: SafeArea(
+                top: false,
+                child: _mergedNotificationsStream == null
+                    ? const Center(child: CircularProgressIndicator())
+                    : StreamBuilder<List<QueryDocumentSnapshot>>(
                       stream: _mergedNotificationsStream,
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
@@ -555,8 +594,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                   data['title'] as String? ?? 'Notification';
                               final body = data['body'] as String? ?? '';
                               final sentAt = data['sentAt'] as Timestamp?;
-                              final delivered =
-                                  data['delivered'] as bool? ?? true;
+                              final notificationColor =
+                                  _getNotificationColor(type);
 
                               return Dismissible(
                                 key: Key(doc.id),
@@ -564,15 +603,15 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                 background: Container(
                                   margin: const EdgeInsets.only(bottom: 12),
                                   decoration: BoxDecoration(
-                                    color: Colors.red,
+                                    color: Colors.red.shade400,
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   alignment: Alignment.centerRight,
-                                  padding: const EdgeInsets.only(right: 20),
+                                  padding: const EdgeInsets.only(right: 24),
                                   child: const Icon(
-                                    Icons.delete,
+                                    Icons.delete_rounded,
                                     color: Colors.white,
-                                    size: 28,
+                                    size: 26,
                                   ),
                                 ),
                                 onDismissed: (direction) {
@@ -584,7 +623,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                         builder: (context) => AlertDialog(
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(
-                                              20,
+                                              16,
                                             ),
                                           ),
                                           title: const Text(
@@ -611,8 +650,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                               ).pop(true),
                                               style: ElevatedButton.styleFrom(
                                                 backgroundColor:
-                                                    Colors.red.shade600,
+                                                    Colors.red.shade500,
                                                 foregroundColor: Colors.white,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
                                               ),
                                               child: const Text('Delete'),
                                             ),
@@ -621,133 +664,136 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                       ) ??
                                       false;
                                 },
+                                // Modern iOS-style notification card
                                 child: Container(
                                   margin: const EdgeInsets.only(bottom: 12),
-                                  padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: DesignToken.primary.withValues(
-                                        alpha: 0.1,
-                                      ),
-                                      width: 1,
-                                    ),
+                                    borderRadius: BorderRadius.circular(14),
                                     boxShadow: [
                                       BoxShadow(
                                         color: Colors.black.withValues(
-                                          alpha: 0.05,
+                                          alpha: 0.04,
                                         ),
-                                        blurRadius: 8,
+                                        blurRadius: 10,
                                         offset: const Offset(0, 2),
+                                      ),
+                                      BoxShadow(
+                                        color: Colors.black.withValues(
+                                          alpha: 0.02,
+                                        ),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 1),
                                       ),
                                     ],
                                   ),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      // Icon
-                                      Container(
-                                        width: 48,
-                                        height: 48,
-                                        decoration: BoxDecoration(
-                                          color: _getNotificationColor(
-                                            type,
-                                          ).withValues(alpha: 0.1),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Icon(
-                                          _getNotificationIcon(type),
-                                          color: _getNotificationColor(type),
-                                          size: 24,
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(14),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        border: Border(
+                                          left: BorderSide(
+                                            color: notificationColor,
+                                            width: 4,
+                                          ),
                                         ),
                                       ),
-                                      const SizedBox(width: 12),
-                                      // Content
-                                      Expanded(
-                                        child: Column(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(14),
+                                        child: Row(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
-                                            Row(
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    title,
-                                                    style: AppTextStyles
-                                                        .nunitoBold
-                                                        .copyWith(
-                                                          fontSize: 16,
-                                                          color: DesignToken
-                                                              .textDark,
-                                                        ),
-                                                  ),
+                                            // Icon with gradient background
+                                            Container(
+                                              width: 44,
+                                              height: 44,
+                                              decoration: BoxDecoration(
+                                                gradient: LinearGradient(
+                                                  begin: Alignment.topLeft,
+                                                  end: Alignment.bottomRight,
+                                                  colors: [
+                                                    notificationColor
+                                                        .withValues(alpha: 0.2),
+                                                    notificationColor
+                                                        .withValues(alpha: 0.1),
+                                                  ],
                                                 ),
-                                                if (!delivered)
-                                                  Container(
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                          horizontal: 6,
-                                                          vertical: 2,
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                              child: Icon(
+                                                _getNotificationIcon(type),
+                                                color: notificationColor,
+                                                size: 22,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            // Content
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  // Title and time row
+                                                  Row(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Expanded(
+                                                        child: Text(
+                                                          title,
+                                                          style: AppTextStyles
+                                                              .nunitoBold
+                                                              .copyWith(
+                                                                fontSize: 15,
+                                                                color:
+                                                                    DesignToken
+                                                                        .textDark,
+                                                                letterSpacing:
+                                                                    -0.2,
+                                                              ),
                                                         ),
-                                                    decoration: BoxDecoration(
-                                                      color: Colors
-                                                          .orange
-                                                          .shade100,
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            4,
-                                                          ),
-                                                    ),
-                                                    child: Text(
-                                                      'Failed',
-                                                      style: TextStyle(
-                                                        fontSize: 10,
-                                                        color: Colors
-                                                            .orange
-                                                            .shade800,
-                                                        fontWeight:
-                                                            FontWeight.w600,
                                                       ),
-                                                    ),
+                                                      const SizedBox(width: 8),
+                                                      Text(
+                                                        _formatTimestamp(
+                                                          sentAt,
+                                                        ),
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          color:
+                                                              Colors.grey[400],
+                                                          fontWeight:
+                                                              FontWeight.w500,
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              body,
-                                              style: AppTextStyles.nunitoRegular
-                                                  .copyWith(
-                                                    fontSize: 14,
-                                                    color: Colors.grey[700],
+                                                  const SizedBox(height: 4),
+                                                  // Body text
+                                                  Text(
+                                                    body,
+                                                    style: AppTextStyles
+                                                        .nunitoRegular
+                                                        .copyWith(
+                                                          fontSize: 13,
+                                                          color:
+                                                              Colors.grey[600],
+                                                          height: 1.3,
+                                                        ),
+                                                    maxLines: 2,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
                                                   ),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Text(
-                                              _formatTimestamp(sentAt),
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey[500],
+                                                ],
                                               ),
                                             ),
                                           ],
                                         ),
                                       ),
-                                      // Delete button
-                                      IconButton(
-                                        icon: Icon(
-                                          Icons.delete_outline,
-                                          color: Colors.grey[400],
-                                          size: 20,
-                                        ),
-                                        onPressed: () =>
-                                            _deleteNotification(doc.id),
-                                        tooltip: 'Delete',
-                                      ),
-                                    ],
+                                    ),
                                   ),
                                 ),
                               );
@@ -756,6 +802,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                         );
                       },
                     ),
+              ),
             ),
           ),
         ],

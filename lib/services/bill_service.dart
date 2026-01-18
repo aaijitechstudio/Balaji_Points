@@ -96,6 +96,30 @@ class BillService {
         AppLogger.info(
           '  Verified data: carpenterId=${verifyDoc.data()?['carpenterId']}, status=${verifyDoc.data()?['status']}',
         );
+
+        // Send notification to all admins about new pending bill
+        try {
+          // Get carpenter name from users collection
+          final userDoc =
+              await _firestore.collection('users').doc(carpenterId).get();
+          final userData = userDoc.data();
+          final firstName = userData?['firstName'] as String? ?? '';
+          final lastName = userData?['lastName'] as String? ?? '';
+          final carpenterName = '$firstName $lastName'.trim();
+
+          final notificationService = NotificationService();
+          await notificationService.notifyAdminsNewPendingBill(
+            carpenterName:
+                carpenterName.isNotEmpty ? carpenterName : carpenterPhone,
+            carpenterPhone: carpenterPhone,
+            amount: amount,
+            billId: billId,
+          );
+          AppLogger.info('✅ Admin notification sent for new pending bill');
+        } catch (e) {
+          // Don't fail the bill submission if notification fails
+          AppLogger.warning('Failed to send admin notification: $e');
+        }
       } else {
         AppLogger.error(
           'BillService: ❌ Bill document not found after save!',

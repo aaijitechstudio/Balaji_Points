@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/logger.dart';
 import 'session_service.dart';
+import 'notification_service.dart';
 
 class UserService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -126,6 +127,21 @@ class UserService {
         'lastUpdated': FieldValue.serverTimestamp(),
         'pointsHistory': [],
       });
+
+      // Send notification to all admins about new user registration
+      try {
+        final userName = '$firstName $lastName'.trim();
+        final notificationService = NotificationService();
+        await notificationService.notifyAdminsNewUserRegistered(
+          userName: userName.isNotEmpty ? userName : phone,
+          userPhone: phone,
+          userId: uid,
+        );
+        AppLogger.info('✅ Admin notification sent for new user registration');
+      } catch (e) {
+        // Don't fail user creation if notification fails
+        AppLogger.warning('Failed to send admin notification for new user: $e');
+      }
 
       return true;
     } catch (e) {

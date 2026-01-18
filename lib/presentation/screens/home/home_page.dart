@@ -976,16 +976,18 @@ class _HomePageState extends State<HomePage>
               Expanded(
                 child: Container(
                   color: DesignToken.woodenBackground,
-                  child: RefreshIndicator(
-                    onRefresh: _loadInitialData,
-                    color: DesignToken.primary,
-                    backgroundColor: Colors.white,
-                    child: SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 16),
+                  child: SafeArea(
+                    top: false,
+                    child: RefreshIndicator(
+                      onRefresh: _loadInitialData,
+                      color: DesignToken.primary,
+                      backgroundColor: Colors.white,
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 16),
 
                           // User profile card
                           UserProfileCard(
@@ -1085,6 +1087,7 @@ class _HomePageState extends State<HomePage>
                         ],
                       ),
                     ),
+                  ),
                   ),
                 ),
               ),
