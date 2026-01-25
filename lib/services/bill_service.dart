@@ -526,16 +526,21 @@ class BillService {
         print('═══════════════════════════════════════════════════════════');
         print('✅ APPROVE BILL SUCCESS');
         print('═══════════════════════════════════════════════════════════');
+        print('🔔 NOTIFICATION SECTION STARTING...');
+        print('   Carpenter ID: $finalCarpenterId');
 
         // Send notification after successful approval
         try {
+          print('🔔 Step 1: Inside notification try block');
           AppLogger.info('📤 Attempting to send bill approved notification...');
           AppLogger.info('   userId: $finalCarpenterId');
           AppLogger.info('   amount: $amount');
           AppLogger.info('   points: $pointsEarned');
           AppLogger.info('   billId: $billId');
+          print('🔔 Step 2: Creating NotificationService instance...');
 
           final notificationService = NotificationService();
+          print('🔔 Step 3: Calling sendBillApprovedNotification...');
           final notificationSent = await notificationService
               .sendBillApprovedNotification(
                 userId: finalCarpenterId,
@@ -543,13 +548,16 @@ class BillService {
                 points: pointsEarned,
                 billId: billId,
               );
+          print('🔔 Step 4: Notification call completed. Result: $notificationSent');
 
           if (notificationSent) {
             AppLogger.info('✅ Bill approved notification sent successfully');
+            print('✅ Notification queued in Firestore successfully');
           } else {
             AppLogger.warning(
               '⚠️ Bill approved notification failed to send (check logs above)',
             );
+            print('❌ Notification failed - user not found or no FCM token');
           }
 
           // Check for tier upgrade and send notification if tier changed
@@ -568,12 +576,17 @@ class BillService {
             finalCarpenterId,
             newTotalPoints,
           );
-        } catch (e) {
+        } catch (e, stackTrace) {
           // Don't fail the approval if notification fails
+          print('❌❌❌ EXCEPTION IN NOTIFICATION CODE ❌❌❌');
+          print('   Error: $e');
+          print('   StackTrace: $stackTrace');
           AppLogger.warning(
             'Failed to send notification after bill approval: $e',
           );
+          AppLogger.error('Notification error stacktrace', stackTrace);
         }
+        print('🔔 NOTIFICATION SECTION COMPLETED');
 
         return true;
       } on FirebaseException catch (fe) {

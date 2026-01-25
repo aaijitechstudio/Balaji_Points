@@ -45,6 +45,8 @@ class NotificationService {
     Map<String, dynamic>? data,
   }) async {
     try {
+      print('🔔 NotificationService.sendNotification() called');
+      print('   Type: $type, UserId: $userId, Title: $title');
       AppLogger.info('📤 Sending notification: $type to user: $userId');
 
       // Get user's FCM token
@@ -53,11 +55,14 @@ class NotificationService {
       String? actualUserId;
 
       // First try: direct userId lookup
+      print('🔔 Looking up user: users/$userId');
       userDoc = await _firestore.collection('users').doc(userId).get();
       if (userDoc.exists) {
         actualUserId = userId;
+        print('✅ Found user with direct userId: $userId');
         AppLogger.info('Found user with direct userId: $userId');
       } else {
+        print('⚠️ User not found with direct userId, trying phone lookup...');
         // Second try: search by phone number if userId is phone number format
         if (userId.length >= 10 && RegExp(r'^\d+$').hasMatch(userId)) {
           // userId might be phone number, try searching by phone field
@@ -95,6 +100,7 @@ class NotificationService {
       }
 
       if (!userDoc.exists) {
+        print('❌ User not found after all attempts: $userId');
         AppLogger.error(
           'User not found: $userId (tried direct lookup, phone, and carpenterId)',
         );
@@ -102,9 +108,13 @@ class NotificationService {
       }
 
       final userData = userDoc.data() as Map<String, dynamic>?;
+      print('📄 User document keys: ${userData?.keys.toList()}');
       final fcmToken = userData?['fcmToken'] as String?;
 
       if (fcmToken == null || fcmToken.isEmpty) {
+        print('❌ NO FCM TOKEN for user: $userId');
+        print('   Has fcmToken field: ${userData?.containsKey('fcmToken')}');
+        print('   All user data keys: ${userData?.keys.toList()}');
         AppLogger.error(
           'No FCM token found for user: $userId (document ID: ${actualUserId ?? userDoc.id})',
         );
@@ -114,6 +124,8 @@ class NotificationService {
         );
         return false;
       }
+
+      print('✅ FCM token found: ${fcmToken.substring(0, 20)}...');
 
       AppLogger.info(
         'FCM token found for user: $userId (document ID: ${actualUserId ?? userDoc.id})',
@@ -153,6 +165,7 @@ class NotificationService {
 
       // Queue notification in Firestore for Cloud Functions to process
       // This is the recommended approach for production
+      print('🔔 Queueing notification in notification_queue...');
       await _queueNotificationInFirestore(
         userId: finalUserId,
         fcmToken: fcmToken,
@@ -161,6 +174,7 @@ class NotificationService {
         body: body,
         data: notificationData,
       );
+      print('✅ Notification queued in notification_queue collection');
 
       // Log analytics
       await _logNotificationAnalytics(
@@ -173,8 +187,12 @@ class NotificationService {
       );
 
       AppLogger.info('✅ Notification queued successfully: $type');
+      print('✅ NotificationService.sendNotification() SUCCESS');
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('❌ EXCEPTION in NotificationService.sendNotification()');
+      print('   Error: $e');
+      print('   StackTrace: $stackTrace');
       AppLogger.error('Error sending notification', e);
       return false;
     }
@@ -357,6 +375,100 @@ class NotificationService {
         'screen': '/notifications', // Navigate to notifications screen
       },
     );
+  }
+
+  /// Broadcast daily spin winner announcement to all carpenters
+  Future<int> broadcastDailySpinWinner({
+    required String winnerName,
+    required int pointsWon,
+  }) async {
+    try {
+      AppLogger.info('📢 Broadcasting daily spin winner: $winnerName');
+
+      // Get all users (carpenters only, exclude admins)
+      final usersQuery = await _firestore.collection('users').get();
+
+      // Filter to exclude admins and users without FCM tokens
+      final validUsers = usersQuery.docs.where((doc) {
+        final userData = doc.data();
+        final role = userData['role'] as String?;
+        final fcmToken = userData['fcmToken'] as String?;
+        // Include carpenters and users without role (assumed to be carpenters)
+        return role != 'admin' && fcmToken != null && fcmToken.isNotEmpty;
+      }).toList();
+
+      int successCount = 0;
+      int skippedCount = 0;
+
+      // Send notification to each carpenter
+      for (final userDoc in validUsers) {
+        final userId = userDoc.id;
+        final userData = userDoc.data();
+        final fcmToken = userData['fcmToken'] as String?;
+
+        // Check notification preferences
+        final notificationPrefs =
+            userData['notificationPreferences'] as Map<String, dynamic>?;
+        if (notificationPrefs != null) {
+          final enabled = notificationPrefs['enabled'] as bool? ?? true;
+          if (!enabled) {
+            skippedCount++;
+            continue;
+          }
+
+          final dailySpinEnabled =
+              notificationPrefs['dailySpin'] as bool? ?? true;
+          if (!dailySpinEnabled) {
+            skippedCount++;
+            continue;
+          }
+        }
+
+        // Queue notification for this carpenter
+        try {
+          await _queueNotificationInFirestore(
+            userId: userId,
+            fcmToken: fcmToken!,
+            type: NotificationType.dailySpinWon,
+            title: '🎰 Today\'s Spin Winner!',
+            body: '$winnerName won $pointsWon points in today\'s spin!',
+            data: {
+              'type': NotificationType.dailySpinWon.name,
+              'notificationId': _generateNotificationId(),
+              'timestamp': FieldValue.serverTimestamp(),
+              'winnerName': winnerName,
+              'pointsWon': pointsWon,
+              'screen': '/daily-spin',
+            },
+          );
+          successCount++;
+        } catch (e) {
+          AppLogger.warning(
+            'Failed to queue spin winner notification for user $userId: $e',
+          );
+          skippedCount++;
+        }
+      }
+
+      AppLogger.info(
+        '📢 Spin winner broadcast complete: $successCount sent, $skippedCount skipped',
+      );
+
+      // Log broadcast analytics
+      await _logNotificationAnalytics(
+        type: NotificationType.dailySpinWon.name,
+        title: '🎰 Today\'s Spin Winner!',
+        body: '$winnerName won $pointsWon points!',
+        sentCount: successCount,
+        skippedCount: skippedCount,
+        isBroadcast: true,
+      );
+
+      return successCount;
+    } catch (e) {
+      AppLogger.error('Error broadcasting daily spin winner', e);
+      return 0;
+    }
   }
 
   /// Send offer redeemed notification

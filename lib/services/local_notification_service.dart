@@ -92,7 +92,6 @@ class LocalNotificationService {
         importance: Importance.high,
         playSound: true,
         enableVibration: true,
-        sound: RawResourceAndroidNotificationSound('notification'),
       );
 
       await _notifications

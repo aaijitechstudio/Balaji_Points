@@ -45,7 +45,9 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         channelId: channelId,
       );
 
-      AppLogger.info('✅ Background notification shown via LocalNotificationService');
+      AppLogger.info(
+        '✅ Background notification shown via LocalNotificationService',
+      );
     } catch (e) {
       AppLogger.error('Error showing background notification', e);
       // Continue - FCM might still show it automatically

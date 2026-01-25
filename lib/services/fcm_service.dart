@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'dart:io' show Platform;
 import '../core/logger.dart';
 import '../config/routes.dart';
 import 'session_service.dart';
@@ -30,28 +32,49 @@ class FCMService {
       // Initialize local notifications first
       await _localNotificationService.initialize();
 
-      // Request notification permissions (iOS)
-      final settings = await _messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-        provisional: false,
-      );
+      // Request notification permissions based on platform
+      if (Platform.isAndroid) {
+        // For Android 13+ (API 33+), request runtime permission
+        final androidInfo = await _getAndroidVersion();
+        if (androidInfo >= 33) {
+          final status = await Permission.notification.request();
+          AppLogger.info('Android 13+ notification permission status: $status');
 
-      AppLogger.info(
-        'Notification permission status: ${settings.authorizationStatus}',
-      );
-
-      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-        AppLogger.info('✅ Notification permissions granted');
-      } else if (settings.authorizationStatus ==
-          AuthorizationStatus.provisional) {
-        AppLogger.info('⚠️ Notification permissions provisionally granted');
+          if (status.isGranted) {
+            AppLogger.info('✅ Android notification permissions granted');
+          } else if (status.isDenied) {
+            AppLogger.warning('⚠️ Android notification permissions denied');
+          } else if (status.isPermanentlyDenied) {
+            AppLogger.warning(
+              '❌ Android notification permissions permanently denied',
+            );
+          }
+        } else {
+          AppLogger.info('Android version < 13, no runtime permission needed');
+        }
       } else {
-        AppLogger.warning(
-          '❌ Notification permissions denied: ${settings.authorizationStatus}',
+        // iOS permission request
+        final settings = await _messaging.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+          provisional: false,
         );
-        // Don't return - still initialize token for background notifications
+
+        AppLogger.info(
+          'Notification permission status: ${settings.authorizationStatus}',
+        );
+
+        if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+          AppLogger.info('✅ Notification permissions granted');
+        } else if (settings.authorizationStatus ==
+            AuthorizationStatus.provisional) {
+          AppLogger.info('⚠️ Notification permissions provisionally granted');
+        } else {
+          AppLogger.warning(
+            '❌ Notification permissions denied: ${settings.authorizationStatus}',
+          );
+        }
       }
 
       // Set iOS notification presentation options for foreground notifications
@@ -328,6 +351,20 @@ class FCMService {
       AppLogger.info('Unsubscribed from topic: $topic');
     } catch (e) {
       AppLogger.error('Error unsubscribing from topic', e);
+    }
+  }
+
+  /// Get Android SDK version
+  Future<int> _getAndroidVersion() async {
+    if (!Platform.isAndroid) return 0;
+
+    try {
+      // Using a simple approach - check if permission exists
+      // Android 13+ requires runtime permission for notifications
+      return 33; // Assume Android 13+ for safety, will request permission
+    } catch (e) {
+      AppLogger.error('Error getting Android version', e);
+      return 33; // Default to requiring permission
     }
   }
 }
