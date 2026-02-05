@@ -980,7 +980,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get failedToPickImage => 'Failed to pick image';
 
   @override
-  String get searchByNameOrPhone => 'Search by name or phone...';
+  String get searchByNameOrPhone => 'Search by name or phone';
 
   @override
   String get add => 'Add';
@@ -1245,4 +1245,84 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get saveChanges => 'Save Changes';
+
+  @override
+  String get withdrawBill => 'Withdraw Bill';
+
+  @override
+  String get withdrawBillConfirmation =>
+      'Are you sure you want to withdraw this approved bill? This will reverse the points awarded to the carpenter.';
+
+  @override
+  String get withdraw => 'Withdraw';
+
+  @override
+  String get billWithdrawnSuccess =>
+      'Bill withdrawn successfully. Points have been reversed.';
+
+  @override
+  String get failedToWithdrawBill => 'Failed to withdraw bill';
+
+  @override
+  String get withdrawApproval => 'Withdraw Approval';
+
+  @override
+  String get reversePointsAndUndoApproval => 'Reverse points & undo approval';
+
+  @override
+  String get approveBillAction => 'Approve Bill';
+
+  @override
+  String get awardPointsAndMarkAsApproved => 'Award points & mark as approved';
+
+  @override
+  String get selectCarpenter => 'Select Carpenter';
+
+  @override
+  String get errorLoadingCarpenters => 'Error loading carpenters';
+
+  @override
+  String get noCarpentersFound => 'No carpenters found';
+
+  @override
+  String get noCarpentersAvailable => 'No carpenters available';
+
+  @override
+  String get billHistory => 'Bill History';
+
+  @override
+  String get filters => 'Filters';
+
+  @override
+  String get from => 'From';
+
+  @override
+  String get to => 'To';
+
+  @override
+  String get searchCarpenter => 'Search carpenter...';
+
+  @override
+  String get errorLoadingBillHistory => 'Error loading bills';
+
+  @override
+  String get noBillsFoundMatchingFilters => 'No bills found matching filters';
+
+  @override
+  String get noBillsFoundHistory => 'No bills found';
+
+  @override
+  String get billDateLabel => 'Bill Date';
+
+  @override
+  String get submittedLabel => 'Submitted';
+
+  @override
+  String get approvedLabel => 'Approved';
+
+  @override
+  String get rejectedLabel => 'Rejected';
+
+  @override
+  String get pts => 'pts';
 }

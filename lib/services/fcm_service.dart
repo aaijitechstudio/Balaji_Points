@@ -78,7 +78,7 @@ class FCMService {
     }
   }
 
-  /// 🔥 MAIN FIX IS HERE
+  /// Save FCM token to Firestore for the current user
   Future<void> _saveTokenToFirestore(String token) async {
     try {
       final Set<String> targetDocIds = {};
@@ -101,7 +101,7 @@ class FCMService {
         targetDocIds.add(sessionUserId);
       }
 
-      // Save token to collected IDs
+      // Save token to collected IDs (only the current user's documents)
       for (final docId in targetDocIds) {
         await _firestore.collection('users').doc(docId).set({
           'fcmToken': token,
@@ -112,20 +112,27 @@ class FCMService {
         AppLogger.info('✅ FCM token saved to users/$docId');
       }
 
-      // 🔥 4️⃣ FORCE SYNC TOKEN TO ADMIN ROLE DOCUMENT(S)
-      final adminDocs = await _firestore
-          .collection('users')
-          .where('role', isEqualTo: 'admin')
-          .get();
+      // ✅ ONLY sync to admin documents if the CURRENT user is actually an admin
+      final userRole = await _sessionService.getUserRole();
+      if (userRole == 'admin') {
+        // Get all admin documents and ensure token is synced
+        final adminDocs = await _firestore
+            .collection('users')
+            .where('role', isEqualTo: 'admin')
+            .get();
 
-      for (final doc in adminDocs.docs) {
-        await doc.reference.set({
-          'fcmToken': token,
-          'lastTokenUpdate': FieldValue.serverTimestamp(),
-          'platform': defaultTargetPlatform.name,
-        }, SetOptions(merge: true));
+        for (final doc in adminDocs.docs) {
+          // Only update if this is one of our target documents
+          if (targetDocIds.contains(doc.id)) {
+            await doc.reference.set({
+              'fcmToken': token,
+              'lastTokenUpdate': FieldValue.serverTimestamp(),
+              'platform': defaultTargetPlatform.name,
+            }, SetOptions(merge: true));
 
-        AppLogger.info('👑 Admin token synced: ${doc.id}');
+            AppLogger.info('👑 Admin token synced: ${doc.id}');
+          }
+        }
       }
     } catch (e) {
       AppLogger.error('Error saving FCM token', e);
@@ -195,12 +202,43 @@ class FCMService {
     }
   }
 
-  /// Logout cleanup
+  /// Logout cleanup - removes FCM token from Firestore and FCM
   Future<void> deleteToken() async {
     try {
+      // Get current user document IDs before clearing session
+      final Set<String> targetDocIds = {};
+
+      // 1️⃣ Firebase Auth user (Admin via Auth)
+      final authUser = _auth.currentUser;
+      if (authUser != null) {
+        targetDocIds.add(authUser.uid);
+      }
+
+      // 2️⃣ PIN login phone number
+      final phone = await _sessionService.getPhoneNumber();
+      if (phone != null && phone.isNotEmpty) {
+        targetDocIds.add(phone);
+      }
+
+      // 3️⃣ Session userId
+      final sessionUserId = await _sessionService.getUserId();
+      if (sessionUserId != null && sessionUserId.isNotEmpty) {
+        targetDocIds.add(sessionUserId);
+      }
+
+      // Clear FCM token from Firestore for all user documents
+      for (final docId in targetDocIds) {
+        await _firestore.collection('users').doc(docId).update({
+          'fcmToken': FieldValue.delete(),
+          'lastTokenUpdate': FieldValue.serverTimestamp(),
+        });
+        AppLogger.info('🧹 FCM token cleared from users/$docId');
+      }
+
+      // Delete token from FCM
       await _messaging.deleteToken();
       _token = null;
-      AppLogger.info('🧹 FCM token deleted');
+      AppLogger.info('🧹 FCM token deleted from device');
     } catch (e) {
       AppLogger.error('Error deleting token', e);
     }

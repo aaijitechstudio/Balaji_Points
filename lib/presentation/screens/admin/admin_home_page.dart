@@ -7,11 +7,12 @@ import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/core/mixins/double_tap_exit_mixin.dart';
+import 'package:balaji_points/services/fcm_service.dart';
 import '../../widgets/admin/pending_bills_list.dart';
 import '../../widgets/admin/offers_management.dart';
 import '../../widgets/admin/users_list.dart';
 import '../../widgets/admin/daily_spin_management.dart';
-import '../../widgets/home_nav_bar.dart';
+import '../../widgets/admin/bill_history_list.dart';
 
 class AdminHomePage extends ConsumerStatefulWidget {
   const AdminHomePage({super.key});
@@ -27,14 +28,15 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
   }
 
   /// Get filtered notifications stream based on user role
   Stream<QuerySnapshot> _getFilteredNotificationsStream() {
-    // For admins, show all notifications
+    // For admins, show only admin-related notifications (new bills, new users)
     return FirebaseFirestore.instance
         .collection('notification_logs')
+        .where('type', whereIn: ['newPendingBill', 'newUserRegistered'])
         .orderBy('sentAt', descending: true)
         .snapshots();
   }
@@ -90,7 +92,12 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
 
     if (shouldLogout == true && mounted) {
       try {
+        // Delete FCM token before signing out
+        await FCMService().deleteToken();
+
+        // Sign out from Firebase
         await FirebaseAuth.instance.signOut();
+
         if (mounted) {
           context.go('/login');
         }
@@ -130,107 +137,155 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
         backgroundColor: DesignToken.primary,
         body: Column(
           children: [
-            // Unified Navigation Bar - Consistent 64px height
-            HomeNavBar(
-              title: l10n.adminPanel,
-              subtitle: l10n.adminSubtitle,
-              showLogo: true,
-              showProfileButton: false,
-              actions: [
-                // Notifications button with badge
-                StreamBuilder<QuerySnapshot>(
-                  stream: _getFilteredNotificationsStream(),
-                  builder: (context, snapshot) {
-                    int notificationCount = 0;
-
-                    if (snapshot.hasData) {
-                      // For admins, show all notifications (no filtering needed)
-                      notificationCount = snapshot.data!.docs.length;
-                    }
-
-                    return Stack(
+            // Compact iOS-style Header
+            SafeArea(
+              bottom: false,
+              child: Container(
+                color: DesignToken.primary,
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: Column(
+                  children: [
+                    // Top row with title and actions
+                    Row(
                       children: [
-                        IconButton(
-                          icon: const Icon(
-                            Icons.notifications_outlined,
-                            color: DesignToken.white,
-                            size: 22,
-                          ),
-                          onPressed: () {
-                            context.push('/notifications');
-                          },
-                          tooltip: 'Notifications',
-                        ),
-                        if (notificationCount > 0)
-                          Positioned(
-                            right: 8,
-                            top: 8,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Colors.red,
-                                shape: BoxShape.circle,
-                              ),
-                              constraints: const BoxConstraints(
-                                minWidth: 16,
-                                minHeight: 16,
-                              ),
-                              child: Center(
-                                child: Text(
-                                  notificationCount > 99
-                                      ? '99+'
-                                      : '$notificationCount',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                l10n.adminPanel,
+                                style: AppTextStyles.nunitoBold.copyWith(
+                                  fontSize: 24,
+                                  color: Colors.white,
+                                  height: 1.2,
                                 ),
                               ),
-                            ),
+                              Text(
+                                l10n.adminSubtitle,
+                                style: AppTextStyles.nunitoRegular.copyWith(
+                                  fontSize: 13,
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                ),
+                              ),
+                            ],
                           ),
-                      ],
-                    );
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.logout,
-                    color: DesignToken.white,
-                    size: 22,
-                  ),
-                  onPressed: _handleLogout,
-                  tooltip: l10n.logout,
-                ),
-              ],
-            ),
+                        ),
+                        // Compact action buttons
+                        StreamBuilder<QuerySnapshot>(
+                          stream: _getFilteredNotificationsStream(),
+                          builder: (context, snapshot) {
+                            int notificationCount = 0;
+                            if (snapshot.hasData) {
+                              notificationCount = snapshot.data!.docs.length;
+                            }
 
-            // Tabs
-            Container(
-              color: DesignToken.primary,
-              child: TabBar(
-                controller: _tabController,
-                indicatorColor: DesignToken.white,
-                indicatorWeight: 3,
-                labelColor: DesignToken.white,
-                unselectedLabelColor: DesignToken.white.withValues(alpha: 0.7),
-                labelStyle: AppTextStyles.nunitoSemiBold.copyWith(fontSize: 14),
-                unselectedLabelStyle: AppTextStyles.nunitoRegular.copyWith(
-                  fontSize: 14,
+                            return Stack(
+                              children: [
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.notifications_outlined,
+                                    color: Colors.white,
+                                    size: 24,
+                                  ),
+                                  onPressed: () => context.push('/notifications'),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 40,
+                                    minHeight: 40,
+                                  ),
+                                ),
+                                if (notificationCount > 0)
+                                  Positioned(
+                                    right: 6,
+                                    top: 6,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.red,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      constraints: const BoxConstraints(
+                                        minWidth: 16,
+                                        minHeight: 16,
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          notificationCount > 99 ? '99+' : '$notificationCount',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.logout, color: Colors.white, size: 24),
+                          onPressed: _handleLogout,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 40,
+                            minHeight: 40,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // iOS-style Segmented Control Tabs
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: TabBar(
+                        controller: _tabController,
+                        indicator: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        indicatorSize: TabBarIndicatorSize.tab,
+                        dividerColor: Colors.transparent,
+                        labelColor: DesignToken.primary,
+                        unselectedLabelColor: Colors.white.withValues(alpha: 0.7),
+                        labelStyle: AppTextStyles.nunitoBold.copyWith(
+                          fontSize: 13,
+                          letterSpacing: 0.3,
+                        ),
+                        unselectedLabelStyle: AppTextStyles.nunitoMedium.copyWith(
+                          fontSize: 12,
+                          letterSpacing: 0.2,
+                        ),
+                        labelPadding: EdgeInsets.zero,
+                        isScrollable: false,
+                        tabs: const [
+                          Tab(text: 'Pending', height: 36),
+                          Tab(text: 'History', height: 36),
+                          Tab(text: 'Offers', height: 36),
+                          Tab(text: 'Users', height: 36),
+                          Tab(text: 'Spin', height: 36),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                tabs: [
-                  Tab(
-                    icon: const Icon(Icons.receipt_long),
-                    text: l10n.pendingBills,
-                  ),
-                  Tab(icon: const Icon(Icons.local_offer), text: l10n.offers),
-                  Tab(icon: const Icon(Icons.people), text: l10n.users),
-                  Tab(icon: const Icon(Icons.casino), text: l10n.dailySpin),
-                ],
               ),
             ),
 
-            // Tab Content with bottom safe area
+            // Tab Content with maximum space
             Expanded(
               child: Container(
                 color: DesignToken.woodenBackground,
@@ -240,6 +295,7 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
                     controller: _tabController,
                     children: const [
                       PendingBillsList(),
+                      BillHistoryList(),
                       OffersManagement(),
                       UsersList(),
                       DailySpinManagement(),

@@ -1939,7 +1939,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchByNameOrPhone.
   ///
   /// In en, this message translates to:
-  /// **'Search by name or phone...'**
+  /// **'Search by name or phone'**
   String get searchByNameOrPhone;
 
   /// No description provided for @add.
@@ -2433,6 +2433,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Save Changes'**
   String get saveChanges;
+
+  /// No description provided for @withdrawBill.
+  ///
+  /// In en, this message translates to:
+  /// **'Withdraw Bill'**
+  String get withdrawBill;
+
+  /// No description provided for @withdrawBillConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to withdraw this approved bill? This will reverse the points awarded to the carpenter.'**
+  String get withdrawBillConfirmation;
+
+  /// No description provided for @withdraw.
+  ///
+  /// In en, this message translates to:
+  /// **'Withdraw'**
+  String get withdraw;
+
+  /// No description provided for @billWithdrawnSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Bill withdrawn successfully. Points have been reversed.'**
+  String get billWithdrawnSuccess;
+
+  /// No description provided for @failedToWithdrawBill.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to withdraw bill'**
+  String get failedToWithdrawBill;
+
+  /// No description provided for @withdrawApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Withdraw Approval'**
+  String get withdrawApproval;
+
+  /// No description provided for @reversePointsAndUndoApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Reverse points & undo approval'**
+  String get reversePointsAndUndoApproval;
+
+  /// No description provided for @approveBillAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve Bill'**
+  String get approveBillAction;
+
+  /// No description provided for @awardPointsAndMarkAsApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Award points & mark as approved'**
+  String get awardPointsAndMarkAsApproved;
+
+  /// No description provided for @selectCarpenter.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Carpenter'**
+  String get selectCarpenter;
+
+  /// No description provided for @errorLoadingCarpenters.
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading carpenters'**
+  String get errorLoadingCarpenters;
+
+  /// No description provided for @noCarpentersFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No carpenters found'**
+  String get noCarpentersFound;
+
+  /// No description provided for @noCarpentersAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No carpenters available'**
+  String get noCarpentersAvailable;
+
+  /// No description provided for @billHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Bill History'**
+  String get billHistory;
+
+  /// No description provided for @filters.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get filters;
+
+  /// No description provided for @from.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get from;
+
+  /// No description provided for @to.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get to;
+
+  /// No description provided for @searchCarpenter.
+  ///
+  /// In en, this message translates to:
+  /// **'Search carpenter...'**
+  String get searchCarpenter;
+
+  /// No description provided for @errorLoadingBillHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading bills'**
+  String get errorLoadingBillHistory;
+
+  /// No description provided for @noBillsFoundMatchingFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'No bills found matching filters'**
+  String get noBillsFoundMatchingFilters;
+
+  /// No description provided for @noBillsFoundHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'No bills found'**
+  String get noBillsFoundHistory;
+
+  /// No description provided for @billDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Bill Date'**
+  String get billDateLabel;
+
+  /// No description provided for @submittedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitted'**
+  String get submittedLabel;
+
+  /// No description provided for @approvedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get approvedLabel;
+
+  /// No description provided for @rejectedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get rejectedLabel;
+
+  /// No description provided for @pts.
+  ///
+  /// In en, this message translates to:
+  /// **'pts'**
+  String get pts;
 }
 
 class _AppLocalizationsDelegate

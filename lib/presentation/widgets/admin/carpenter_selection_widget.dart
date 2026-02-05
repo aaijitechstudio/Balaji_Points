@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
+import 'package:balaji_points/l10n/app_localizations.dart';
 
 class CarpenterSelectionWidget extends StatefulWidget {
   final Map<String, dynamic>? selectedCarpenter;
@@ -29,108 +30,110 @@ class _CarpenterSelectionWidgetState extends State<CarpenterSelectionWidget> {
   }
 
   void _showCarpenterSelectionDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Container(
-          constraints: const BoxConstraints(maxHeight: 600),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: DesignToken.primary,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.person_search,
-                      color: Colors.white,
-                      size: 24,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            constraints: const BoxConstraints(maxHeight: 600),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: DesignToken.primary,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Select Carpenter',
-                        style: AppTextStyles.nunitoBold.copyWith(
-                          fontSize: 20,
-                          color: Colors.white,
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.person_search,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          l10n.selectCarpenter,
+                          style: AppTextStyles.nunitoBold.copyWith(
+                            fontSize: 20,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
 
-              // Search Bar
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (value) {
-                    setState(() {
-                      _searchQuery = value.toLowerCase();
-                    });
-                  },
-                  style: AppTextStyles.nunitoRegular.copyWith(fontSize: 14),
-                  decoration: InputDecoration(
-                    hintText: 'Search by name or phone',
-                    hintStyle: AppTextStyles.nunitoRegular.copyWith(
-                      color: Colors.grey[400],
-                    ),
-                    prefixIcon: const Icon(
-                      Icons.search,
-                      color: DesignToken.primary,
-                    ),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 20),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() {
-                                _searchQuery = '';
-                              });
-                            },
-                          )
-                        : null,
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
+                // Search Bar
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) {
+                      setDialogState(() {
+                        _searchQuery = value.toLowerCase();
+                      });
+                    },
+                    style: AppTextStyles.nunitoRegular.copyWith(fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: l10n.searchByNameOrPhone,
+                      hintStyle: AppTextStyles.nunitoRegular.copyWith(
+                        color: Colors.grey[400],
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: DesignToken.primary,
+                      ),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 20),
+                              onPressed: () {
+                                _searchController.clear();
+                                setDialogState(() {
+                                  _searchQuery = '';
+                                });
+                              },
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                   ),
                 ),
-              ),
 
-              // Carpenters List
-              Expanded(
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('users')
-                      .snapshots(),
-                  builder: (context, snapshot) {
+                // Carpenters List
+                Expanded(
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('users')
+                        .snapshots(),
+                    builder: (context, snapshot) {
                     if (snapshot.hasError) {
                       return Center(
                         child: Text(
-                          'Error loading carpenters',
+                          l10n.errorLoadingCarpenters,
                           style: AppTextStyles.nunitoRegular.copyWith(
                             color: Colors.red,
                           ),
@@ -186,8 +189,8 @@ class _CarpenterSelectionWidgetState extends State<CarpenterSelectionWidget> {
                             const SizedBox(height: 16),
                             Text(
                               _searchQuery.isNotEmpty
-                                  ? 'No carpenters found'
-                                  : 'No carpenters available',
+                                  ? l10n.noCarpentersFound
+                                  : l10n.noCarpentersAvailable,
                               style: AppTextStyles.nunitoRegular.copyWith(
                                 fontSize: 16,
                                 color: Colors.grey[600],
@@ -255,9 +258,9 @@ class _CarpenterSelectionWidgetState extends State<CarpenterSelectionWidget> {
                                   height: 50,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: DesignToken.primary.withOpacity(0.1),
+                                    color: DesignToken.primary.withValues(alpha: 0.1),
                                     border: Border.all(
-                                      color: DesignToken.primary.withOpacity(0.3),
+                                      color: DesignToken.primary.withValues(alpha: 0.3),
                                       width: 2,
                                     ),
                                   ),
@@ -358,11 +361,13 @@ class _CarpenterSelectionWidgetState extends State<CarpenterSelectionWidget> {
           ),
         ),
       ),
+    ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final selectedCarpenter = widget.selectedCarpenter;
 
     return InkWell(
@@ -410,7 +415,7 @@ class _CarpenterSelectionWidgetState extends State<CarpenterSelectionWidget> {
                       ],
                     )
                   : Text(
-                      'Select Carpenter',
+                      l10n.selectCarpenter,
                       style: AppTextStyles.nunitoRegular.copyWith(
                         fontSize: 14,
                         color: Colors.grey[600],

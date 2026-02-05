@@ -25,6 +25,7 @@ class UsersList extends StatefulWidget {
 class _UsersListState extends State<UsersList> {
   String _searchQuery = '';
   String _selectedTier = 'All';
+  String _selectedSort = 'points'; // Default sort by points
   final List<String> _tiers = ['All', 'Platinum', 'Gold', 'Silver', 'Bronze'];
   final _userService = UserService();
 
@@ -258,43 +259,86 @@ class _UsersListState extends State<UsersList> {
                 ],
               ),
               const SizedBox(height: 12),
-              // Tier Filter
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: _tiers.map((tier) {
-                    final isSelected = _selectedTier == tier;
-                    final tierLabel = tier == 'All'
-                        ? l10n.all
-                        : tier == 'Platinum'
-                        ? l10n.platinum
-                        : tier == 'Gold'
-                        ? l10n.gold
-                        : tier == 'Silver'
-                        ? l10n.silver
-                        : l10n.bronze;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: FilterChip(
-                        selected: isSelected,
-                        label: Text(tierLabel),
-                        labelStyle: AppTextStyles.nunitoSemiBold.copyWith(
+              // Sort Dropdown + Tier Filter Row
+              Row(
+                children: [
+                  // Sort Dropdown
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: DesignToken.primary.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _selectedSort,
+                        icon: Icon(Icons.arrow_drop_down, color: DesignToken.primary),
+                        style: AppTextStyles.nunitoSemiBold.copyWith(
                           fontSize: 14,
-                          color: isSelected
-                              ? Colors.white
-                              : DesignToken.textDark,
+                          color: DesignToken.textDark,
                         ),
-                        backgroundColor: Colors.grey[200],
-                        selectedColor: DesignToken.primary,
-                        onSelected: (selected) {
+                        items: [
+                          DropdownMenuItem(value: 'points', child: Text('Points (High to Low)')),
+                          DropdownMenuItem(value: 'pointsLowToHigh', child: Text('Points (Low to High)')),
+                          DropdownMenuItem(value: 'newest', child: Text('Newest First')),
+                          DropdownMenuItem(value: 'oldest', child: Text('Oldest First')),
+                          DropdownMenuItem(value: 'nameAZ', child: Text('Name (A-Z)')),
+                          DropdownMenuItem(value: 'nameZA', child: Text('Name (Z-A)')),
+                        ],
+                        onChanged: (value) {
                           setState(() {
-                            _selectedTier = tier;
+                            _selectedSort = value!;
                           });
                         },
                       ),
-                    );
-                  }).toList(),
-                ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Tier Filter
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: _tiers.map((tier) {
+                          final isSelected = _selectedTier == tier;
+                          final tierLabel = tier == 'All'
+                              ? l10n.all
+                              : tier == 'Platinum'
+                              ? l10n.platinum
+                              : tier == 'Gold'
+                              ? l10n.gold
+                              : tier == 'Silver'
+                              ? l10n.silver
+                              : l10n.bronze;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: FilterChip(
+                              selected: isSelected,
+                              label: Text(tierLabel),
+                              labelStyle: AppTextStyles.nunitoSemiBold.copyWith(
+                                fontSize: 14,
+                                color: isSelected
+                                    ? Colors.white
+                                    : DesignToken.textDark,
+                              ),
+                              backgroundColor: Colors.grey[200],
+                              selectedColor: DesignToken.primary,
+                              onSelected: (selected) {
+                                setState(() {
+                                  _selectedTier = tier;
+                                });
+                              },
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -384,13 +428,65 @@ class _UsersListState extends State<UsersList> {
                 return matchesSearch && matchesTier;
               }).toList();
 
-              // Sort by points (descending)
+              // Sort based on selected option
               users.sort((a, b) {
-                final aPoints =
-                    (a.data() as Map<String, dynamic>)['totalPoints'] ?? 0;
-                final bPoints =
-                    (b.data() as Map<String, dynamic>)['totalPoints'] ?? 0;
-                return bPoints.compareTo(aPoints);
+                final aData = a.data() as Map<String, dynamic>;
+                final bData = b.data() as Map<String, dynamic>;
+
+                switch (_selectedSort) {
+                  case 'points':
+                    // Sort by points (high to low)
+                    final aPoints = aData['totalPoints'] ?? 0;
+                    final bPoints = bData['totalPoints'] ?? 0;
+                    return bPoints.compareTo(aPoints);
+
+                  case 'pointsLowToHigh':
+                    // Sort by points (low to high)
+                    final aPoints = aData['totalPoints'] ?? 0;
+                    final bPoints = bData['totalPoints'] ?? 0;
+                    return aPoints.compareTo(bPoints);
+
+                  case 'newest':
+                    // Sort by registration date (newest first)
+                    final aCreated = aData['createdAt'] as Timestamp?;
+                    final bCreated = bData['createdAt'] as Timestamp?;
+                    if (aCreated == null && bCreated == null) return 0;
+                    if (aCreated == null) return 1;
+                    if (bCreated == null) return -1;
+                    return bCreated.compareTo(aCreated);
+
+                  case 'oldest':
+                    // Sort by registration date (oldest first)
+                    final aCreated = aData['createdAt'] as Timestamp?;
+                    final bCreated = bData['createdAt'] as Timestamp?;
+                    if (aCreated == null && bCreated == null) return 0;
+                    if (aCreated == null) return 1;
+                    if (bCreated == null) return -1;
+                    return aCreated.compareTo(bCreated);
+
+                  case 'nameAZ':
+                    // Sort by name (A to Z)
+                    final aFirstName = (aData['firstName'] ?? '').toString().toLowerCase();
+                    final aLastName = (aData['lastName'] ?? '').toString().toLowerCase();
+                    final bFirstName = (bData['firstName'] ?? '').toString().toLowerCase();
+                    final bLastName = (bData['lastName'] ?? '').toString().toLowerCase();
+                    final aFullName = '$aFirstName $aLastName'.trim();
+                    final bFullName = '$bFirstName $bLastName'.trim();
+                    return aFullName.compareTo(bFullName);
+
+                  case 'nameZA':
+                    // Sort by name (Z to A)
+                    final aFirstName = (aData['firstName'] ?? '').toString().toLowerCase();
+                    final aLastName = (aData['lastName'] ?? '').toString().toLowerCase();
+                    final bFirstName = (bData['firstName'] ?? '').toString().toLowerCase();
+                    final bLastName = (bData['lastName'] ?? '').toString().toLowerCase();
+                    final aFullName = '$aFirstName $aLastName'.trim();
+                    final bFullName = '$bFirstName $bLastName'.trim();
+                    return bFullName.compareTo(aFullName);
+
+                  default:
+                    return 0;
+                }
               });
 
               if (users.isEmpty) {

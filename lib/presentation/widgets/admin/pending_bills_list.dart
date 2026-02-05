@@ -5,6 +5,7 @@ import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/services/bill_service.dart';
 import 'package:balaji_points/l10n/app_localizations.dart';
+import 'package:balaji_points/presentation/screens/admin/bill_details_page.dart';
 import 'package:intl/intl.dart';
 
 class PendingBillsList extends StatefulWidget {
@@ -27,6 +28,7 @@ class _PendingBillsListState extends State<PendingBillsList> {
   final TextEditingController _carpenterNameController =
       TextEditingController();
   String _carpenterNameFilter = '';
+  bool _showFilters = false;
 
   // ---------------- IMAGE VIEWER ----------------
   void _viewBillImage(String imageUrl) {
@@ -485,14 +487,14 @@ class _PendingBillsListState extends State<PendingBillsList> {
 
     return Column(
       children: [
-        // Filter Section
+        // Compact iOS-style Filter Bar
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
@@ -500,231 +502,191 @@ class _PendingBillsListState extends State<PendingBillsList> {
           ),
           child: Column(
             children: [
-              // Date Range Filters
+              // Search bar with filter toggle
               Row(
                 children: [
-                  // Start Date Filter
                   Expanded(
-                    child: InkWell(
-                      onTap: () => _selectStartDate(context),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
+                    child: TextField(
+                      controller: _carpenterNameController,
+                      onChanged: (value) => setState(() => _carpenterNameFilter = value.toLowerCase()),
+                      style: AppTextStyles.nunitoRegular.copyWith(fontSize: 13),
+                      decoration: InputDecoration(
+                        hintText: 'Search carpenter...',
+                        hintStyle: AppTextStyles.nunitoRegular.copyWith(
+                          color: Colors.grey[500],
+                          fontSize: 13,
                         ),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: DesignToken.primary.withOpacity(0.3),
+                        prefixIcon: Icon(Icons.search, color: Colors.grey[600], size: 18),
+                        suffixIcon: _carpenterNameFilter.isNotEmpty
+                            ? IconButton(
+                                icon: Icon(Icons.clear, size: 16, color: Colors.grey[600]),
+                                onPressed: () {
+                                  _carpenterNameController.clear();
+                                  setState(() => _carpenterNameFilter = '');
+                                },
+                                padding: EdgeInsets.zero,
+                              )
+                            : null,
+                        filled: true,
+                        fillColor: Colors.grey[50],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: Colors.grey.withValues(alpha: 0.2),
                             width: 1,
                           ),
                         ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.calendar_today,
-                              size: 18,
-                              color: DesignToken.primary,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    'From',
-                                    style: AppTextStyles.nunitoRegular.copyWith(
-                                      fontSize: 11,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    _startDate != null
-                                        ? DateFormat(
-                                            'dd MMM yyyy',
-                                          ).format(_startDate!)
-                                        : 'Select Date',
-                                    style: AppTextStyles.nunitoSemiBold
-                                        .copyWith(
-                                          fontSize: 13,
-                                          color: _startDate != null
-                                              ? DesignToken.textDark
-                                              : Colors.grey[500],
-                                        ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if (_startDate != null)
-                              InkWell(
-                                onTap: () {
-                                  setState(() {
-                                    _startDate = null;
-                                  });
-                                },
-                                child: Icon(
-                                  Icons.close,
-                                  size: 16,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                          ],
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: Colors.grey.withValues(alpha: 0.2),
+                            width: 1,
+                          ),
                         ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: DesignToken.primary.withValues(alpha: 0.5),
+                            width: 1,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        isDense: true,
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // End Date Filter
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _selectEndDate(context),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: DesignToken.primary.withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.event,
-                              size: 18,
-                              color: DesignToken.primary,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    'To',
-                                    style: AppTextStyles.nunitoRegular.copyWith(
-                                      fontSize: 11,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    _endDate != null
-                                        ? DateFormat(
-                                            'dd MMM yyyy',
-                                          ).format(_endDate!)
-                                        : 'Select Date',
-                                    style: AppTextStyles.nunitoSemiBold
-                                        .copyWith(
-                                          fontSize: 13,
-                                          color: _endDate != null
-                                              ? DesignToken.textDark
-                                              : Colors.grey[500],
-                                        ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if (_endDate != null)
-                              InkWell(
-                                onTap: () {
-                                  setState(() {
-                                    _endDate = null;
-                                  });
-                                },
-                                child: Icon(
-                                  Icons.close,
-                                  size: 16,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                          ],
-                        ),
+                  // Filter toggle button
+                  Container(
+                    decoration: BoxDecoration(
+                      color: _showFilters
+                          ? DesignToken.primary.withValues(alpha: 0.1)
+                          : Colors.grey.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: IconButton(
+                      icon: Icon(
+                        _showFilters ? Icons.filter_list : Icons.filter_list_outlined,
+                        color: _showFilters ? DesignToken.primary : Colors.grey[700],
+                        size: 20,
                       ),
+                      onPressed: () => setState(() => _showFilters = !_showFilters),
+                      padding: const EdgeInsets.all(8),
+                      constraints: const BoxConstraints(
+                        minWidth: 36,
+                        minHeight: 36,
+                      ),
+                      tooltip: 'Date Filters',
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              // Carpenter Name Filter
-              TextField(
-                controller: _carpenterNameController,
-                onChanged: (value) {
-                  setState(() {
-                    _carpenterNameFilter = value.toLowerCase();
-                  });
-                },
-                style: AppTextStyles.nunitoRegular.copyWith(fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: 'Search by Carpenter Name',
-                  hintStyle: AppTextStyles.nunitoRegular.copyWith(
-                    color: Colors.grey[400],
-                    fontSize: 14,
-                  ),
-                  prefixIcon: const Icon(
-                    Icons.person_search,
-                    color: DesignToken.primary,
-                    size: 20,
-                  ),
-                  suffixIcon: _carpenterNameFilter.isNotEmpty
-                      ? InkWell(
-                          onTap: () {
-                            setState(() {
-                              _carpenterNameController.clear();
-                              _carpenterNameFilter = '';
-                            });
-                          },
-                          child: const Icon(
-                            Icons.close,
-                            size: 18,
-                            color: Colors.grey,
+
+              // Collapsible date filters
+              if (_showFilters) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => _selectStartDate(context),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: _startDate != null
+                                  ? DesignToken.primary.withValues(alpha: 0.4)
+                                  : Colors.grey.withValues(alpha: 0.2),
+                              width: 1,
+                            ),
                           ),
-                        )
-                      : null,
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                ),
-              ),
-              // Clear Filters Button
-              if (_hasActiveFilters()) ...[
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: TextButton.icon(
-                    onPressed: _clearFilters,
-                    icon: const Icon(
-                      Icons.clear_all,
-                      size: 18,
-                      color: DesignToken.primary,
-                    ),
-                    label: Text(
-                      'Clear All Filters',
-                      style: AppTextStyles.nunitoSemiBold.copyWith(
-                        fontSize: 14,
-                        color: DesignToken.primary,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.calendar_today,
+                                size: 14,
+                                color: _startDate != null ? DesignToken.primary : Colors.grey[600],
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  _startDate != null
+                                      ? DateFormat('dd MMM').format(_startDate!)
+                                      : 'From',
+                                  style: AppTextStyles.nunitoMedium.copyWith(
+                                    fontSize: 12,
+                                    color: _startDate != null ? DesignToken.textDark : Colors.grey[600],
+                                  ),
+                                ),
+                              ),
+                              if (_startDate != null)
+                                InkWell(
+                                  onTap: () => setState(() => _startDate = null),
+                                  child: Icon(Icons.close, size: 14, color: Colors.grey[600]),
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => _selectEndDate(context),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: _endDate != null
+                                  ? DesignToken.primary.withValues(alpha: 0.4)
+                                  : Colors.grey.withValues(alpha: 0.2),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.event,
+                                size: 14,
+                                color: _endDate != null ? DesignToken.primary : Colors.grey[600],
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  _endDate != null
+                                      ? DateFormat('dd MMM').format(_endDate!)
+                                      : 'To',
+                                  style: AppTextStyles.nunitoMedium.copyWith(
+                                    fontSize: 12,
+                                    color: _endDate != null ? DesignToken.textDark : Colors.grey[600],
+                                  ),
+                                ),
+                              ),
+                              if (_endDate != null)
+                                InkWell(
+                                  onTap: () => setState(() => _endDate = null),
+                                  child: Icon(Icons.close, size: 14, color: Colors.grey[600]),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                    if (_hasActiveFilters())
+                      IconButton(
+                        icon: Icon(Icons.clear_all, size: 18, color: DesignToken.primary),
+                        onPressed: _clearFilters,
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        tooltip: 'Clear Filters',
+                      ),
+                  ],
                 ),
               ],
             ],
@@ -829,20 +791,49 @@ class _PendingBillsListState extends State<PendingBillsList> {
                           }
 
                           return Card(
-                            elevation: 2,
+                            elevation: 4,
                             margin: const EdgeInsets.only(bottom: 12),
+                            shadowColor: DesignToken.secondary.withValues(alpha: 0.3),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(12),
-                              onTap: () {
-                                setState(() {
-                                  _expanded[billId] = !isExpanded;
-                                });
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.all(12),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Colors.white,
+                                    DesignToken.secondary.withValues(alpha: 0.05),
+                                  ],
+                                ),
+                                border: Border.all(
+                                  color: DesignToken.secondary.withValues(alpha: 0.2),
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(16),
+                                onTap: () async {
+                                  // Navigate to Bill Details page
+                                  final result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => BillDetailsPage(
+                                        billId: billId,
+                                        initialBillData: bill,
+                                      ),
+                                    ),
+                                  );
+
+                                  // Refresh if bill was approved/rejected
+                                  if (result == true && mounted) {
+                                    setState(() {});
+                                  }
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -916,82 +907,147 @@ class _PendingBillsListState extends State<PendingBillsList> {
                                             ],
                                           ),
                                         ),
-                                        // Points and Amount - Separate Highlighted Containers
-                                        Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.end,
+                                        // Points, Amount, and Image Thumbnail
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            // Points Container
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 10,
-                                                    vertical: 6,
+                                            // Image Thumbnail (if available)
+                                            if (imageUrl.isNotEmpty) ...[
+                                              GestureDetector(
+                                                onTap: () => _viewBillImage(imageUrl),
+                                                child: Container(
+                                                  width: 50,
+                                                  height: 50,
+                                                  decoration: BoxDecoration(
+                                                    borderRadius: BorderRadius.circular(8),
+                                                    border: Border.all(
+                                                      color: DesignToken.primary.withOpacity(0.3),
+                                                      width: 2,
+                                                    ),
                                                   ),
-                                              decoration: BoxDecoration(
-                                                color: DesignToken.secondary
-                                                    .withOpacity(0.2),
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                border: Border.all(
-                                                  color: DesignToken.primary
-                                                      .withOpacity(0.3),
-                                                  width: 1.5,
+                                                  child: ClipRRect(
+                                                    borderRadius: BorderRadius.circular(6),
+                                                    child: Stack(
+                                                      children: [
+                                                        Image.network(
+                                                          imageUrl,
+                                                          fit: BoxFit.cover,
+                                                          width: 50,
+                                                          height: 50,
+                                                          errorBuilder: (_, __, ___) => Container(
+                                                            color: Colors.grey[300],
+                                                            child: Icon(
+                                                              Icons.broken_image,
+                                                              size: 20,
+                                                              color: Colors.grey[600],
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        // Overlay icon to indicate it's clickable
+                                                        Container(
+                                                          decoration: BoxDecoration(
+                                                            gradient: LinearGradient(
+                                                              begin: Alignment.topCenter,
+                                                              end: Alignment.bottomCenter,
+                                                              colors: [
+                                                                Colors.black.withOpacity(0.3),
+                                                                Colors.transparent,
+                                                              ],
+                                                            ),
+                                                          ),
+                                                          child: Center(
+                                                            child: Icon(
+                                                              Icons.zoom_in,
+                                                              color: Colors.white,
+                                                              size: 16,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
                                                 ),
                                               ),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Icon(
-                                                    Icons.monetization_on,
-                                                    size: 18,
-                                                    color:
-                                                        DesignToken.secondary,
+                                              const SizedBox(width: 8),
+                                            ],
+                                            // Points and Amount Column
+                                            Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.end,
+                                              children: [
+                                                // Points Container
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 6,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    color: DesignToken.secondary
+                                                        .withOpacity(0.2),
+                                                    borderRadius:
+                                                        BorderRadius.circular(8),
+                                                    border: Border.all(
+                                                      color: DesignToken.primary
+                                                          .withOpacity(0.3),
+                                                      width: 1.5,
+                                                    ),
                                                   ),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    '${(amount / 1000).floor()} pts',
+                                                  child: Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      Icon(
+                                                        Icons.monetization_on,
+                                                        size: 18,
+                                                        color:
+                                                            DesignToken.secondary,
+                                                      ),
+                                                      const SizedBox(width: 4),
+                                                      Text(
+                                                        '${(amount / 1000).floor()} pts',
+                                                        style: AppTextStyles
+                                                            .nunitoBold
+                                                            .copyWith(
+                                                              fontSize: 15,
+                                                              color: DesignToken
+                                                                  .secondary,
+                                                            ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 6),
+                                                // Amount Container
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 6,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.green.withOpacity(
+                                                      0.15,
+                                                    ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(8),
+                                                    border: Border.all(
+                                                      color: DesignToken.primary
+                                                          .withOpacity(0.3),
+                                                      width: 1.5,
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    '₹${amount.toStringAsFixed(0)}',
                                                     style: AppTextStyles
-                                                        .nunitoBold
+                                                        .nunitoSemiBold
                                                         .copyWith(
-                                                          fontSize: 15,
-                                                          color: DesignToken
-                                                              .secondary,
+                                                          fontSize: 13,
+                                                          color:
+                                                              Colors.green.shade700,
                                                         ),
                                                   ),
-                                                ],
-                                              ),
-                                            ),
-                                            const SizedBox(height: 6),
-                                            // Amount Container
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 10,
-                                                    vertical: 6,
-                                                  ),
-                                              decoration: BoxDecoration(
-                                                color: Colors.green.withOpacity(
-                                                  0.15,
                                                 ),
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                border: Border.all(
-                                                  color: DesignToken.primary
-                                                      .withOpacity(0.3),
-                                                  width: 1.5,
-                                                ),
-                                              ),
-                                              child: Text(
-                                                '₹${amount.toStringAsFixed(0)}',
-                                                style: AppTextStyles
-                                                    .nunitoSemiBold
-                                                    .copyWith(
-                                                      fontSize: 13,
-                                                      color:
-                                                          Colors.green.shade700,
-                                                    ),
-                                              ),
+                                              ],
                                             ),
                                           ],
                                         ),
@@ -1212,6 +1268,7 @@ class _PendingBillsListState extends State<PendingBillsList> {
                                 ),
                               ),
                             ),
+                          ),
                           );
                         },
                       );

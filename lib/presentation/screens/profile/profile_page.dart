@@ -8,6 +8,7 @@ import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/services/user_service.dart';
 import 'package:balaji_points/services/session_service.dart';
+import 'package:balaji_points/services/fcm_service.dart';
 import 'package:balaji_points/presentation/providers/theme_provider.dart';
 import 'package:balaji_points/presentation/providers/locale_provider.dart';
 import 'package:balaji_points/presentation/widgets/home_nav_bar.dart';
@@ -25,6 +26,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
     with WidgetsBindingObserver {
   final UserService _userService = UserService();
   final SessionService _sessionService = SessionService();
+  final FCMService _fcmService = FCMService();
   Map<String, dynamic>? _userData;
   bool _isLoading = true;
   String _appVersion = '';
@@ -169,6 +171,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
     // If user confirmed logout
     if (shouldLogout == true && context.mounted) {
       try {
+        // Delete FCM token before clearing session
+        await _fcmService.deleteToken();
+
         // Clear session (logout)
         await _sessionService.clearSession();
 

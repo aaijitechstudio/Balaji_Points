@@ -983,7 +983,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get failedToPickImage => 'छवि चुनने में विफल';
 
   @override
-  String get searchByNameOrPhone => 'नाम या फोन से खोजें...';
+  String get searchByNameOrPhone => 'नाम या फोन से खोजें';
 
   @override
   String get add => 'जोड़ें';
@@ -1249,4 +1249,87 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get saveChanges => 'परिवर्तन सहेजें';
+
+  @override
+  String get withdrawBill => 'बिल वापस लें';
+
+  @override
+  String get withdrawBillConfirmation =>
+      'क्या आप वाकई इस स्वीकृत बिल को वापस लेना चाहते हैं? इससे बढ़ई को दिए गए अंक वापस हो जाएंगे।';
+
+  @override
+  String get withdraw => 'वापस लें';
+
+  @override
+  String get billWithdrawnSuccess =>
+      'बिल सफलतापूर्वक वापस लिया गया। अंक वापस कर दिए गए हैं।';
+
+  @override
+  String get failedToWithdrawBill => 'बिल वापस लेने में विफल';
+
+  @override
+  String get withdrawApproval => 'स्वीकृति वापस लें';
+
+  @override
+  String get reversePointsAndUndoApproval =>
+      'अंक वापस करें और स्वीकृति रद्द करें';
+
+  @override
+  String get approveBillAction => 'बिल स्वीकृत करें';
+
+  @override
+  String get awardPointsAndMarkAsApproved =>
+      'अंक दें और स्वीकृत के रूप में चिह्नित करें';
+
+  @override
+  String get selectCarpenter => 'बढ़ई चुनें';
+
+  @override
+  String get errorLoadingCarpenters => 'बढ़ई लोड करने में त्रुटि';
+
+  @override
+  String get noCarpentersFound => 'कोई बढ़ई नहीं मिला';
+
+  @override
+  String get noCarpentersAvailable => 'कोई बढ़ई उपलब्ध नहीं';
+
+  @override
+  String get billHistory => 'बिल इतिहास';
+
+  @override
+  String get filters => 'फ़िल्टर';
+
+  @override
+  String get from => 'से';
+
+  @override
+  String get to => 'तक';
+
+  @override
+  String get searchCarpenter => 'बढ़ई खोजें...';
+
+  @override
+  String get errorLoadingBillHistory => 'बिल लोड करने में त्रुटि';
+
+  @override
+  String get noBillsFoundMatchingFilters =>
+      'फ़िल्टर से मेल खाने वाले कोई बिल नहीं मिले';
+
+  @override
+  String get noBillsFoundHistory => 'कोई बिल नहीं मिला';
+
+  @override
+  String get billDateLabel => 'बिल तारीख';
+
+  @override
+  String get submittedLabel => 'जमा किया गया';
+
+  @override
+  String get approvedLabel => 'स्वीकृत';
+
+  @override
+  String get rejectedLabel => 'अस्वीकृत';
+
+  @override
+  String get pts => 'अंक';
 }

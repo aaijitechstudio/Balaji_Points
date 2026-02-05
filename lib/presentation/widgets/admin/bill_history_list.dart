@@ -1,0 +1,954 @@
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:balaji_points/core/theme/design_token.dart';
+import 'package:balaji_points/config/theme.dart' hide AppColors;
+import 'package:balaji_points/l10n/app_localizations.dart';
+import 'package:balaji_points/presentation/screens/admin/bill_details_page.dart';
+import 'package:intl/intl.dart';
+
+/// Bill History Widget - Shows all approved bills with filters
+/// Displays bill images, carpenter info, dates, and amounts
+class BillHistoryList extends StatefulWidget {
+  const BillHistoryList({super.key});
+
+  @override
+  State<BillHistoryList> createState() => _BillHistoryListState();
+}
+
+class _BillHistoryListState extends State<BillHistoryList> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final Map<String, bool> _expanded = {};
+  final Map<String, Map<String, dynamic>?> _carpenterCache = {};
+
+  // Filter state
+  DateTime? _startDate;
+  DateTime? _endDate;
+  final TextEditingController _carpenterNameController = TextEditingController();
+  String _carpenterNameFilter = '';
+  String _selectedStatus = 'approved'; // approved, rejected, all
+  bool _showFilters = false;
+
+  @override
+  void dispose() {
+    _carpenterNameController.dispose();
+    super.dispose();
+  }
+
+  // ---------------- IMAGE VIEWER ----------------
+  void _viewBillImage(String imageUrl) {
+    final l10n = AppLocalizations.of(context)!;
+
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.black87,
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                child: imageUrl.isNotEmpty
+                    ? Image.network(
+                        imageUrl,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.error,
+                              color: Colors.red,
+                              size: 60,
+                            ),
+                            Text(
+                              l10n.failedToLoadImage,
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.image_not_supported,
+                            size: 60,
+                            color: Colors.grey,
+                          ),
+                          Text(
+                            l10n.noImageAvailable,
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+            // Close button
+            Positioned(
+              top: 20,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ---------------- FETCH CARPENTER DATA ----------------
+  Future<Map<String, dynamic>?> _fetchCarpenterData(String carpenterId) async {
+    if (_carpenterCache.containsKey(carpenterId)) {
+      return _carpenterCache[carpenterId];
+    }
+
+    try {
+      final doc = await _firestore.collection('users').doc(carpenterId).get();
+
+      if (doc.exists) {
+        final data = doc.data();
+        _carpenterCache[carpenterId] = data;
+        return data;
+      }
+
+      final query = await _firestore
+          .collection('users')
+          .where('phone', isEqualTo: carpenterId)
+          .limit(1)
+          .get();
+
+      if (query.docs.isNotEmpty) {
+        final data = query.docs.first.data();
+        _carpenterCache[carpenterId] = data;
+        return data;
+      }
+
+      _carpenterCache[carpenterId] = null;
+      return null;
+    } catch (e) {
+      print('Error fetching carpenter data: $e');
+      _carpenterCache[carpenterId] = null;
+      return null;
+    }
+  }
+
+  // ---------------- DATE PICKERS ----------------
+  Future<void> _selectStartDate(BuildContext context) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _startDate ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: DesignToken.primary,
+              onPrimary: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _startDate = picked;
+      });
+    }
+  }
+
+  Future<void> _selectEndDate(BuildContext context) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _endDate ?? DateTime.now(),
+      firstDate: _startDate ?? DateTime(2020),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: DesignToken.primary,
+              onPrimary: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _endDate = picked;
+      });
+    }
+  }
+
+  // ---------------- FILTERS ----------------
+  List<QueryDocumentSnapshot> _filterBills(List<QueryDocumentSnapshot> bills) {
+    return bills.where((doc) {
+      final bill = doc.data() as Map<String, dynamic>;
+      final status = bill['status'] as String?;
+      final billDate = bill['billDate'] as Timestamp?;
+      final approvedAt = bill['approvedAt'] as Timestamp?;
+      final rejectedAt = bill['rejectedAt'] as Timestamp?;
+      final createdAt = bill['createdAt'] as Timestamp?;
+
+      // Filter by status first
+      if (_selectedStatus != 'all') {
+        if (status != _selectedStatus) return false;
+      } else {
+        // For 'all', only show approved or rejected bills (not pending)
+        if (status != 'approved' && status != 'rejected') return false;
+      }
+
+      // Use billDate if available, otherwise approvedAt/rejectedAt, otherwise createdAt
+      final dateToFilter = billDate?.toDate() ??
+                          approvedAt?.toDate() ??
+                          rejectedAt?.toDate() ??
+                          createdAt?.toDate();
+
+      if (dateToFilter == null) return false;
+
+      // Apply date range filter
+      if (_startDate != null) {
+        final start = DateTime(_startDate!.year, _startDate!.month, _startDate!.day);
+        if (dateToFilter.isBefore(start)) return false;
+      }
+
+      if (_endDate != null) {
+        final end = DateTime(_endDate!.year, _endDate!.month, _endDate!.day, 23, 59, 59);
+        if (dateToFilter.isAfter(end)) return false;
+      }
+
+      return true;
+    }).toList();
+  }
+
+  bool _hasActiveFilters() {
+    return _startDate != null || _endDate != null || _carpenterNameFilter.isNotEmpty;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return Column(
+      children: [
+        // Compact Filter Bar with iOS style
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // Top row: Status chips and filter toggle
+              Row(
+                children: [
+                  // Compact status chips
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildCompactStatusChip('approved', 'Approved', Colors.green),
+                          const SizedBox(width: 6),
+                          _buildCompactStatusChip('rejected', 'Rejected', Colors.red),
+                          const SizedBox(width: 6),
+                          _buildCompactStatusChip('all', 'All', DesignToken.primary),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Filter toggle button
+                  Container(
+                    decoration: BoxDecoration(
+                      color: _showFilters
+                          ? DesignToken.primary.withValues(alpha: 0.1)
+                          : Colors.grey.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: IconButton(
+                      icon: Icon(
+                        _showFilters ? Icons.filter_list : Icons.filter_list_outlined,
+                        color: _showFilters ? DesignToken.primary : Colors.grey[700],
+                        size: 20,
+                      ),
+                      onPressed: () => setState(() => _showFilters = !_showFilters),
+                      padding: const EdgeInsets.all(8),
+                      constraints: const BoxConstraints(
+                        minWidth: 36,
+                        minHeight: 36,
+                      ),
+                      tooltip: 'Filters',
+                    ),
+                  ),
+                ],
+              ),
+
+              // Collapsible advanced filters
+              if (_showFilters) ...[
+                const SizedBox(height: 8),
+                // Compact date range
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => _selectStartDate(context),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: _startDate != null
+                                  ? DesignToken.primary.withValues(alpha: 0.4)
+                                  : Colors.grey.withValues(alpha: 0.2),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.calendar_today,
+                                size: 14,
+                                color: _startDate != null ? DesignToken.primary : Colors.grey[600],
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  _startDate != null
+                                      ? DateFormat('dd MMM').format(_startDate!)
+                                      : 'From',
+                                  style: AppTextStyles.nunitoMedium.copyWith(
+                                    fontSize: 12,
+                                    color: _startDate != null ? DesignToken.textDark : Colors.grey[600],
+                                  ),
+                                ),
+                              ),
+                              if (_startDate != null)
+                                InkWell(
+                                  onTap: () => setState(() => _startDate = null),
+                                  child: Icon(Icons.close, size: 14, color: Colors.grey[600]),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => _selectEndDate(context),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: _endDate != null
+                                  ? DesignToken.primary.withValues(alpha: 0.4)
+                                  : Colors.grey.withValues(alpha: 0.2),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.event,
+                                size: 14,
+                                color: _endDate != null ? DesignToken.primary : Colors.grey[600],
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  _endDate != null
+                                      ? DateFormat('dd MMM').format(_endDate!)
+                                      : 'To',
+                                  style: AppTextStyles.nunitoMedium.copyWith(
+                                    fontSize: 12,
+                                    color: _endDate != null ? DesignToken.textDark : Colors.grey[600],
+                                  ),
+                                ),
+                              ),
+                              if (_endDate != null)
+                                InkWell(
+                                  onTap: () => setState(() => _endDate = null),
+                                  child: Icon(Icons.close, size: 14, color: Colors.grey[600]),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                // Compact search
+                TextField(
+                  controller: _carpenterNameController,
+                  onChanged: (value) => setState(() => _carpenterNameFilter = value.toLowerCase()),
+                  style: AppTextStyles.nunitoRegular.copyWith(fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: 'Search carpenter...',
+                    hintStyle: AppTextStyles.nunitoRegular.copyWith(
+                      color: Colors.grey[500],
+                      fontSize: 13,
+                    ),
+                    prefixIcon: Icon(Icons.search, color: Colors.grey[600], size: 18),
+                    suffixIcon: _carpenterNameFilter.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(Icons.clear, size: 16, color: Colors.grey[600]),
+                            onPressed: () {
+                              _carpenterNameController.clear();
+                              setState(() => _carpenterNameFilter = '');
+                            },
+                            padding: EdgeInsets.zero,
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: Colors.grey.withValues(alpha: 0.2),
+                        width: 1,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: Colors.grey.withValues(alpha: 0.2),
+                        width: 1,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: DesignToken.primary.withValues(alpha: 0.5),
+                        width: 1,
+                      ),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    isDense: true,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+
+        // Bills List
+        Expanded(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: _firestore
+                    .collection('bills')
+                    .where('status', whereIn: ['approved', 'rejected'])
+                    .orderBy('createdAt', descending: true)
+                    .snapshots(),
+            builder: (_, snap) {
+              if (snap.hasError) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Error loading bills',
+                        style: AppTextStyles.nunitoBold.copyWith(fontSize: 18),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        snap.error.toString(),
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.nunitoRegular.copyWith(fontSize: 14, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              if (!snap.hasData) {
+                return const Center(
+                  child: CircularProgressIndicator(color: DesignToken.primary),
+                );
+              }
+
+              var bills = snap.data!.docs;
+              bills = _filterBills(bills);
+
+              if (bills.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.receipt_long_outlined, size: 64, color: Colors.grey[400]),
+                      const SizedBox(height: 16),
+                      Text(
+                        _hasActiveFilters() ? 'No bills found matching filters' : 'No bills found',
+                        style: AppTextStyles.nunitoRegular.copyWith(fontSize: 16, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.all(12),
+                itemCount: bills.length,
+                itemBuilder: (_, i) {
+                  final bill = bills[i].data() as Map<String, dynamic>;
+                  bill['billId'] = bills[i].id;
+
+                  final billId = bill['billId'];
+                  final isExpanded = _expanded[billId] ?? false;
+                  final carpenterId = bill['carpenterId'] ?? '';
+                  final amount = bill['amount'] ?? 0;
+                  final phone = bill['carpenterPhone'] ?? '';
+                  final imageUrl = bill['imageUrl'] ?? '';
+                  final status = bill['status'] ?? '';
+                  final billDate = bill['billDate'] as Timestamp?;
+                  final approvedAt = bill['approvedAt'] as Timestamp?;
+                  final createdAt = bill['createdAt'] as Timestamp?;
+
+                  // Extract points earned (for approved bills)
+                  final points = bill['pointsEarned'] ?? (amount / 1000).floor();
+
+                  return FutureBuilder<Map<String, dynamic>?>(
+                    future: _fetchCarpenterData(carpenterId),
+                    builder: (context, carpenterSnapshot) {
+                      String carpenterName = 'Carpenter';
+                      String? profileImageUrl;
+
+                      if (carpenterSnapshot.hasData && carpenterSnapshot.data != null) {
+                        final carpenterData = carpenterSnapshot.data!;
+                        final firstName = carpenterData['firstName'] ?? '';
+                        final lastName = carpenterData['lastName'] ?? '';
+                        carpenterName = ('$firstName $lastName').trim();
+                        if (carpenterName.isEmpty) carpenterName = 'Carpenter';
+                        profileImageUrl = carpenterData['profileImage'] as String?;
+                      }
+
+                      // Apply carpenter name filter
+                      if (_carpenterNameFilter.isNotEmpty) {
+                        final fullName = carpenterName.toLowerCase();
+                        if (!fullName.contains(_carpenterNameFilter)) {
+                          return const SizedBox.shrink();
+                        }
+                      }
+
+                      return Card(
+                        elevation: 4,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        shadowColor: status == 'approved'
+                            ? Colors.green.withValues(alpha: 0.3)
+                            : Colors.red.withValues(alpha: 0.3),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.white,
+                                status == 'approved'
+                                    ? Colors.green.withValues(alpha: 0.05)
+                                    : Colors.red.withValues(alpha: 0.05),
+                              ],
+                            ),
+                            border: Border.all(
+                              color: status == 'approved'
+                                  ? Colors.green.withValues(alpha: 0.2)
+                                  : Colors.red.withValues(alpha: 0.2),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: () async {
+                              // Navigate to Bill Details page
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => BillDetailsPage(
+                                    billId: billId,
+                                    initialBillData: bill,
+                                  ),
+                                ),
+                              );
+
+                              // Refresh if needed
+                              if (result == true && mounted) {
+                                setState(() {});
+                              }
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Redesigned compact layout
+                                Row(
+                                  children: [
+                                    // Profile Image
+                                    Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: DesignToken.primary.withValues(alpha: 0.1),
+                                        border: Border.all(
+                                          color: DesignToken.primary.withValues(alpha: 0.3),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: profileImageUrl != null && profileImageUrl.isNotEmpty
+                                          ? ClipOval(
+                                              child: Image.network(
+                                                profileImageUrl,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (_, __, ___) => Icon(
+                                                  Icons.person,
+                                                  color: DesignToken.primary,
+                                                  size: 20,
+                                                ),
+                                              ),
+                                            )
+                                          : Icon(Icons.person, color: DesignToken.primary, size: 20),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    // Name, Phone & Status
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Flexible(
+                                                child: Text(
+                                                  carpenterName,
+                                                  style: AppTextStyles.nunitoBold.copyWith(
+                                                    fontSize: 14,
+                                                    color: DesignToken.textDark,
+                                                    height: 1.2,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 6),
+                                              // Status Badge - Inline
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: status == 'approved'
+                                                      ? Colors.green.shade100
+                                                      : Colors.red.shade100,
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      status == 'approved' ? Icons.check_circle : Icons.cancel,
+                                                      size: 10,
+                                                      color: status == 'approved' ? Colors.green.shade700 : Colors.red.shade700,
+                                                    ),
+                                                    const SizedBox(width: 3),
+                                                    Text(
+                                                      status == 'approved' ? 'Approved' : 'Rejected',
+                                                      style: AppTextStyles.nunitoBold.copyWith(
+                                                        fontSize: 9,
+                                                        color: status == 'approved' ? Colors.green.shade700 : Colors.red.shade700,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          if (phone.isNotEmpty) ...[
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              phone,
+                                              style: AppTextStyles.nunitoRegular.copyWith(
+                                                fontSize: 11,
+                                                color: Colors.grey[600],
+                                                height: 1.2,
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    // Right Side: Image Thumbnail, Amount & Points
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        // Image Thumbnail
+                                        if (imageUrl.isNotEmpty) ...[
+                                          GestureDetector(
+                                            onTap: () => _viewBillImage(imageUrl),
+                                            child: Container(
+                                              width: 45,
+                                              height: 45,
+                                              decoration: BoxDecoration(
+                                                borderRadius: BorderRadius.circular(8),
+                                                border: Border.all(
+                                                  color: DesignToken.primary.withValues(alpha: 0.3),
+                                                  width: 1.5,
+                                                ),
+                                              ),
+                                              child: ClipRRect(
+                                                borderRadius: BorderRadius.circular(6),
+                                                child: Stack(
+                                                  children: [
+                                                    Image.network(
+                                                      imageUrl,
+                                                      fit: BoxFit.cover,
+                                                      width: 45,
+                                                      height: 45,
+                                                      errorBuilder: (_, __, ___) => Container(
+                                                        color: Colors.grey[300],
+                                                        child: Icon(
+                                                          Icons.broken_image,
+                                                          size: 18,
+                                                          color: Colors.grey[600],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    Container(
+                                                      decoration: BoxDecoration(
+                                                        gradient: LinearGradient(
+                                                          begin: Alignment.topCenter,
+                                                          end: Alignment.bottomCenter,
+                                                          colors: [
+                                                            Colors.black.withValues(alpha: 0.3),
+                                                            Colors.transparent,
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      child: Center(
+                                                        child: Icon(
+                                                          Icons.zoom_in,
+                                                          color: Colors.white,
+                                                          size: 14,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                        ],
+                                        // Amount & Points in vertical stack
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.end,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            // Amount
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: Colors.green.withValues(alpha: 0.15),
+                                                borderRadius: BorderRadius.circular(6),
+                                                border: Border.all(
+                                                  color: DesignToken.primary.withValues(alpha: 0.25),
+                                                  width: 1,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                '₹${amount.toStringAsFixed(0)}',
+                                                style: AppTextStyles.nunitoBold.copyWith(
+                                                  fontSize: 13,
+                                                  color: Colors.green.shade700,
+                                                  height: 1,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 3),
+                                            // Points
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: DesignToken.primary.withValues(alpha: 0.15),
+                                                borderRadius: BorderRadius.circular(6),
+                                                border: Border.all(
+                                                  color: DesignToken.primary.withValues(alpha: 0.25),
+                                                  width: 1,
+                                                ),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    Icons.stars,
+                                                    size: 10,
+                                                    color: DesignToken.primary,
+                                                  ),
+                                                  const SizedBox(width: 3),
+                                                  Text(
+                                                    '$points',
+                                                    style: AppTextStyles.nunitoBold.copyWith(
+                                                      fontSize: 11,
+                                                      color: DesignToken.primary,
+                                                      height: 1,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+
+                                const SizedBox(height: 8),
+
+                                // Date Information - Compact
+                                Row(
+                                  children: [
+                                    if (billDate != null) ...[
+                                      Icon(Icons.receipt_long, size: 12, color: Colors.blue[600]),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        DateFormat('dd MMM yyyy').format(billDate.toDate()),
+                                        style: TextStyle(fontSize: 10, color: Colors.blue[700], fontWeight: FontWeight.w600),
+                                      ),
+                                      if (approvedAt != null) ...[
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          width: 3,
+                                          height: 3,
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[400],
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                      ],
+                                    ],
+                                    if (approvedAt != null) ...[
+                                      Icon(
+                                        status == 'approved' ? Icons.check_circle : Icons.cancel,
+                                        size: 12,
+                                        color: status == 'approved' ? Colors.green[600] : Colors.red[600],
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        DateFormat('dd MMM, hh:mm a').format(approvedAt.toDate()),
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: status == 'approved' ? Colors.green[700] : Colors.red[700],
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                    if (billDate == null && approvedAt == null && createdAt != null) ...[
+                                      Icon(Icons.schedule, size: 12, color: Colors.grey[600]),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        DateFormat('dd MMM yyyy').format(createdAt.toDate()),
+                                        style: TextStyle(fontSize: 10, color: Colors.grey[600], fontWeight: FontWeight.w600),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+
+                                // Expanded: Show larger image
+                                if (isExpanded && imageUrl.isNotEmpty) ...[
+                                  const SizedBox(height: 10),
+                                  GestureDetector(
+                                    onTap: () => _viewBillImage(imageUrl),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Image.network(
+                                        imageUrl,
+                                        height: 200,
+                                        width: double.infinity,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => Container(
+                                          height: 200,
+                                          color: Colors.grey[200],
+                                          child: Center(
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.error_outline, color: Colors.grey[400], size: 40),
+                                                const SizedBox(height: 8),
+                                                Text(
+                                                  l10n.failedToLoadImage,
+                                                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      );
+                    },
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCompactStatusChip(String value, String label, Color color) {
+    final isSelected = _selectedStatus == value;
+    return InkWell(
+      onTap: () => setState(() => _selectedStatus = value),
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? color : color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: color.withValues(alpha: isSelected ? 1.0 : 0.3),
+            width: 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: AppTextStyles.nunitoSemiBold.copyWith(
+            fontSize: 11,
+            color: isSelected ? Colors.white : color,
+          ),
+        ),
+      ),
+    );
+  }
+}
