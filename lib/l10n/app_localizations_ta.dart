@@ -1333,4 +1333,13 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get pts => 'pts';
+
+  @override
+  String get languageEnglish => 'English';
+
+  @override
+  String get languageHindi => 'हिंदी';
+
+  @override
+  String get languageTamil => 'தமிழ்';
 }

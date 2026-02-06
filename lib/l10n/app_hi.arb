@@ -563,5 +563,8 @@
   "submittedLabel": "जमा किया गया",
   "approvedLabel": "स्वीकृत",
   "rejectedLabel": "अस्वीकृत",
-  "pts": "अंक"
+  "pts": "अंक",
+  "languageEnglish": "English",
+  "languageHindi": "हिंदी",
+  "languageTamil": "தமிழ்"
 }

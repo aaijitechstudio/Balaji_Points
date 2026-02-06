@@ -568,5 +568,8 @@
   "submittedLabel": "Submitted",
   "approvedLabel": "Approved",
   "rejectedLabel": "Rejected",
-  "pts": "pts"
+  "pts": "pts",
+  "languageEnglish": "English",
+  "languageHindi": "हिंदी",
+  "languageTamil": "தமிழ்"
 }

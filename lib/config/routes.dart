@@ -1,19 +1,21 @@
 // filepath: lib/config/routes.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+
 import 'package:balaji_points/presentation/screens/dashboard/dashboard_page.dart';
 import 'package:balaji_points/presentation/screens/profile/edit_profile_page.dart';
 import 'package:balaji_points/presentation/screens/profile/profile_page.dart';
-
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-
 import 'package:balaji_points/presentation/screens/splash/splash_page.dart';
-import 'package:balaji_points/presentation/screens/auth/login_page.dart';
 
-// PIN authentication screens
-import 'package:balaji_points/presentation/screens/auth/pin_setup_page.dart';
-import 'package:balaji_points/presentation/screens/auth/pin_login_page.dart';
-import 'package:balaji_points/presentation/screens/auth/reset_pin_page.dart';
+// NEW ARCHITECTURE - Auth screens (Clean Architecture + BLoC)
+import 'package:balaji_points/features/auth/presentation/pages/login_page.dart';
+import 'package:balaji_points/features/auth/presentation/pages/pin_setup_page.dart';
+import 'package:balaji_points/features/auth/presentation/pages/pin_login_page.dart';
+import 'package:balaji_points/features/auth/presentation/pages/reset_pin_page.dart';
+import 'package:balaji_points/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:balaji_points/injection/dependency_injection.dart';
 
 import 'package:balaji_points/presentation/screens/spin/daily_spin_page.dart';
 import 'package:balaji_points/presentation/screens/admin/admin_home_page.dart';
@@ -23,7 +25,6 @@ import 'package:balaji_points/presentation/screens/bills/add_bill_page.dart';
 import 'package:balaji_points/presentation/screens/settings/notification_settings_page.dart';
 import 'package:balaji_points/presentation/screens/notifications/notifications_page.dart';
 
-// Global navigator key for navigation from anywhere (including notification handlers)
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -31,10 +32,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     navigatorKey: navigatorKey,
     initialLocation: '/splash',
 
-    // NOTE: PIN-based authentication - no route guards for now
-    // TODO: Implement proper session management with shared preferences or secure storage
     redirect: (context, state) async {
-      // Allow all navigation for PIN-based auth
       return null;
     },
 
@@ -60,40 +58,50 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/splash', builder: (context, _) => const SplashPage()),
 
-      GoRoute(path: '/login', builder: (context, _) => const LoginPage()),
+      // NEW ARCHITECTURE - Auth routes with BLoC
+      GoRoute(
+        path: '/login',
+        builder: (context, _) => BlocProvider(
+          create: (_) => getIt<AuthBloc>(),
+          child: const LoginPage(),
+        ),
+      ),
 
-      // ------------------ PIN SETUP ------------------
       GoRoute(
         path: '/pin-setup',
         builder: (context, state) {
           final phone = state.uri.queryParameters['phone'] ?? '';
-          return PINSetupPage(phoneNumber: phone);
+          return BlocProvider(
+            create: (_) => getIt<AuthBloc>(),
+            child: PINSetupPage(phoneNumber: phone),
+          );
         },
       ),
 
-      // ------------------ PIN LOGIN ------------------
       GoRoute(
         path: '/pin-login',
         builder: (context, state) {
           final phone = state.uri.queryParameters['phone'] ?? '';
-          return PINLoginPage(phoneNumber: phone);
+          return BlocProvider(
+            create: (_) => getIt<AuthBloc>(),
+            child: PINLoginPage(phoneNumber: phone),
+          );
         },
       ),
 
-      // ------------------ PIN RESET ------------------
       GoRoute(
         path: '/pin-reset',
         builder: (context, state) {
           final phone = state.uri.queryParameters['phone'] ?? '';
-          return ResetPINPage(phoneNumber: phone);
+          return BlocProvider(
+            create: (_) => getIt<AuthBloc>(),
+            child: ResetPINPage(phoneNumber: phone),
+          );
         },
       ),
 
-      // ------------------ MAIN APP ------------------
       GoRoute(path: '/', builder: (context, _) => const DashboardPage()),
-
       GoRoute(path: '/profile', builder: (context, _) => const ProfilePage()),
-
       GoRoute(
         path: '/edit-profile',
         builder: (context, state) {
@@ -101,47 +109,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           return EditProfilePage(isFirstTime: isFirstTime);
         },
       ),
-
-      GoRoute(
-        path: '/daily-spin',
-        builder: (context, _) => const DailySpinPage(),
-      ),
-
-      GoRoute(
-        path: '/notification-settings',
-        builder: (context, _) => const NotificationSettingsPage(),
-      ),
-
-      GoRoute(
-        path: '/notifications',
-        name: 'notifications',
-        builder: (context, _) => const NotificationsPage(),
-      ),
-
-      // Admin routes - more specific routes first
-      GoRoute(
-        path: '/admin/add-bill',
-        builder: (context, _) => const AdminAddBillPage(),
-      ),
-
-      // TEMPORARY: Diagnostic route - Remove after verification
-      GoRoute(
-        path: '/admin/diagnostic',
-        name: 'admin-diagnostic',
-        builder: (context, state) {
-          // Extract phone number from query parameters
-          // URL decoding is handled automatically by GoRouter
-          final phoneParam = state.uri.queryParameters['phone'];
-          final phone = phoneParam != null && phoneParam.isNotEmpty
-              ? phoneParam
-              : '9894223355';
-          return DiagnosticPage(phoneNumber: phone);
-        },
-      ),
-
+      GoRoute(path: '/daily-spin', builder: (context, _) => const DailySpinPage()),
       GoRoute(path: '/admin', builder: (context, _) => const AdminHomePage()),
-
+      GoRoute(path: '/admin/add-bill', builder: (context, _) => const AdminAddBillPage()),
+      GoRoute(path: '/admin/diagnostic', builder: (context, _) => const DiagnosticPage()),
       GoRoute(path: '/add-bill', builder: (context, _) => const AddBillPage()),
+      GoRoute(path: '/notification-settings', builder: (context, _) => const NotificationSettingsPage()),
+      GoRoute(path: '/notifications', builder: (context, _) => const NotificationsPage()),
     ],
   );
 });

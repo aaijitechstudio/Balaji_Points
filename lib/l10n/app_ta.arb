@@ -535,5 +535,8 @@
   "enterBillOrInvoiceNumberOptional": "பில் அல்லது விலைப்பட்டியல் எண்ணை உள்ளிடவும் (விருப்பம்)",
   "addAnyAdditionalNotes": "எந்த கூடுதல் குறிப்புகளையும் சேர்க்கவும்...",
   "submitBill": "பிலை சமர்ப்பிக்கவும்",
-  "saveChanges": "மாற்றங்களை சேமிக்கவும்"
+  "saveChanges": "மாற்றங்களை சேமிக்கவும்",
+  "languageEnglish": "English",
+  "languageHindi": "हिंदी",
+  "languageTamil": "தமிழ்"
 }

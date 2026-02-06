@@ -11,6 +11,7 @@ import 'firebase_options.dart';
 import 'core/logger.dart';
 import 'services/fcm_service.dart';
 import 'services/local_notification_service.dart';
+import 'injection/dependency_injection.dart';
 
 /// -------------------------------
 /// BACKGROUND FCM HANDLER (TOP LEVEL)
@@ -19,12 +20,8 @@ import 'services/local_notification_service.dart';
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  AppLogger.info('💬 Background FCM Message: ${message.notification?.title}');
-  AppLogger.info('   Body: ${message.notification?.body}');
-  AppLogger.info('   Data: ${message.data}');
 
   // For Android, explicitly show local notification when app is in background
-  // This ensures notifications appear even if FCM payload format varies
   if (message.notification != null) {
     try {
       final localNotificationService = LocalNotificationService();
@@ -44,13 +41,8 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         payload: message.data.toString(),
         channelId: channelId,
       );
-
-      AppLogger.info(
-        '✅ Background notification shown via LocalNotificationService',
-      );
     } catch (e) {
-      AppLogger.error('Error showing background notification', e);
-      // Continue - FCM might still show it automatically
+      AppLogger.error('Background notification error', e);
     }
   }
 }
@@ -66,8 +58,6 @@ void main() {
     ),
   );
 
-  AppLogger.info('🚀 App starting...');
-
   // App begins with Bootstrap (Firebase initialization inside)
   runApp(const ProviderScope(child: _Bootstrap()));
 }
@@ -80,34 +70,28 @@ class _Bootstrap extends StatelessWidget {
 
   Future<void> _init() async {
     try {
-      AppLogger.info('⚙️ Initializing Firebase...');
-
-      // Initialize Firebase ONLY once
+      // Initialize Firebase
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
 
-      AppLogger.info('✅ Firebase initialized');
+      // Setup dependency injection
+      await setupDependencyInjection();
 
-      // ----------------------------
       // FCM (Safe Initialization)
-      // ----------------------------
       try {
         FirebaseMessaging.onBackgroundMessage(
           _firebaseMessagingBackgroundHandler,
         );
-
         await FCMService().initialize();
-
-        AppLogger.info('📩 FCM initialized');
       } catch (fcmError) {
-        AppLogger.warning(
-          '⚠️ FCM initialization failed — continuing app: $fcmError',
-        );
+        AppLogger.warning('⚠️ FCM initialization failed: $fcmError');
       }
+      
+      AppLogger.info('✅ App initialized');
     } catch (e) {
-      AppLogger.error('❌ Firebase initialization FAILED', e);
-      rethrow; // allow splash to show forever if needed
+      AppLogger.error('❌ App initialization failed', e);
+      rethrow;
     }
   }
 

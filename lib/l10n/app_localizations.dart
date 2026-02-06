@@ -2589,6 +2589,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'pts'**
   String get pts;
+
+  /// No description provided for @languageEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get languageEnglish;
+
+  /// No description provided for @languageHindi.
+  ///
+  /// In en, this message translates to:
+  /// **'हिंदी'**
+  String get languageHindi;
+
+  /// No description provided for @languageTamil.
+  ///
+  /// In en, this message translates to:
+  /// **'தமிழ்'**
+  String get languageTamil;
 }
 
 class _AppLocalizationsDelegate
