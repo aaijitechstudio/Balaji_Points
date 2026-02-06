@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 // NEW ARCHITECTURE - Features
 import 'package:balaji_points/features/splash/presentation/pages/splash_page.dart';
+import 'package:balaji_points/features/splash/presentation/bloc/splash_bloc.dart';
 import 'package:balaji_points/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:balaji_points/features/wallet/presentation/pages/wallet_page.dart';
 import 'package:balaji_points/features/home/presentation/pages/home_page.dart';
@@ -20,12 +21,10 @@ import 'package:balaji_points/features/bills/presentation/pages/add_bill_page.da
 import 'package:balaji_points/features/bills/presentation/pages/admin_add_bill_page.dart';
 import 'package:balaji_points/features/admin/presentation/pages/admin_home_page.dart';
 import 'package:balaji_points/features/admin/presentation/pages/diagnostic_page.dart';
+import 'package:balaji_points/features/spin/presentation/pages/daily_spin_page.dart';
+import 'package:balaji_points/features/settings/presentation/pages/notification_settings_page.dart';
+import 'package:balaji_points/features/notifications/presentation/pages/notifications_page.dart';
 import 'package:balaji_points/injection/dependency_injection.dart';
-
-// OLD ARCHITECTURE - Temporary imports for screens not yet migrated
-import 'package:balaji_points/presentation/screens/spin/daily_spin_page.dart';
-import 'package:balaji_points/presentation/screens/settings/notification_settings_page.dart';
-import 'package:balaji_points/presentation/screens/notifications/notifications_page.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -128,7 +127,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/admin', builder: (context, _) => const AdminHomePage()),
       GoRoute(path: '/admin/diagnostic', builder: (context, _) => const DiagnosticPage()),
       
-      // Other routes (OLD ARCHITECTURE - TODO: migrate)
+      // Settings, Spin, Notifications (NEW ARCHITECTURE)
       GoRoute(path: '/daily-spin', builder: (context, _) => const DailySpinPage()),
       GoRoute(path: '/notification-settings', builder: (context, _) => const NotificationSettingsPage()),
       GoRoute(path: '/notifications', builder: (context, _) => const NotificationsPage()),

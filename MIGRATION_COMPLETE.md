@@ -278,3 +278,35 @@ If you encounter any issues:
 **Generated:** 2026-02-06  
 **Build Status:** ✅ PASSING  
 **Ready for Testing:** YES  
+
+---
+
+## 🔧 Runtime Issue Fixed (2026-02-06 20:44)
+
+### Issue Encountered
+When running the app, SplashPage crashed with:
+```
+Error: Could not find the correct Provider<SplashBloc> above this SplashPage Widget
+```
+
+### Root Cause
+- SplashBloc was not registered in dependency injection
+- SplashPage route was not wrapped with BlocProvider
+
+### Fix Applied
+1. **Updated `lib/injection/dependency_injection.dart`:**
+   - Added SplashRemoteDataSource registration
+   - Added SplashRepository registration
+   - Added CheckSessionUseCase registration
+   - Added SplashBloc factory registration
+
+2. **Updated `lib/config/routes.dart`:**
+   - Wrapped `/splash` route with `BlocProvider`
+   - Injected `SplashBloc` via `getIt<SplashBloc>()`
+
+### Result
+✅ SplashPage now has proper BLoC provider  
+✅ App can start without Provider errors  
+✅ Requires hot restart to load new DI setup  
+
+**Status:** FIXED - Ready to test with hot restart
