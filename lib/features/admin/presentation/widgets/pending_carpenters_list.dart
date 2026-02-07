@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
-import '../../../services/user_service.dart';
-import '../../../core/logger.dart';
+import 'package:balaji_points/services/user_service.dart';
+import 'package:balaji_points/core/logger.dart';
 
 class PendingCarpentersList extends StatefulWidget {
   const PendingCarpentersList({super.key});

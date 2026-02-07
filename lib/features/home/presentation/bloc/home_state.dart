@@ -1,54 +1,27 @@
 import 'package:equatable/equatable.dart';
-import 'package:balaji_points/features/home/domain/entities/home.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// States for home BLoC
-abstract class UhomeState extends Equatable {
-  const UhomeState();
+abstract class HomeState extends Equatable {
+  const HomeState();
   
   @override
   List<Object?> get props => [];
 }
 
-class UhomeInitial extends UhomeState {
-  const UhomeInitial();
+class HomeInitial extends HomeState {
+  const HomeInitial();
 }
 
-class UhomeLoading extends UhomeState {
-  const UhomeLoading();
-}
-
-class UhomeLoaded extends UhomeState {
-  final UhomeEntity entity;
+class HomeLoaded extends HomeState {
+  final Stream<QuerySnapshot> offersStream;
+  final Stream<QuerySnapshot> carpentersStream;
   
-  const UhomeLoaded(this.entity);
+  const HomeLoaded({
+    required this.offersStream,
+    required this.carpentersStream,
+  });
   
   @override
-  List<Object?> get props => [entity];
-}
-
-class UhomesLoaded extends UhomeState {
-  final List<UhomeEntity> entities;
-  
-  const UhomesLoaded(this.entities);
-  
-  @override
-  List<Object?> get props => [entities];
-}
-
-class UhomeError extends UhomeState {
-  final String message;
-  
-  const UhomeError(this.message);
-  
-  @override
-  List<Object?> get props => [message];
-}
-
-class UhomeOperationSuccess extends UhomeState {
-  final String message;
-  
-  const UhomeOperationSuccess(this.message);
-  
-  @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [offersStream, carpentersStream];
 }

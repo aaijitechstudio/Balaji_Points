@@ -8,6 +8,7 @@ import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/core/utils/back_button_handler.dart';
+import 'package:balaji_points/core/utils/logger.dart';
 import 'package:balaji_points/services/pin_auth_service.dart';
 import '../../providers/locale_provider.dart';
 
@@ -84,17 +85,15 @@ class _LoginPageState extends ConsumerState<LoginPage>
 
       if (userExists) {
         // User exists - navigate to PIN login page
-        print('🔍 [DEBUG] User exists, navigating to PIN login');
         context.push('/pin-login?phone=$phone');
       } else {
         // User doesn't exist - navigate to PIN setup page
-        print('🔍 [DEBUG] User does not exist, navigating to PIN setup');
         context.push('/pin-setup?phone=$phone');
       }
     } catch (e) {
       if (!mounted) return;
 
-      print('🔍 [DEBUG] Error checking user: $e');
+      Logger.e('Error checking user: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('${l10n.error}: ${e.toString()}'),

@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../core/logger.dart';
+import '../core/utils/logger.dart';
 
 /// Notification types for different events
 enum NotificationType {
@@ -45,9 +45,7 @@ class NotificationService {
     Map<String, dynamic>? data,
   }) async {
     try {
-      print('🔔 NotificationService.sendNotification() called');
-      print('   Type: $type, UserId: $userId, Title: $title');
-      AppLogger.info('📤 Sending notification: $type to user: $userId');
+      Logger.i('Sending notification: $type to user: $userId');
 
       // Get user's FCM token
       // Try multiple userId formats to find the user document
@@ -55,14 +53,11 @@ class NotificationService {
       String? actualUserId;
 
       // First try: direct userId lookup
-      print('🔔 Looking up user: users/$userId');
       userDoc = await _firestore.collection('users').doc(userId).get();
       if (userDoc.exists) {
         actualUserId = userId;
-        print('✅ Found user with direct userId: $userId');
-        AppLogger.info('Found user with direct userId: $userId');
+        Logger.i('Found user with direct userId: $userId');
       } else {
-        print('⚠️ User not found with direct userId, trying phone lookup...');
         // Second try: search by phone number if userId is phone number format
         if (userId.length >= 10 && RegExp(r'^\d+$').hasMatch(userId)) {
           // userId might be phone number, try searching by phone field
@@ -75,7 +70,7 @@ class NotificationService {
           if (phoneQuery.docs.isNotEmpty) {
             userDoc = phoneQuery.docs.first;
             actualUserId = userDoc.id;
-            AppLogger.info(
+            Logger.i(
               'Found user by phone number: $userId -> document ID: $actualUserId',
             );
           }
@@ -92,7 +87,7 @@ class NotificationService {
           if (carpenterQuery.docs.isNotEmpty) {
             userDoc = carpenterQuery.docs.first;
             actualUserId = userDoc.id;
-            AppLogger.info(
+            Logger.i(
               'Found user by carpenterId: $userId -> document ID: $actualUserId',
             );
           }
@@ -100,34 +95,27 @@ class NotificationService {
       }
 
       if (!userDoc.exists) {
-        print('❌ User not found after all attempts: $userId');
-        AppLogger.error(
+        Logger.e(
           'User not found: $userId (tried direct lookup, phone, and carpenterId)',
         );
         return false;
       }
 
       final userData = userDoc.data() as Map<String, dynamic>?;
-      print('📄 User document keys: ${userData?.keys.toList()}');
       final fcmToken = userData?['fcmToken'] as String?;
 
       if (fcmToken == null || fcmToken.isEmpty) {
-        print('❌ NO FCM TOKEN for user: $userId');
-        print('   Has fcmToken field: ${userData?.containsKey('fcmToken')}');
-        print('   All user data keys: ${userData?.keys.toList()}');
-        AppLogger.error(
+        Logger.e(
           'No FCM token found for user: $userId (document ID: ${actualUserId ?? userDoc.id})',
         );
-        AppLogger.info('User data keys: ${userData?.keys.toList()}');
-        AppLogger.info(
+        Logger.i('User data keys: ${userData?.keys.toList()}');
+        Logger.i(
           'User has fcmToken field: ${userData?.containsKey('fcmToken')}',
         );
         return false;
       }
 
-      print('✅ FCM token found: ${fcmToken.substring(0, 20)}...');
-
-      AppLogger.info(
+      Logger.i(
         'FCM token found for user: $userId (document ID: ${actualUserId ?? userDoc.id})',
       );
 
@@ -137,7 +125,7 @@ class NotificationService {
       if (notificationPrefs != null) {
         final enabled = notificationPrefs['enabled'] as bool? ?? true;
         if (!enabled) {
-          AppLogger.info('Notifications disabled for user: $userId');
+          Logger.i('Notifications disabled for user: $userId');
           return false;
         }
 
@@ -145,7 +133,7 @@ class NotificationService {
         final typeKey = _getNotificationTypeKey(type);
         final typeEnabled = notificationPrefs[typeKey] as bool? ?? true;
         if (!typeEnabled) {
-          AppLogger.info(
+          Logger.i(
             'Notification type $typeKey disabled for user: $userId',
           );
           return false;
@@ -165,7 +153,6 @@ class NotificationService {
 
       // Queue notification in Firestore for Cloud Functions to process
       // This is the recommended approach for production
-      print('🔔 Queueing notification in notification_queue...');
       await _queueNotificationInFirestore(
         userId: finalUserId,
         fcmToken: fcmToken,
@@ -174,7 +161,6 @@ class NotificationService {
         body: body,
         data: notificationData,
       );
-      print('✅ Notification queued in notification_queue collection');
 
       // Log analytics
       await _logNotificationAnalytics(
@@ -186,14 +172,10 @@ class NotificationService {
         isBroadcast: false,
       );
 
-      AppLogger.info('✅ Notification queued successfully: $type');
-      print('✅ NotificationService.sendNotification() SUCCESS');
+      Logger.i('Notification queued successfully: $type');
       return true;
     } catch (e, stackTrace) {
-      print('❌ EXCEPTION in NotificationService.sendNotification()');
-      print('   Error: $e');
-      print('   StackTrace: $stackTrace');
-      AppLogger.error('Error sending notification', e);
+      Logger.e('Error sending notification', error: e, stackTrace: stackTrace);
       return false;
     }
   }
@@ -220,9 +202,9 @@ class NotificationService {
         'priority': _getNotificationPriority(type),
       });
 
-      AppLogger.info('Notification queued in Firestore');
+      Logger.i('Notification queued in Firestore');
     } catch (e) {
-      AppLogger.error('Error queueing notification in Firestore', e);
+      Logger.e('Error queueing notification in Firestore', error: e);
       rethrow;
     }
   }
@@ -383,7 +365,7 @@ class NotificationService {
     required int pointsWon,
   }) async {
     try {
-      AppLogger.info('📢 Broadcasting daily spin winner: $winnerName');
+      Logger.i('📢 Broadcasting daily spin winner: $winnerName');
 
       // Get all users (carpenters only, exclude admins)
       final usersQuery = await _firestore.collection('users').get();
@@ -443,14 +425,14 @@ class NotificationService {
           );
           successCount++;
         } catch (e) {
-          AppLogger.warning(
+          Logger.w(
             'Failed to queue spin winner notification for user $userId: $e',
           );
           skippedCount++;
         }
       }
 
-      AppLogger.info(
+      Logger.i(
         '📢 Spin winner broadcast complete: $successCount sent, $skippedCount skipped',
       );
 
@@ -466,7 +448,7 @@ class NotificationService {
 
       return successCount;
     } catch (e) {
-      AppLogger.error('Error broadcasting daily spin winner', e);
+      Logger.e('Error broadcasting daily spin winner', error: e);
       return 0;
     }
   }
@@ -517,7 +499,7 @@ class NotificationService {
     required int points,
   }) async {
     try {
-      AppLogger.info('📢 Broadcasting new offer notification: $offerTitle');
+      Logger.i('📢 Broadcasting new offer notification: $offerTitle');
 
       // Get all users (carpenters only, exclude admins)
       // Note: Firestore doesn't support isNotEqualTo directly
@@ -581,14 +563,14 @@ class NotificationService {
           );
           successCount++;
         } catch (e) {
-          AppLogger.warning(
+          Logger.w(
             'Failed to queue notification for user $userId: $e',
           );
           skippedCount++;
         }
       }
 
-      AppLogger.info(
+      Logger.i(
         '📢 Broadcast complete: $successCount sent, $skippedCount skipped',
       );
 
@@ -604,7 +586,7 @@ class NotificationService {
 
       return successCount;
     } catch (e) {
-      AppLogger.error('Error broadcasting new offer notification', e);
+      Logger.e('Error broadcasting new offer notification', error: e);
       return 0;
     }
   }
@@ -649,9 +631,9 @@ class NotificationService {
         'status': 'queued',
       });
 
-      AppLogger.info('Notification analytics logged: $type');
+      Logger.i('Notification analytics logged: $type');
     } catch (e) {
-      AppLogger.warning('Failed to log notification analytics: $e');
+      Logger.w('Failed to log notification analytics', data: e);
       // Don't throw - analytics logging is not critical
     }
   }
@@ -686,7 +668,7 @@ class NotificationService {
     Map<String, dynamic>? data,
   }) async {
     try {
-      AppLogger.info('📢 Sending notification to all admins: $title');
+      Logger.i('📢 Sending notification to all admins: $title');
 
       // Get all admin users with FCM tokens
       final usersQuery = await _firestore.collection('users').get();
@@ -700,7 +682,7 @@ class NotificationService {
       }).toList();
 
       if (adminUsers.isEmpty) {
-        AppLogger.warning('No admin users found with FCM tokens');
+        Logger.w('No admin users found with FCM tokens');
         return 0;
       }
 
@@ -741,20 +723,20 @@ class NotificationService {
           );
           successCount++;
         } catch (e) {
-          AppLogger.warning(
+          Logger.w(
             'Failed to queue admin notification for $adminId: $e',
           );
           skippedCount++;
         }
       }
 
-      AppLogger.info(
+      Logger.i(
         '📢 Admin notification complete: $successCount sent, $skippedCount skipped',
       );
 
       return successCount;
     } catch (e) {
-      AppLogger.error('Error sending notification to admins', e);
+      Logger.e('Error sending notification to admins', error: e);
       return 0;
     }
   }

@@ -8,7 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/services/session_service.dart';
-import 'package:balaji_points/presentation/widgets/home_nav_bar.dart';
+import 'package:balaji_points/features/home/presentation/widgets/home_nav_bar.dart';
 import 'dart:async';
 
 class NotificationsPage extends StatefulWidget {

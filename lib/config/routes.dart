@@ -8,8 +8,6 @@ import 'package:go_router/go_router.dart';
 import 'package:balaji_points/features/splash/presentation/pages/splash_page.dart';
 import 'package:balaji_points/features/splash/presentation/bloc/splash_bloc.dart';
 import 'package:balaji_points/features/dashboard/presentation/pages/dashboard_page.dart';
-import 'package:balaji_points/features/wallet/presentation/pages/wallet_page.dart';
-import 'package:balaji_points/features/home/presentation/pages/home_page.dart';
 import 'package:balaji_points/features/profile/presentation/pages/profile_page.dart';
 import 'package:balaji_points/features/profile/presentation/pages/edit_profile_page.dart';
 import 'package:balaji_points/features/auth/presentation/pages/login_page.dart';
@@ -18,9 +16,10 @@ import 'package:balaji_points/features/auth/presentation/pages/pin_login_page.da
 import 'package:balaji_points/features/auth/presentation/pages/reset_pin_page.dart';
 import 'package:balaji_points/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:balaji_points/features/bills/presentation/pages/add_bill_page.dart';
-import 'package:balaji_points/features/bills/presentation/pages/admin_add_bill_page.dart';
+import 'package:balaji_points/features/admin/presentation/pages/admin_add_bill_page.dart';
 import 'package:balaji_points/features/admin/presentation/pages/admin_home_page.dart';
 import 'package:balaji_points/features/admin/presentation/pages/diagnostic_page.dart';
+import 'package:balaji_points/features/admin/presentation/pages/bill_details_page.dart';
 import 'package:balaji_points/features/spin/presentation/pages/daily_spin_page.dart';
 import 'package:balaji_points/features/settings/presentation/pages/notification_settings_page.dart';
 import 'package:balaji_points/features/notifications/presentation/pages/notifications_page.dart';
@@ -121,10 +120,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       
       // Bills (NEW ARCHITECTURE)
       GoRoute(path: '/add-bill', builder: (context, _) => const AddBillPage()),
-      GoRoute(path: '/admin/add-bill', builder: (context, _) => const AdminAddBillPage()),
       
       // Admin (NEW ARCHITECTURE)
       GoRoute(path: '/admin', builder: (context, _) => const AdminHomePage()),
+      GoRoute(path: '/admin/add-bill', builder: (context, _) => const AdminAddBillPage()),
+      GoRoute(
+        path: '/admin/bill-details',
+        builder: (context, state) {
+          final billId = state.uri.queryParameters['billId'] ?? '';
+          return BillDetailsPage(billId: billId);
+        },
+      ),
       GoRoute(path: '/admin/diagnostic', builder: (context, _) => const DiagnosticPage()),
       
       // Settings, Spin, Notifications (NEW ARCHITECTURE)

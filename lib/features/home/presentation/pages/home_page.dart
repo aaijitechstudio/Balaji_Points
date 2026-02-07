@@ -9,12 +9,12 @@ import 'package:confetti/confetti.dart';
 import 'dart:math';
 
 import 'package:balaji_points/l10n/app_localizations.dart';
-import 'package:balaji_points/presentation/widgets/home_nav_bar.dart';
-import 'package:balaji_points/presentation/widgets/user_profile_card.dart';
-import 'package:balaji_points/presentation/widgets/top_carpenters_display.dart'; // provides CarpenterRank
-import 'package:balaji_points/presentation/widgets/top_carpenters_list.dart';
-import 'package:balaji_points/presentation/widgets/shimmer_loading.dart';
-import 'package:balaji_points/presentation/widgets/complete_profile_card.dart';
+import 'package:balaji_points/core/widgets/navigation/home_nav_bar.dart';
+import 'package:balaji_points/features/home/presentation/widgets/user_profile_card.dart';
+import 'package:balaji_points/features/home/presentation/widgets/top_carpenters_display.dart'; // provides CarpenterRank
+import 'package:balaji_points/features/home/presentation/widgets/top_carpenters_list.dart';
+import 'package:balaji_points/core/widgets/loading/shimmer_loading.dart';
+import 'package:balaji_points/features/home/presentation/widgets/complete_profile_card.dart';
 // Daily spin removed - admin only feature now
 import 'package:balaji_points/services/user_service.dart';
 import 'package:balaji_points/services/session_service.dart';
@@ -111,7 +111,7 @@ class _OffersCarouselState extends State<OffersCarousel> {
       return Column(
         children: widget.offers.asMap().entries.map((entry) {
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: DesignToken.paddingLG, vertical: DesignToken.paddingSM),
             child: _FullWidthOfferCard(offer: entry.value, index: entry.key),
           );
         }).toList(),
@@ -134,7 +134,7 @@ class _OffersCarouselState extends State<OffersCarousel> {
             itemBuilder: (context, index) {
               final offer = widget.offers[index];
               return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: DesignToken.paddingHorizontalLG,
                 child: offer.bannerUrl.isNotEmpty
                     ? _BannerOfferCard(offer: offer)
                     : _BasicOfferCard(offer: offer),
@@ -144,7 +144,7 @@ class _OffersCarouselState extends State<OffersCarousel> {
         ),
         // Page indicators (dots) - only show if more than 1 offer
         if (widget.offers.length > 1) ...[
-          const SizedBox(height: 12),
+          SizedBox(height: DesignToken.heightMD),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(
@@ -160,11 +160,11 @@ class _OffersCarouselState extends State<OffersCarousel> {
   Widget _buildDot(int index) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      margin: const EdgeInsets.symmetric(horizontal: 4),
+      margin: const EdgeInsets.symmetric(horizontal: DesignToken.paddingXS),
       width: _currentPage == index ? 24 : 8,
       height: 8,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: DesignToken.borderRadiusXS,
         color: _currentPage == index
             ? DesignToken.primary
             : DesignToken.primary.withOpacity(0.3),
@@ -188,7 +188,7 @@ class _BannerOfferCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: DesignToken.borderRadiusLG,
         border: Border.all(
           color: DesignToken.primary.withOpacity(0.3),
           width: 2,
@@ -202,6 +202,7 @@ class _BannerOfferCard extends StatelessWidget {
                   width: double.infinity,
                   height: double.infinity,
                   fit: BoxFit.contain,
+                  semanticLabel: 'Offer banner',
                   errorBuilder: (_, __, ___) => Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -209,13 +210,14 @@ class _BannerOfferCard extends StatelessWidget {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: DesignToken.borderRadiusLG,
                     ),
                     child: const Center(
                       child: Icon(
                         Icons.image_not_supported,
                         size: 48,
                         color: Colors.white,
+                        semanticLabel: 'Image not available',
                       ),
                     ),
                   ),
@@ -228,7 +230,7 @@ class _BannerOfferCard extends StatelessWidget {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
-                        borderRadius: BorderRadius.circular(18),
+                        borderRadius: DesignToken.borderRadiusLG,
                       ),
                       child: const Center(
                         child: CircularProgressIndicator(color: Colors.white),
@@ -243,10 +245,10 @@ class _BannerOfferCard extends StatelessWidget {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: DesignToken.borderRadiusLG,
                   ),
                   child: const Center(
-                    child: Icon(Icons.image, size: 48, color: Colors.white),
+                    child: Icon(Icons.image, size: 48, color: Colors.white, semanticLabel: 'Placeholder image'),
                   ),
                 ),
           Positioned.fill(
@@ -271,16 +273,16 @@ class _BannerOfferCard extends StatelessWidget {
                   offer.title,
                   style: const TextStyle(
                     color: DesignToken.white,
-                    fontSize: 20,
+                    fontSize: DesignToken.fontSize2XL,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                // const SizedBox(height: 6),
+                // SizedBox(height: DesignToken.heightSM),
                 // Text(
                 //   offer.description,
                 //   maxLines: 2,
                 //   overflow: TextOverflow.ellipsis,
-                //   style: TextStyle(color: DesignToken.white70, fontSize: 14),
+                //   style: TextStyle(color: DesignToken.white70, fontSize: DesignToken.fontSizeMD),
                 // ),
               ],
             ),
@@ -298,10 +300,10 @@ class _BasicOfferCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: DesignToken.paddingAllLG,
       decoration: BoxDecoration(
         color: DesignToken.transparent, // no white background
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: DesignToken.borderRadiusLG,
         border: Border.all(
           color: DesignToken.primary.withOpacity(0.3),
           width: 2,
@@ -319,14 +321,14 @@ class _BasicOfferCard extends StatelessWidget {
         children: [
           Text(
             offer.title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            style: const TextStyle(fontSize: DesignToken.fontSizeXL, fontWeight: FontWeight.w700),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: DesignToken.heightSM),
           Text(
             offer.description,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 14, color: DesignToken.black54),
+            style: TextStyle(fontSize: DesignToken.fontSizeMD, color: DesignToken.black54),
           ),
         ],
       ),
@@ -395,10 +397,10 @@ class _FullWidthOfferCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: DesignToken.paddingAllXL,
       decoration: BoxDecoration(
         gradient: _getGradient(),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: DesignToken.borderRadiusLG,
         border: Border.all(
           color: DesignToken.primary.withOpacity(0.4),
           width: 2,
@@ -421,18 +423,18 @@ class _FullWidthOfferCard extends StatelessWidget {
                 Text(
                   offer.title,
                   style: const TextStyle(
-                    fontSize: 20,
+                    fontSize: DesignToken.fontSize2XL,
                     fontWeight: FontWeight.w700,
                     color: DesignToken.white,
                   ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: DesignToken.heightMD),
                 Text(
                   offer.description,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 15,
+                    fontSize: DesignToken.fontSizeLG,
                     color: DesignToken.white70,
                     height: 1.4,
                   ),
@@ -440,9 +442,9 @@ class _FullWidthOfferCard extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: DesignToken.widthMD),
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: DesignToken.paddingAllMD,
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.25),
               shape: BoxShape.circle,
@@ -455,6 +457,7 @@ class _FullWidthOfferCard extends StatelessWidget {
               Icons.card_giftcard,
               color: Colors.white,
               size: 28,
+              semanticLabel: 'Gift card offer',
             ),
           ),
         ],
@@ -843,11 +846,11 @@ class _HomePageState extends State<HomePage>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: DesignToken.borderRadiusXL),
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: DesignToken.paddingAllSM,
               decoration: BoxDecoration(
                 color: Colors.orange.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
@@ -856,20 +859,21 @@ class _HomePageState extends State<HomePage>
                 Icons.person_add_alt_1,
                 color: Colors.orange.shade700,
                 size: 24,
+                semanticLabel: 'Add referral',
               ),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: DesignToken.widthMD),
             Expanded(
               child: Text(
                 l10n.profileIncomplete,
-                style: AppTextStyles.nunitoBold.copyWith(fontSize: 20),
+                style: AppTextStyles.nunitoBold.copyWith(fontSize: DesignToken.fontSize2XL),
               ),
             ),
           ],
         ),
         content: Text(
           l10n.completeProfileMessage,
-          style: AppTextStyles.nunitoRegular.copyWith(fontSize: 16),
+          style: AppTextStyles.nunitoRegular.copyWith(fontSize: DesignToken.fontSizeLG),
         ),
         actions: [
           TextButton(
@@ -878,7 +882,7 @@ class _HomePageState extends State<HomePage>
               l10n.cancel,
               style: AppTextStyles.nunitoMedium.copyWith(
                 color: Colors.grey[600],
-                fontSize: 16,
+                fontSize: DesignToken.fontSizeLG,
               ),
             ),
           ),
@@ -891,12 +895,12 @@ class _HomePageState extends State<HomePage>
               backgroundColor: Colors.orange.shade600,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: DesignToken.borderRadiusMD,
               ),
             ),
             child: Text(
               l10n.completeProfile,
-              style: AppTextStyles.nunitoSemiBold.copyWith(fontSize: 16),
+              style: AppTextStyles.nunitoSemiBold.copyWith(fontSize: DesignToken.fontSizeLG),
             ),
           ),
         ],
@@ -975,6 +979,7 @@ class _HomePageState extends State<HomePage>
                                     Icons.notifications_outlined,
                                     color: Colors.white,
                                     size: 24,
+                                    semanticLabel: 'Notifications',
                                   ),
                                   onPressed: () {
                                     debugPrint('Navigating to /notifications');
@@ -987,7 +992,7 @@ class _HomePageState extends State<HomePage>
                                     right: 8,
                                     top: 8,
                                     child: Container(
-                                      padding: const EdgeInsets.all(4),
+                                      padding: DesignToken.paddingAllXS,
                                       decoration: const BoxDecoration(
                                         color: Colors.red,
                                         shape: BoxShape.circle,
@@ -1003,7 +1008,7 @@ class _HomePageState extends State<HomePage>
                                               : '$notificationCount',
                                           style: const TextStyle(
                                             color: Colors.white,
-                                            fontSize: 10,
+                                            fontSize: DesignToken.fontSizeXS,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
@@ -1032,7 +1037,7 @@ class _HomePageState extends State<HomePage>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const SizedBox(height: 16),
+                            SizedBox(height: DesignToken.heightLG),
 
                           // User profile card
                           UserProfileCard(
@@ -1042,46 +1047,46 @@ class _HomePageState extends State<HomePage>
                             userImageUrl: _getUserProfileImage(),
                           ),
 
-                          const SizedBox(height: 16),
+                          SizedBox(height: DesignToken.heightLG),
 
                           // Complete Profile Card (shown if profile is incomplete)
                           if (!_isProfileComplete()) ...[
                             const CompleteProfileCard(),
-                            const SizedBox(height: 16),
+                            SizedBox(height: DesignToken.heightLG),
                           ],
 
-                          const SizedBox(height: 4),
+                          SizedBox(height: DesignToken.heightXS),
 
                           // Latest Offers header
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            padding: DesignToken.paddingHorizontalLG,
                             child: Text(
                               AppLocalizations.of(context)!.latestOffers,
                               style: TextStyle(
                                 color: DesignToken.primary,
-                                fontSize: 20,
+                                fontSize: DesignToken.fontSize2XL,
                                 fontWeight: FontWeight.bold,
                               ).merge(AppTextStyles.nunitoBold),
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          SizedBox(height: DesignToken.heightMD),
 
                           // Offers carousel
                           _isLoadingOffers
                               ? const ShimmerOfferCard()
                               : OffersCarousel(offers: _offers),
 
-                          const SizedBox(height: 20),
+                          SizedBox(height: DesignToken.heightXL),
 
                           // Today's Winner Display
                           _buildTodaysWinner(),
 
-                          const SizedBox(height: 20),
+                          SizedBox(height: DesignToken.heightXL),
 
                           // Current User Position Card
                           _buildCurrentUserPositionCard(),
 
-                          const SizedBox(height: 20),
+                          SizedBox(height: DesignToken.heightXL),
 
                           // Top carpenters
                           if (_isLoadingCarpenters)
@@ -1091,10 +1096,10 @@ class _HomePageState extends State<HomePage>
                               margin: const EdgeInsets.symmetric(
                                 horizontal: 16,
                               ),
-                              padding: const EdgeInsets.all(20),
+                              padding: DesignToken.paddingAllXL,
                               decoration: BoxDecoration(
                                 color: DesignToken.white,
-                                borderRadius: BorderRadius.circular(20),
+                                borderRadius: DesignToken.borderRadiusXL,
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withOpacity(0.05),
@@ -1113,7 +1118,7 @@ class _HomePageState extends State<HomePage>
                                 },
                               ),
                             ),
-                            const SizedBox(height: 20),
+                            SizedBox(height: DesignToken.heightXL),
 
                             // Top 10 Carpenters List (without bordered card container)
                             if (_topCarpenters.isNotEmpty)
@@ -1128,7 +1133,7 @@ class _HomePageState extends State<HomePage>
                               ),
                           ],
 
-                          const SizedBox(height: 20),
+                          SizedBox(height: DesignToken.heightXL),
                         ],
                       ),
                     ),
@@ -1189,11 +1194,11 @@ class _HomePageState extends State<HomePage>
               },
               backgroundColor: DesignToken.secondary,
               elevation: 6,
-              icon: const Icon(Icons.add_circle, color: Colors.white, size: 28),
+              icon: const Icon(Icons.add_circle, color: Colors.white, size: 28, semanticLabel: 'Add points'),
               label: Text(
                 AppLocalizations.of(context)!.addPoints,
                 style: AppTextStyles.nunitoBold.copyWith(
-                  fontSize: 16,
+                  fontSize: DesignToken.fontSizeLG,
                   color: Colors.white,
                 ),
               ),
@@ -1218,15 +1223,15 @@ class _HomePageState extends State<HomePage>
     }
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(20),
+      margin: DesignToken.paddingHorizontalLG,
+      padding: DesignToken.paddingAllXL,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [DesignToken.blue700, DesignToken.purpleShade600],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: DesignToken.borderRadiusXL,
         boxShadow: [
           BoxShadow(
             color: DesignToken.blue500.withValues(alpha: 0.3),
@@ -1259,7 +1264,7 @@ class _HomePageState extends State<HomePage>
                 Text(
                   '#$_currentUserRank',
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: DesignToken.fontSize2XL,
                     fontWeight: FontWeight.bold,
                     color: DesignToken.blue700,
                   ),
@@ -1267,7 +1272,7 @@ class _HomePageState extends State<HomePage>
                 Text(
                   AppLocalizations.of(context)!.rankShort,
                   style: const TextStyle(
-                    fontSize: 10,
+                    fontSize: DesignToken.fontSizeXS,
                     fontWeight: FontWeight.w600,
                     color: Colors.grey,
                   ),
@@ -1275,7 +1280,7 @@ class _HomePageState extends State<HomePage>
               ],
             ),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: DesignToken.widthLG),
 
           // User Info
           Expanded(
@@ -1286,31 +1291,31 @@ class _HomePageState extends State<HomePage>
                   AppLocalizations.of(context)!.yourPosition,
                   style: const TextStyle(
                     color: DesignToken.white70,
-                    fontSize: 12,
+                    fontSize: DesignToken.fontSizeSM,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: DesignToken.heightXS),
                 Text(
                   _getUserDisplayName(),
                   style: const TextStyle(
                     color: DesignToken.white,
-                    fontSize: 18,
+                    fontSize: DesignToken.fontSizeXL,
                     fontWeight: FontWeight.bold,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: DesignToken.heightSM),
                 Row(
                   children: [
-                    const Icon(Icons.stars, color: Colors.amber, size: 18),
-                    const SizedBox(width: 6),
+                    const Icon(Icons.stars, color: Colors.amber, size: 18, semanticLabel: 'Points star'),
+                    SizedBox(width: DesignToken.widthSM),
                     Text(
                       '$_currentUserPoints Points',
                       style: const TextStyle(
                         color: DesignToken.white,
-                        fontSize: 16,
+                        fontSize: DesignToken.fontSizeLG,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -1322,7 +1327,7 @@ class _HomePageState extends State<HomePage>
 
           // Trophy Icon
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: DesignToken.paddingAllMD,
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.2),
               shape: BoxShape.circle,
@@ -1331,6 +1336,7 @@ class _HomePageState extends State<HomePage>
               Icons.emoji_events,
               color: Colors.amber,
               size: 28,
+              semanticLabel: 'Achievement trophy',
             ),
           ),
         ],
@@ -1345,7 +1351,7 @@ class _HomePageState extends State<HomePage>
         '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: DesignToken.paddingHorizontalLG,
       child: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('daily_prize_winners')
@@ -1358,10 +1364,10 @@ class _HomePageState extends State<HomePage>
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return Container(
-              padding: const EdgeInsets.all(16),
+              padding: DesignToken.paddingAllLG,
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: DesignToken.borderRadiusLG,
                 border: Border.all(
                   color: DesignToken.secondary.withValues(alpha: 0.2),
                   width: 2,
@@ -1378,7 +1384,7 @@ class _HomePageState extends State<HomePage>
                 children: [
                   // Trophy Icon
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    padding: DesignToken.paddingAllSM,
                     decoration: BoxDecoration(
                       color: DesignToken.secondary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
@@ -1387,9 +1393,10 @@ class _HomePageState extends State<HomePage>
                       Icons.emoji_events_outlined,
                       size: 28,
                       color: DesignToken.secondary.withValues(alpha: 0.6),
+                      semanticLabel: 'No achievements yet',
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  SizedBox(width: DesignToken.widthLG),
 
                   // No Winner Text
                   Expanded(
@@ -1400,15 +1407,15 @@ class _HomePageState extends State<HomePage>
                         Text(
                           AppLocalizations.of(context)!.todaysWinnerLabel,
                           style: AppTextStyles.nunitoBold.copyWith(
-                            fontSize: 14,
+                            fontSize: DesignToken.fontSizeMD,
                             color: DesignToken.secondary,
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        SizedBox(height: DesignToken.heightXS),
                         Text(
                           AppLocalizations.of(context)!.noWinnerYetToday,
                           style: AppTextStyles.nunitoRegular.copyWith(
-                            fontSize: 14,
+                            fontSize: DesignToken.fontSizeMD,
                             color: Colors.grey.shade600,
                           ),
                         ),
@@ -1421,6 +1428,7 @@ class _HomePageState extends State<HomePage>
                     Icons.info_outline,
                     size: 24,
                     color: Colors.grey.shade400,
+                    semanticLabel: 'Achievement information',
                   ),
                 ],
               ),
@@ -1450,10 +1458,10 @@ class _HomePageState extends State<HomePage>
               }
 
               return Container(
-                padding: const EdgeInsets.all(16),
+                padding: DesignToken.paddingAllLG,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: DesignToken.borderRadiusLG,
                   border: Border.all(
                     color: isCurrentUserWinner
                         ? Colors.amber.shade300
@@ -1472,7 +1480,7 @@ class _HomePageState extends State<HomePage>
                   children: [
                     // Trophy Icon
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: DesignToken.paddingAllSM,
                       decoration: BoxDecoration(
                         color: isCurrentUserWinner
                             ? Colors.amber.shade50
@@ -1485,9 +1493,10 @@ class _HomePageState extends State<HomePage>
                         color: isCurrentUserWinner
                             ? Colors.amber.shade700
                             : DesignToken.secondary,
+                        semanticLabel: 'Leaderboard rank trophy',
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: DesignToken.widthMD),
 
                     // Profile Image
                     Container(
@@ -1507,6 +1516,7 @@ class _HomePageState extends State<HomePage>
                             ? Image.network(
                                 winnerPhoto,
                                 fit: BoxFit.cover,
+                                semanticLabel: 'Winner profile picture',
                                 errorBuilder: (context, error, stackTrace) {
                                   return Container(
                                     color: DesignToken.secondary.withValues(
@@ -1516,6 +1526,7 @@ class _HomePageState extends State<HomePage>
                                       Icons.person,
                                       size: 25,
                                       color: DesignToken.secondary,
+                                      semanticLabel: 'Default profile icon',
                                     ),
                                   );
                                 },
@@ -1528,11 +1539,12 @@ class _HomePageState extends State<HomePage>
                                   Icons.person,
                                   size: 25,
                                   color: DesignToken.secondary,
+                                  semanticLabel: 'Default profile icon',
                                 ),
                               ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: DesignToken.widthMD),
 
                     // Winner Info
                     Expanded(
@@ -1547,17 +1559,17 @@ class _HomePageState extends State<HomePage>
                                     context,
                                   )!.todaysWinnerLabel,
                             style: AppTextStyles.nunitoBold.copyWith(
-                              fontSize: 14,
+                              fontSize: DesignToken.fontSizeMD,
                               color: isCurrentUserWinner
                                   ? Colors.amber.shade800
                                   : DesignToken.secondary,
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          SizedBox(height: DesignToken.heightXS),
                           Text(
                             winnerName,
                             style: AppTextStyles.nunitoSemiBold.copyWith(
-                              fontSize: 16,
+                              fontSize: DesignToken.fontSizeLG,
                               color: DesignToken.textDark,
                             ),
                             maxLines: 1,
@@ -1575,7 +1587,7 @@ class _HomePageState extends State<HomePage>
                       ),
                       decoration: BoxDecoration(
                         color: Colors.amber.shade50,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: DesignToken.borderRadiusSM,
                         border: Border.all(
                           color: Colors.amber.shade200,
                           width: 1,
@@ -1588,12 +1600,13 @@ class _HomePageState extends State<HomePage>
                             Icons.monetization_on,
                             size: 16,
                             color: Colors.amber.shade700,
+                            semanticLabel: 'Points icon',
                           ),
-                          const SizedBox(width: 4),
+                          SizedBox(width: DesignToken.widthXS),
                           Text(
                             '$prizePoints',
                             style: AppTextStyles.nunitoBold.copyWith(
-                              fontSize: 14,
+                              fontSize: DesignToken.fontSizeMD,
                               color: Colors.amber.shade900,
                             ),
                           ),
@@ -1638,31 +1651,32 @@ class _HomePageState extends State<HomePage>
                           Icons.person,
                           size: 40,
                           color: DesignToken.secondary,
+                          semanticLabel: 'Profile icon',
                         )
                       : null,
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: DesignToken.heightMD),
                 Text(
                   _getUserDisplayName(),
                   style: const TextStyle(
                     color: DesignToken.white,
-                    fontSize: 24,
+                    fontSize: DesignToken.fontSize3XL,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: DesignToken.heightXS),
                 Text(
                   '${_getUserTier()} Tier • ${_getUserPoints()} Points',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.8),
-                    fontSize: 14,
+                    fontSize: DesignToken.fontSizeMD,
                   ),
                 ),
               ],
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.home, color: DesignToken.primary),
+            leading: const Icon(Icons.home, color: DesignToken.primary, semanticLabel: 'Navigate to home'),
             title: Text(AppLocalizations.of(context)!.home),
             onTap: () => Navigator.pop(context),
           ),
@@ -1670,6 +1684,7 @@ class _HomePageState extends State<HomePage>
             leading: const Icon(
               Icons.monetization_on,
               color: DesignToken.primary,
+              semanticLabel: 'View my points',
             ),
             title: Text(AppLocalizations.of(context)!.myPoints),
             onTap: () => Navigator.pop(context),
@@ -1678,28 +1693,29 @@ class _HomePageState extends State<HomePage>
             leading: const Icon(
               Icons.card_giftcard,
               color: DesignToken.primary,
+              semanticLabel: 'Redeem rewards',
             ),
             title: Text(AppLocalizations.of(context)!.redeemRewards),
             onTap: () => Navigator.pop(context),
           ),
           ListTile(
-            leading: const Icon(Icons.history, color: DesignToken.primary),
+            leading: const Icon(Icons.history, color: DesignToken.primary, semanticLabel: 'Transaction history'),
             title: Text(AppLocalizations.of(context)!.transactionHistory),
             onTap: () => Navigator.pop(context),
           ),
           ListTile(
-            leading: const Icon(Icons.leaderboard, color: DesignToken.primary),
+            leading: const Icon(Icons.leaderboard, color: DesignToken.primary, semanticLabel: 'View leaderboard'),
             title: Text(AppLocalizations.of(context)!.leaderboard),
             onTap: () => Navigator.pop(context),
           ),
           ListTile(
-            leading: const Icon(Icons.settings, color: DesignToken.primary),
+            leading: const Icon(Icons.settings, color: DesignToken.primary, semanticLabel: 'Settings'),
             title: Text(AppLocalizations.of(context)!.settings),
             onTap: () => Navigator.pop(context),
           ),
           const Divider(),
           ListTile(
-            leading: const Icon(Icons.help_outline, color: DesignToken.primary),
+            leading: const Icon(Icons.help_outline, color: DesignToken.primary, semanticLabel: 'Help and support'),
             title: Text(AppLocalizations.of(context)!.helpSupport),
             onTap: () => Navigator.pop(context),
           ),

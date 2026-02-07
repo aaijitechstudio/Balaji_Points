@@ -7,7 +7,7 @@ class TransactionPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Text("Transaction Page", style: AppTextStyles.nunitoBold.copyWith(fontSize: 22)),
+      child: Text("Transaction Page", style: AppTextStyles.nunitoBold.copyWith(fontSize: DesignToken.fontSize2XL)),
     );
   }
 }

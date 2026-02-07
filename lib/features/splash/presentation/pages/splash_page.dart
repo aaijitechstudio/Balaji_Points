@@ -155,7 +155,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                         child: RotationTransition(
                           turns: _rotation,
                           child: Container(
-                            padding: const EdgeInsets.all(20),
+                            padding: DesignToken.paddingAllXL,
                             decoration: BoxDecoration(
                               color: DesignToken.white,
                               shape: BoxShape.circle,
@@ -169,7 +169,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                               ],
                             ),
                             child: ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: DesignToken.borderRadiusSM,
                               child: Image.asset(
                                 'assets/images/balaji_point_logo.png',
                                 width: 100,
@@ -188,7 +188,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
                                       ),
-                                      borderRadius: BorderRadius.circular(10),
+                                      borderRadius: DesignToken.borderRadiusSM,
                                     ),
                                     child: Icon(
                                       Icons.star,
@@ -203,7 +203,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                         ),
                       ),
 
-                      const SizedBox(height: 24),
+                      SizedBox(height: DesignToken.height2XL),
 
                       // Brand Name with animation
                       FadeTransition(
@@ -211,7 +211,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                         child: Text(
                           l10n?.appName ?? 'Balaji Points',
                           style: AppTextStyles.nunitoBold.copyWith(
-                            fontSize: 32,
+                            fontSize: DesignToken.fontSize5XL,
                             color: DesignToken.white,
                             letterSpacing: 1.5,
                             shadows: [
@@ -225,7 +225,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                         ),
                       ),
 
-                      const SizedBox(height: 8),
+                      SizedBox(height: DesignToken.heightSM),
 
                       // Subtitle
                       FadeTransition(
@@ -234,14 +234,14 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                           l10n?.rewardsLoyaltyProgram ??
                               'Rewards & Loyalty Program',
                           style: AppTextStyles.nunitoRegular.copyWith(
-                            fontSize: 16,
+                            fontSize: DesignToken.fontSizeLG,
                             color: DesignToken.white.withOpacity(0.9),
                             letterSpacing: 0.5,
                           ),
                         ),
                       ),
 
-                      const SizedBox(height: 60),
+                      SizedBox(height: DesignToken.height6XL),
 
                       // Loading Indicator
                       SizedBox(
@@ -255,7 +255,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                         ),
                       ),
 
-                      const SizedBox(height: 40),
+                      SizedBox(height: DesignToken.height4XL),
 
                       // Footer
                       FadeTransition(
@@ -266,7 +266,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                             '${l10n?.poweredBy ?? 'Powered by'}\n${l10n?.companyName ?? 'Shree Balaji Plywood & Hardware'}',
                             textAlign: TextAlign.center,
                             style: AppTextStyles.nunitoRegular.copyWith(
-                              fontSize: 14,
+                              fontSize: DesignToken.fontSizeMD,
                               color: DesignToken.white.withOpacity(0.8),
                               height: 1.5,
                             ),

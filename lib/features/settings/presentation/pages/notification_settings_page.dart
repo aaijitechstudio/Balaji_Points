@@ -4,7 +4,7 @@ import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart';
 import 'package:balaji_points/services/session_service.dart';
 import 'package:balaji_points/core/logger.dart';
-import 'package:balaji_points/presentation/widgets/home_nav_bar.dart';
+import 'package:balaji_points/core/widgets/navigation/home_nav_bar.dart';
 
 class NotificationSettingsPage extends StatefulWidget {
   const NotificationSettingsPage({super.key});
@@ -155,18 +155,18 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                       ),
                     )
                   : SingleChildScrollView(
-                      padding: const EdgeInsets.all(20),
+                      padding: DesignToken.paddingAllXL,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SizedBox(height: 20),
+                          SizedBox(height: DesignToken.heightXL),
                           // Master Switch
                           _buildMasterSwitch(),
-                          const SizedBox(height: 24),
+                          SizedBox(height: DesignToken.height2XL),
                           // Notification Types
                           if (_enabled) ...[
                             _buildSectionTitle('Bill Notifications'),
-                            const SizedBox(height: 12),
+                            SizedBox(height: DesignToken.heightMD),
                             _buildPreferenceSwitch(
                               title: 'Bill Approved',
                               subtitle:
@@ -179,7 +179,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                                 _savePreferences();
                               },
                             ),
-                            const SizedBox(height: 12),
+                            SizedBox(height: DesignToken.heightMD),
                             _buildPreferenceSwitch(
                               title: 'Bill Rejected',
                               subtitle:
@@ -192,7 +192,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                                 _savePreferences();
                               },
                             ),
-                            const SizedBox(height: 12),
+                            SizedBox(height: DesignToken.heightMD),
                             _buildPreferenceSwitch(
                               title: 'Points Withdrawn',
                               subtitle:
@@ -205,9 +205,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                                 _savePreferences();
                               },
                             ),
-                            const SizedBox(height: 24),
+                            SizedBox(height: DesignToken.height2XL),
                             _buildSectionTitle('Achievement Notifications'),
-                            const SizedBox(height: 12),
+                            SizedBox(height: DesignToken.heightMD),
                             _buildPreferenceSwitch(
                               title: 'Tier Upgraded',
                               subtitle:
@@ -220,9 +220,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                                 _savePreferences();
                               },
                             ),
-                            const SizedBox(height: 24),
+                            SizedBox(height: DesignToken.height2XL),
                             _buildSectionTitle('Activity Notifications'),
-                            const SizedBox(height: 12),
+                            SizedBox(height: DesignToken.heightMD),
                             _buildPreferenceSwitch(
                               title: 'Daily Spin',
                               subtitle:
@@ -235,7 +235,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                                 _savePreferences();
                               },
                             ),
-                            const SizedBox(height: 12),
+                            SizedBox(height: DesignToken.heightMD),
                             _buildPreferenceSwitch(
                               title: 'New Offers',
                               subtitle:
@@ -249,7 +249,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                               },
                             ),
                           ],
-                          const SizedBox(height: 40),
+                          SizedBox(height: DesignToken.height4XL),
                         ],
                       ),
                     ),
@@ -262,10 +262,10 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
 
   Widget _buildMasterSwitch() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: DesignToken.paddingAllXL,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: DesignToken.borderRadiusLG,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -277,10 +277,10 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: DesignToken.paddingAllMD,
             decoration: BoxDecoration(
               color: DesignToken.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: DesignToken.borderRadiusMD,
             ),
             child: Icon(
               Icons.notifications_active,
@@ -288,7 +288,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
               size: 28,
             ),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: DesignToken.widthLG),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -296,17 +296,17 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                 Text(
                   'Enable Notifications',
                   style: AppTextStyles.nunitoBold.copyWith(
-                    fontSize: 18,
+                    fontSize: DesignToken.fontSizeXL,
                     color: DesignToken.textDark,
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: DesignToken.heightXS),
                 Text(
                   _enabled
                       ? 'You will receive notifications'
                       : 'All notifications are disabled',
                   style: AppTextStyles.nunitoRegular.copyWith(
-                    fontSize: 14,
+                    fontSize: DesignToken.fontSizeMD,
                     color: Colors.grey[600],
                   ),
                 ),
@@ -333,7 +333,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
       child: Text(
         title,
         style: AppTextStyles.nunitoBold.copyWith(
-          fontSize: 16,
+          fontSize: DesignToken.fontSizeLG,
           color: DesignToken.textDark,
         ),
       ),
@@ -349,10 +349,10 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     required ValueChanged<bool> onChanged,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: DesignToken.paddingAllLG,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: DesignToken.borderRadiusMD,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -364,14 +364,14 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: DesignToken.paddingAllSM,
             decoration: BoxDecoration(
               color: iconColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: DesignToken.borderRadiusSM,
             ),
             child: Icon(icon, color: iconColor, size: 22),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: DesignToken.widthLG),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -379,22 +379,22 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                 Text(
                   title,
                   style: AppTextStyles.nunitoSemiBold.copyWith(
-                    fontSize: 16,
+                    fontSize: DesignToken.fontSizeLG,
                     color: DesignToken.textDark,
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: DesignToken.heightXS),
                 Text(
                   subtitle,
                   style: AppTextStyles.nunitoRegular.copyWith(
-                    fontSize: 13,
+                    fontSize: DesignToken.fontSizeMD,
                     color: Colors.grey[600],
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: DesignToken.widthMD),
           Switch(
             value: value,
             onChanged: onChanged,

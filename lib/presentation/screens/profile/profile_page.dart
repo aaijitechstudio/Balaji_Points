@@ -11,7 +11,7 @@ import 'package:balaji_points/services/session_service.dart';
 import 'package:balaji_points/services/fcm_service.dart';
 import 'package:balaji_points/presentation/providers/theme_provider.dart';
 import 'package:balaji_points/presentation/providers/locale_provider.dart';
-import 'package:balaji_points/presentation/widgets/home_nav_bar.dart';
+import 'package:balaji_points/core/widgets/navigation/home_nav_bar.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   final bool showBottomNav;

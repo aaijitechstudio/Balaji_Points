@@ -5,6 +5,7 @@ import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/services/bill_service.dart';
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
+import 'package:balaji_points/core/utils/logger.dart';
 
 /// Bill Details Screen - Shows comprehensive bill information for admin
 /// Displays carpenter details, bill images, dates, status, and actions
@@ -54,7 +55,7 @@ class _BillDetailsPageState extends State<BillDetailsPage> {
         }
       }
     } catch (e) {
-      print('Error loading bill data: $e');
+      Logger.e('Error loading bill data', error: e);
     } finally {
       setState(() => _isLoading = false);
     }
@@ -80,7 +81,7 @@ class _BillDetailsPageState extends State<BillDetailsPage> {
         _carpenterData = query.docs.first.data();
       }
     } catch (e) {
-      print('Error loading carpenter data: $e');
+      Logger.e('Error loading carpenter data', error: e);
     }
   }
 

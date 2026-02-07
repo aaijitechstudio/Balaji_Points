@@ -8,7 +8,7 @@ import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/services/pin_auth_service.dart';
 import 'package:balaji_points/services/session_service.dart';
 import 'package:balaji_points/services/fcm_service.dart';
-import 'package:balaji_points/core/logger.dart';
+import 'package:balaji_points/core/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -97,15 +97,12 @@ class _PINLoginPageState extends State<PINLoginPage>
     // IMPORTANT: Refresh and save FCM token after every login
     // This ensures the user always has an up-to-date token in Firestore
     try {
-      print('🔔 Refreshing FCM token after login for user: $phone');
-      AppLogger.info('Refreshing FCM token after login');
+      Logger.i('Refreshing FCM token after login');
       final fcmService = FCMService();
       // Re-initialize FCM to get fresh token and save to Firestore
       await fcmService.initialize();
-      print('✅ FCM token refreshed and saved after login');
     } catch (e) {
-      print('⚠️ Failed to refresh FCM token after login: $e');
-      AppLogger.warning('Failed to refresh FCM token after login: $e');
+      Logger.w('Failed to refresh FCM token after login: $e');
       // Continue login flow even if FCM fails
     }
 

@@ -5,8 +5,9 @@ import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/services/bill_service.dart';
 import 'package:balaji_points/l10n/app_localizations.dart';
-import 'package:balaji_points/presentation/screens/admin/bill_details_page.dart';
+import 'package:balaji_points/features/admin/presentation/pages/bill_details_page.dart';
 import 'package:intl/intl.dart';
+import 'package:balaji_points/core/utils/logger.dart';
 
 class PendingBillsList extends StatefulWidget {
   const PendingBillsList({super.key});
@@ -95,16 +96,9 @@ class _PendingBillsListState extends State<PendingBillsList> {
 
   // ---------------- APPROVE HANDLER ----------------
   Future<void> _approveBill(Map<String, dynamic> bill) async {
-    print('🎯 UI: _approveBill called');
-    print('   Bill data: $bill');
-
     final billId = bill['billId'];
     final carpenterId = bill['carpenterId'];
     final amount = (bill['amount'] ?? 0).toDouble();
-
-    print(
-      '   Extracted: billId="$billId", carpenterId="$carpenterId", amount=$amount',
-    );
 
     // Show confirmation dialog
     final confirm = await showDialog<bool>(
@@ -153,34 +147,24 @@ class _PendingBillsListState extends State<PendingBillsList> {
     );
 
     if (confirm != true) {
-      print('❌ UI: User cancelled approval');
       return;
     }
 
-    print('✅ UI: User confirmed approval, calling approveBill...');
     _showLoadingDialog();
 
     try {
-      print('📞 UI: Calling _billService.approveBill()...');
-      print(
-        '   Parameters: billId="$billId", carpenterId="$carpenterId", amount=$amount',
-      );
-
       final success = await _billService.approveBill(
         billId,
         carpenterId,
         amount,
       );
 
-      print('📥 UI: approveBill returned: $success');
       Navigator.pop(context); // close loading
 
       if (!mounted) {
-        print('⚠️ UI: Widget not mounted, skipping snackbar');
         return;
       }
 
-      print('📢 UI: Showing snackbar (success: $success)');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: success ? Colors.green : Colors.red,
@@ -194,9 +178,6 @@ class _PendingBillsListState extends State<PendingBillsList> {
         ),
       );
     } catch (e, st) {
-      print('❌ UI: Exception caught in _approveBill');
-      print('   Error: $e');
-      print('   StackTrace: $st');
       Navigator.pop(context); // close loading
       if (!mounted) return;
 
@@ -341,7 +322,7 @@ class _PendingBillsListState extends State<PendingBillsList> {
       _carpenterCache[carpenterId] = null;
       return null;
     } catch (e) {
-      print('Error fetching carpenter data: $e');
+      Logger.e('Error fetching carpenter data', error: e);
       _carpenterCache[carpenterId] = null;
       return null;
     }

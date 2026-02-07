@@ -77,11 +77,11 @@ class _AddBillPageState extends State<AddBillPage> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: DesignToken.borderRadiusXL),
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: DesignToken.paddingAllSM,
               decoration: BoxDecoration(
                 color: DesignToken.orangeShade50,
                 shape: BoxShape.circle,
@@ -92,11 +92,11 @@ class _AddBillPageState extends State<AddBillPage> {
                 size: 24,
               ),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: DesignToken.widthMD),
             Expanded(
               child: Text(
                 l10n?.profileIncomplete ?? 'Profile Incomplete',
-                style: AppTextStyles.nunitoBold.copyWith(fontSize: 20),
+                style: AppTextStyles.nunitoBold.copyWith(fontSize: DesignToken.fontSize2XL),
               ),
             ),
           ],
@@ -104,7 +104,7 @@ class _AddBillPageState extends State<AddBillPage> {
         content: Text(
           l10n?.completeProfileMessage ??
               'Please complete your profile (first name, last name, and profile picture) to add bills and earn points.',
-          style: AppTextStyles.nunitoRegular.copyWith(fontSize: 16),
+          style: AppTextStyles.nunitoRegular.copyWith(fontSize: DesignToken.fontSizeLG),
         ),
         actions: [
           ElevatedButton(
@@ -116,12 +116,12 @@ class _AddBillPageState extends State<AddBillPage> {
               backgroundColor: DesignToken.grey600,
               foregroundColor: DesignToken.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: DesignToken.borderRadiusMD,
               ),
             ),
             child: Text(
               l10n?.back ?? 'Go Back',
-              style: AppTextStyles.nunitoSemiBold.copyWith(fontSize: 16),
+              style: AppTextStyles.nunitoSemiBold.copyWith(fontSize: DesignToken.fontSizeLG),
             ),
           ),
           ElevatedButton(
@@ -133,12 +133,12 @@ class _AddBillPageState extends State<AddBillPage> {
               backgroundColor: DesignToken.orangeShade600,
               foregroundColor: DesignToken.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: DesignToken.borderRadiusMD,
               ),
             ),
             child: Text(
               l10n?.completeProfile ?? 'Complete Profile',
-              style: AppTextStyles.nunitoSemiBold.copyWith(fontSize: 16),
+              style: AppTextStyles.nunitoSemiBold.copyWith(fontSize: DesignToken.fontSizeLG),
             ),
           ),
         ],
@@ -243,7 +243,7 @@ class _AddBillPageState extends State<AddBillPage> {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(DesignToken.radiusXL)),
       ),
       builder: (context) => SafeArea(
         child: Column(
@@ -448,7 +448,7 @@ class _AddBillPageState extends State<AddBillPage> {
                 l10n?.addBill ?? 'Add Bill',
                 style: AppTextStyles.nunitoBold.copyWith(
                   color: DesignToken.white,
-                  fontSize: 20,
+                  fontSize: DesignToken.fontSize2XL,
                 ),
               ),
             ),
@@ -457,23 +457,23 @@ class _AddBillPageState extends State<AddBillPage> {
                 // Scrollable Form Content
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
+                    padding: DesignToken.paddingAll2XL,
                     child: Form(
                       key: _formKey,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const SizedBox(height: 20),
+                          SizedBox(height: DesignToken.heightXL),
 
                           // Bill Image Section
                           Text(
                             l10n?.billImage ?? 'Bill Image',
                             style: AppTextStyles.nunitoSemiBold.copyWith(
-                              fontSize: 16,
+                              fontSize: DesignToken.fontSizeLG,
                               color: DesignToken.primary,
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          SizedBox(height: DesignToken.heightMD),
 
                           GestureDetector(
                             onTap: _showImageSourceDialog,
@@ -481,7 +481,7 @@ class _AddBillPageState extends State<AddBillPage> {
                               height: 200,
                               decoration: BoxDecoration(
                                 color: DesignToken.white,
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: DesignToken.borderRadiusLG,
                                 border: Border.all(
                                   color: DesignToken.primary.withOpacity(0.3),
                                   width: 2,
@@ -490,7 +490,7 @@ class _AddBillPageState extends State<AddBillPage> {
                               ),
                               child: _selectedImage != null
                                   ? ClipRRect(
-                                      borderRadius: BorderRadius.circular(14),
+                                      borderRadius: DesignToken.borderRadiusMD,
                                       child: Image.file(
                                         _selectedImage!,
                                         fit: BoxFit.cover,
@@ -506,7 +506,7 @@ class _AddBillPageState extends State<AddBillPage> {
                                           color: DesignToken.primary
                                               .withOpacity(0.5),
                                         ),
-                                        const SizedBox(height: 12),
+                                        SizedBox(height: DesignToken.heightMD),
                                         Text(
                                           l10n?.tapToAddBillImage ??
                                               'Tap to add bill image',
@@ -514,7 +514,7 @@ class _AddBillPageState extends State<AddBillPage> {
                                               .copyWith(
                                                 color: DesignToken.textDark
                                                     .withOpacity(0.6),
-                                                fontSize: 14,
+                                                fontSize: DesignToken.fontSizeMD,
                                               ),
                                         ),
                                       ],
@@ -522,24 +522,24 @@ class _AddBillPageState extends State<AddBillPage> {
                             ),
                           ),
 
-                          const SizedBox(height: 32),
+                          SizedBox(height: DesignToken.height3XL),
 
                           // Amount Field (moved to top)
                           Text(
                             l10n?.billAmount ?? 'Bill Amount (₹)',
                             style: AppTextStyles.nunitoSemiBold.copyWith(
-                              fontSize: 16,
+                              fontSize: DesignToken.fontSizeLG,
                               color: DesignToken.primary,
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          SizedBox(height: DesignToken.heightMD),
 
                           TextFormField(
                             controller: _amountController,
                             keyboardType: TextInputType.number,
                             style: AppTextStyles.nunitoRegular.copyWith(
                               color: DesignToken.textDark,
-                              fontSize: 18,
+                              fontSize: DesignToken.fontSizeXL,
                             ),
                             decoration: InputDecoration(
                               filled: true,
@@ -550,10 +550,10 @@ class _AddBillPageState extends State<AddBillPage> {
                                 color: DesignToken.grey400,
                               ),
                               prefixIcon: Container(
-                                margin: const EdgeInsets.all(12),
+                                margin: DesignToken.paddingAllMD,
                                 decoration: BoxDecoration(
                                   color: DesignToken.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: DesignToken.borderRadiusSM,
                                 ),
                                 child: const Icon(
                                   Icons.currency_rupee,
@@ -561,19 +561,19 @@ class _AddBillPageState extends State<AddBillPage> {
                                 ),
                               ),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: DesignToken.borderRadiusLG,
                                 borderSide: BorderSide(
                                   color: DesignToken.primary.withOpacity(0.3),
                                 ),
                               ),
                               enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: DesignToken.borderRadiusLG,
                                 borderSide: BorderSide(
                                   color: DesignToken.primary.withOpacity(0.3),
                                 ),
                               ),
                               focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: DesignToken.borderRadiusLG,
                                 borderSide: const BorderSide(
                                   color: DesignToken.primary,
                                   width: 2,
@@ -594,17 +594,17 @@ class _AddBillPageState extends State<AddBillPage> {
                             },
                           ),
 
-                          const SizedBox(height: 32),
+                          SizedBox(height: DesignToken.height3XL),
 
                           // Bill Date Field
                           Text(
                             l10n?.billDateOptional ?? 'Bill Date (Optional)',
                             style: AppTextStyles.nunitoSemiBold.copyWith(
-                              fontSize: 16,
+                              fontSize: DesignToken.fontSizeLG,
                               color: DesignToken.primary,
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          SizedBox(height: DesignToken.heightMD),
 
                           GestureDetector(
                             onTap: _selectDate,
@@ -615,7 +615,7 @@ class _AddBillPageState extends State<AddBillPage> {
                               ),
                               decoration: BoxDecoration(
                                 color: DesignToken.white,
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: DesignToken.borderRadiusLG,
                                 border: Border.all(
                                   color: DesignToken.primary.withOpacity(0.3),
                                 ),
@@ -627,7 +627,7 @@ class _AddBillPageState extends State<AddBillPage> {
                                     color: DesignToken.primary,
                                     size: 24,
                                   ),
-                                  const SizedBox(width: 12),
+                                  SizedBox(width: DesignToken.widthMD),
                                   Expanded(
                                     child: Text(
                                       _billDate != null
@@ -639,7 +639,7 @@ class _AddBillPageState extends State<AddBillPage> {
                                             color: _billDate != null
                                                 ? DesignToken.textDark
                                                 : DesignToken.grey400,
-                                            fontSize: 16,
+                                            fontSize: DesignToken.fontSizeLG,
                                           ),
                                     ),
                                   ),
@@ -653,24 +653,24 @@ class _AddBillPageState extends State<AddBillPage> {
                             ),
                           ),
 
-                          const SizedBox(height: 24),
+                          SizedBox(height: DesignToken.height2XL),
 
                           // Store Name Field
                           Text(
                             l10n?.storeVendorNameOptional ??
                                 'Store/Vendor Name (Optional)',
                             style: AppTextStyles.nunitoSemiBold.copyWith(
-                              fontSize: 16,
+                              fontSize: DesignToken.fontSizeLG,
                               color: DesignToken.primary,
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          SizedBox(height: DesignToken.heightMD),
 
                           TextFormField(
                             controller: _storeNameController,
                             style: AppTextStyles.nunitoRegular.copyWith(
                               color: DesignToken.textDark,
-                              fontSize: 16,
+                              fontSize: DesignToken.fontSizeLG,
                             ),
                             decoration: InputDecoration(
                               filled: true,
@@ -682,10 +682,10 @@ class _AddBillPageState extends State<AddBillPage> {
                                 color: DesignToken.grey400,
                               ),
                               prefixIcon: Container(
-                                margin: const EdgeInsets.all(12),
+                                margin: DesignToken.paddingAllMD,
                                 decoration: BoxDecoration(
                                   color: DesignToken.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: DesignToken.borderRadiusSM,
                                 ),
                                 child: const Icon(
                                   Icons.store,
@@ -693,19 +693,19 @@ class _AddBillPageState extends State<AddBillPage> {
                                 ),
                               ),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: DesignToken.borderRadiusLG,
                                 borderSide: BorderSide(
                                   color: DesignToken.primary.withOpacity(0.3),
                                 ),
                               ),
                               enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: DesignToken.borderRadiusLG,
                                 borderSide: BorderSide(
                                   color: DesignToken.primary.withOpacity(0.3),
                                 ),
                               ),
                               focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: DesignToken.borderRadiusLG,
                                 borderSide: const BorderSide(
                                   color: DesignToken.primary,
                                   width: 2,
@@ -714,24 +714,24 @@ class _AddBillPageState extends State<AddBillPage> {
                             ),
                           ),
 
-                          const SizedBox(height: 24),
+                          SizedBox(height: DesignToken.height2XL),
 
                           // Bill Number Field
                           Text(
                             l10n?.billInvoiceNumberOptional ??
                                 'Bill/Invoice Number (Optional)',
                             style: AppTextStyles.nunitoSemiBold.copyWith(
-                              fontSize: 16,
+                              fontSize: DesignToken.fontSizeLG,
                               color: DesignToken.primary,
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          SizedBox(height: DesignToken.heightMD),
 
                           TextFormField(
                             controller: _billNumberController,
                             style: AppTextStyles.nunitoRegular.copyWith(
                               color: DesignToken.textDark,
-                              fontSize: 16,
+                              fontSize: DesignToken.fontSizeLG,
                             ),
                             decoration: InputDecoration(
                               filled: true,
@@ -743,10 +743,10 @@ class _AddBillPageState extends State<AddBillPage> {
                                 color: DesignToken.grey400,
                               ),
                               prefixIcon: Container(
-                                margin: const EdgeInsets.all(12),
+                                margin: DesignToken.paddingAllMD,
                                 decoration: BoxDecoration(
                                   color: DesignToken.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: DesignToken.borderRadiusSM,
                                 ),
                                 child: const Icon(
                                   Icons.receipt,
@@ -754,19 +754,19 @@ class _AddBillPageState extends State<AddBillPage> {
                                 ),
                               ),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: DesignToken.borderRadiusLG,
                                 borderSide: BorderSide(
                                   color: DesignToken.primary.withOpacity(0.3),
                                 ),
                               ),
                               enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: DesignToken.borderRadiusLG,
                                 borderSide: BorderSide(
                                   color: DesignToken.primary.withOpacity(0.3),
                                 ),
                               ),
                               focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: DesignToken.borderRadiusLG,
                                 borderSide: const BorderSide(
                                   color: DesignToken.primary,
                                   width: 2,
@@ -775,24 +775,24 @@ class _AddBillPageState extends State<AddBillPage> {
                             ),
                           ),
 
-                          const SizedBox(height: 24),
+                          SizedBox(height: DesignToken.height2XL),
 
                           // Notes Field (Optional)
                           Text(
                             l10n?.notesOptional ?? 'Notes (Optional)',
                             style: AppTextStyles.nunitoSemiBold.copyWith(
-                              fontSize: 16,
+                              fontSize: DesignToken.fontSizeLG,
                               color: DesignToken.primary,
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          SizedBox(height: DesignToken.heightMD),
 
                           TextFormField(
                             controller: _notesController,
                             maxLines: 3,
                             style: AppTextStyles.nunitoRegular.copyWith(
                               color: DesignToken.textDark,
-                              fontSize: 16,
+                              fontSize: DesignToken.fontSizeLG,
                             ),
                             decoration: InputDecoration(
                               filled: true,
@@ -804,10 +804,10 @@ class _AddBillPageState extends State<AddBillPage> {
                                 color: DesignToken.grey400,
                               ),
                               prefixIcon: Container(
-                                margin: const EdgeInsets.all(12),
+                                margin: DesignToken.paddingAllMD,
                                 decoration: BoxDecoration(
                                   color: DesignToken.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: DesignToken.borderRadiusSM,
                                 ),
                                 child: const Icon(
                                   Icons.note,
@@ -815,19 +815,19 @@ class _AddBillPageState extends State<AddBillPage> {
                                 ),
                               ),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: DesignToken.borderRadiusLG,
                                 borderSide: BorderSide(
                                   color: DesignToken.primary.withOpacity(0.3),
                                 ),
                               ),
                               enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: DesignToken.borderRadiusLG,
                                 borderSide: BorderSide(
                                   color: DesignToken.primary.withOpacity(0.3),
                                 ),
                               ),
                               focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: DesignToken.borderRadiusLG,
                                 borderSide: const BorderSide(
                                   color: DesignToken.primary,
                                   width: 2,
@@ -836,10 +836,10 @@ class _AddBillPageState extends State<AddBillPage> {
                             ),
                           ),
 
-                          const SizedBox(height: 24),
+                          SizedBox(height: DesignToken.height2XL),
 
                           // Info Text
-                          const SizedBox(height: 24),
+                          SizedBox(height: DesignToken.height2XL),
                         ],
                       ),
                     ),
@@ -848,7 +848,7 @@ class _AddBillPageState extends State<AddBillPage> {
 
                 // Fixed Submit Button at Bottom
                 Container(
-                  padding: const EdgeInsets.all(24),
+                  padding: DesignToken.paddingAll2XL,
                   decoration: BoxDecoration(
                     color: DesignToken.white,
                     boxShadow: [
@@ -865,7 +865,7 @@ class _AddBillPageState extends State<AddBillPage> {
                       width: double.infinity,
                       child: Container(
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: DesignToken.borderRadiusLG,
                           boxShadow: [
                             BoxShadow(
                               color: DesignToken.secondary.withOpacity(0.3),
@@ -878,10 +878,10 @@ class _AddBillPageState extends State<AddBillPage> {
                           onPressed: _isSubmitting ? null : _submitBill,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: DesignToken.secondary,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            padding: DesignToken.paddingVerticalLG,
                             minimumSize: const Size(double.infinity, 56),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: DesignToken.borderRadiusLG,
                             ),
                             elevation: 0,
                           ),
@@ -899,7 +899,7 @@ class _AddBillPageState extends State<AddBillPage> {
                               : Text(
                                   l10n?.submitBill ?? 'Submit Bill',
                                   style: AppTextStyles.nunitoBold.copyWith(
-                                    fontSize: 18,
+                                    fontSize: DesignToken.fontSizeXL,
                                     color: DesignToken.white,
                                   ),
                                 ),

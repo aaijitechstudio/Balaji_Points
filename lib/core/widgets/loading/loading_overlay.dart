@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/theme/design_token.dart';
-import '../providers/loading_provider.dart';
+import '../../theme/design_token.dart';
+import '../../providers/loading_provider.dart';
 
 class LoadingOverlay extends ConsumerWidget {
   const LoadingOverlay({super.key});

@@ -11,36 +11,37 @@ class RedeemPage extends StatelessWidget {
       backgroundColor: const Color(0xFF001F3F), // Navy blue background
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: DesignToken.paddingAllLG,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 "My Work",
                 style: AppTextStyles.nunitoBold.copyWith(
-                  fontSize: 22,
+                  fontSize: DesignToken.fontSize2XL,
                   color: DesignToken.black87,
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: DesignToken.heightLG),
 
               // 🔹 Add Work Button
               Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
                   color: Colors.pink.shade50,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: DesignToken.borderRadiusLG,
                   border: Border.all(color: Colors.pink.shade100),
                 ),
-                padding: const EdgeInsets.all(20),
+                padding: DesignToken.paddingAllXL,
                 child: Row(
                   children: [
                     Icon(
                       Icons.add_task_rounded,
                       size: 40,
                       color: Colors.pink.shade700,
+                      semanticLabel: 'Add new work task',
                     ),
-                    const SizedBox(width: 16),
+                    SizedBox(width: DesignToken.widthLG),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -48,13 +49,13 @@ class RedeemPage extends StatelessWidget {
                           Text(
                             "Add New Work",
                             style: AppTextStyles.nunitoBold.copyWith(
-                              fontSize: 18,
+                              fontSize: DesignToken.fontSizeXL,
                             ),
                           ),
                           Text(
                             "Submit photos or job details to earn points",
                             style: AppTextStyles.nunitoRegular.copyWith(
-                              fontSize: 13,
+                              fontSize: DesignToken.fontSizeMD,
                               color: DesignToken.black54,
                             ),
                           ),
@@ -65,7 +66,7 @@ class RedeemPage extends StatelessWidget {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.pinkAccent,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: DesignToken.borderRadiusSM,
                         ),
                       ),
                       onPressed: () {},
@@ -75,12 +76,12 @@ class RedeemPage extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 30),
+              SizedBox(height: DesignToken.height3XL),
               Text(
                 "Recent Work Entries",
-                style: AppTextStyles.nunitoBold.copyWith(fontSize: 18),
+                style: AppTextStyles.nunitoBold.copyWith(fontSize: DesignToken.fontSizeXL),
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: DesignToken.heightSM),
 
               // 🔹 Work List
               Expanded(
@@ -89,18 +90,18 @@ class RedeemPage extends StatelessWidget {
                   itemBuilder: (context, index) {
                     return Card(
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: DesignToken.borderRadiusLG,
                       ),
-                      margin: const EdgeInsets.only(bottom: 12),
+                      margin: const EdgeInsets.only(bottom: DesignToken.paddingMD),
                       child: ListTile(
                         leading: Container(
                           height: 48,
                           width: 48,
                           decoration: BoxDecoration(
                             color: Colors.pink.shade100,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: DesignToken.borderRadiusMD,
                           ),
-                          child: const Icon(Icons.work, color: Colors.pink),
+                          child: const Icon(Icons.work, color: Colors.pink, semanticLabel: 'Work entry'),
                         ),
                         title: Text(
                           "Wooden Door Installation",
@@ -110,7 +111,7 @@ class RedeemPage extends StatelessWidget {
                           "Earned 150 Points",
                           style: AppTextStyles.nunitoRegular,
                         ),
-                        trailing: const Icon(Icons.chevron_right_rounded),
+                        trailing: const Icon(Icons.chevron_right_rounded, semanticLabel: 'View details'),
                         onTap: () {},
                       ),
                     );

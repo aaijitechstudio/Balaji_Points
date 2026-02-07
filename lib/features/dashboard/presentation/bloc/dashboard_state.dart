@@ -1,54 +1,18 @@
 import 'package:equatable/equatable.dart';
-import 'package:balaji_points/features/dashboard/domain/entities/dashboard.dart';
 
-/// States for dashboard BLoC
-abstract class UdashboardState extends Equatable {
-  const UdashboardState();
+/// States for dashboard BLoC - tab navigation
+abstract class DashboardState extends Equatable {
+  const DashboardState();
   
   @override
   List<Object?> get props => [];
 }
 
-class UdashboardInitial extends UdashboardState {
-  const UdashboardInitial();
-}
-
-class UdashboardLoading extends UdashboardState {
-  const UdashboardLoading();
-}
-
-class UdashboardLoaded extends UdashboardState {
-  final UdashboardEntity entity;
+class DashboardTab extends DashboardState {
+  final int selectedIndex;
   
-  const UdashboardLoaded(this.entity);
+  const DashboardTab(this.selectedIndex);
   
   @override
-  List<Object?> get props => [entity];
-}
-
-class UdashboardsLoaded extends UdashboardState {
-  final List<UdashboardEntity> entities;
-  
-  const UdashboardsLoaded(this.entities);
-  
-  @override
-  List<Object?> get props => [entities];
-}
-
-class UdashboardError extends UdashboardState {
-  final String message;
-  
-  const UdashboardError(this.message);
-  
-  @override
-  List<Object?> get props => [message];
-}
-
-class UdashboardOperationSuccess extends UdashboardState {
-  final String message;
-  
-  const UdashboardOperationSuccess(this.message);
-  
-  @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [selectedIndex];
 }

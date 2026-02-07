@@ -8,11 +8,11 @@ import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/core/mixins/double_tap_exit_mixin.dart';
 import 'package:balaji_points/services/fcm_service.dart';
-import 'package:balaji_points/presentation/widgets/admin/pending_bills_list.dart';
-import 'package:balaji_points/presentation/widgets/admin/offers_management.dart';
-import 'package:balaji_points/presentation/widgets/admin/users_list.dart';
-import 'package:balaji_points/presentation/widgets/admin/daily_spin_management.dart';
-import 'package:balaji_points/presentation/widgets/admin/bill_history_list.dart';
+import 'package:balaji_points/features/admin/presentation/widgets/pending_bills_list.dart';
+import 'package:balaji_points/features/admin/presentation/widgets/offers_management.dart';
+import 'package:balaji_points/features/admin/presentation/widgets/users_list.dart';
+import 'package:balaji_points/features/admin/presentation/widgets/daily_spin_management.dart';
+import 'package:balaji_points/features/admin/presentation/widgets/bill_history_list.dart';
 
 class AdminHomePage extends ConsumerStatefulWidget {
   const AdminHomePage({super.key});
@@ -52,14 +52,14 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
     final shouldLogout = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: DesignToken.borderRadiusXL),
         title: Text(
           l10n.logout,
-          style: AppTextStyles.nunitoBold.copyWith(fontSize: 22),
+          style: AppTextStyles.nunitoBold.copyWith(fontSize: DesignToken.fontSize2XL),
         ),
         content: Text(
           l10n.logoutConfirmation,
-          style: AppTextStyles.nunitoRegular.copyWith(fontSize: 16),
+          style: AppTextStyles.nunitoRegular.copyWith(fontSize: DesignToken.fontSizeLG),
         ),
         actions: [
           TextButton(
@@ -68,7 +68,7 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
               l10n.cancel,
               style: AppTextStyles.nunitoMedium.copyWith(
                 color: Colors.grey[600],
-                fontSize: 16,
+                fontSize: DesignToken.fontSizeLG,
               ),
             ),
           ),
@@ -78,12 +78,12 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
               backgroundColor: DesignToken.error,
               foregroundColor: DesignToken.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: DesignToken.borderRadiusMD,
               ),
             ),
             child: Text(
               l10n.logout,
-              style: AppTextStyles.nunitoSemiBold.copyWith(fontSize: 16),
+              style: AppTextStyles.nunitoSemiBold.copyWith(fontSize: DesignToken.fontSizeLG),
             ),
           ),
         ],
@@ -155,7 +155,7 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
                               Text(
                                 l10n.adminPanel,
                                 style: AppTextStyles.nunitoBold.copyWith(
-                                  fontSize: 24,
+                                  fontSize: DesignToken.fontSize3XL,
                                   color: Colors.white,
                                   height: 1.2,
                                 ),
@@ -163,7 +163,7 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
                               Text(
                                 l10n.adminSubtitle,
                                 style: AppTextStyles.nunitoRegular.copyWith(
-                                  fontSize: 13,
+                                  fontSize: DesignToken.fontSizeMD,
                                   color: Colors.white.withValues(alpha: 0.8),
                                 ),
                               ),
@@ -186,6 +186,7 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
                                     Icons.notifications_outlined,
                                     color: Colors.white,
                                     size: 24,
+                                    semanticLabel: 'Notifications',
                                   ),
                                   onPressed: () => context.push('/notifications'),
                                   padding: EdgeInsets.zero,
@@ -199,7 +200,7 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
                                     right: 6,
                                     top: 6,
                                     child: Container(
-                                      padding: const EdgeInsets.all(4),
+                                      padding: DesignToken.paddingAllXS,
                                       decoration: const BoxDecoration(
                                         color: Colors.red,
                                         shape: BoxShape.circle,
@@ -213,7 +214,7 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
                                           notificationCount > 99 ? '99+' : '$notificationCount',
                                           style: const TextStyle(
                                             color: Colors.white,
-                                            fontSize: 9,
+                                            fontSize: DesignToken.fontSizeXS,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
@@ -225,7 +226,7 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
                           },
                         ),
                         IconButton(
-                          icon: const Icon(Icons.logout, color: Colors.white, size: 24),
+                          icon: const Icon(Icons.logout, color: Colors.white, size: 24, semanticLabel: 'Logout'),
                           onPressed: _handleLogout,
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(
@@ -235,20 +236,20 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: DesignToken.heightMD),
 
                     // iOS-style Segmented Control Tabs
                     Container(
-                      padding: const EdgeInsets.all(4),
+                      padding: DesignToken.paddingAllXS,
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: DesignToken.borderRadiusSM,
                       ),
                       child: TabBar(
                         controller: _tabController,
                         indicator: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: DesignToken.borderRadiusSM,
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withValues(alpha: 0.1),
@@ -262,11 +263,11 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
                         labelColor: DesignToken.primary,
                         unselectedLabelColor: Colors.white.withValues(alpha: 0.7),
                         labelStyle: AppTextStyles.nunitoBold.copyWith(
-                          fontSize: 13,
+                          fontSize: DesignToken.fontSizeMD,
                           letterSpacing: 0.3,
                         ),
                         unselectedLabelStyle: AppTextStyles.nunitoMedium.copyWith(
-                          fontSize: 12,
+                          fontSize: DesignToken.fontSizeSM,
                           letterSpacing: 0.2,
                         ),
                         labelPadding: EdgeInsets.zero,

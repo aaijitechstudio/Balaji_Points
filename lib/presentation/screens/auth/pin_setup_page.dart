@@ -8,6 +8,7 @@ import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/services/pin_auth_service.dart';
 import 'package:balaji_points/services/session_service.dart';
 import 'package:balaji_points/core/utils/back_button_handler.dart';
+import 'package:balaji_points/core/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -143,8 +144,6 @@ class _PINSetupPageState extends State<PINSetupPage>
       }
     } catch (e) {
       if (!mounted) return;
-
-      print('🔍 [DEBUG] Error in _savePin: $e');
 
       // Clear any existing snackbars first
       ScaffoldMessenger.of(context).clearSnackBars();

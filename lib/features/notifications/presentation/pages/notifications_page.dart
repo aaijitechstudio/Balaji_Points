@@ -8,7 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/services/session_service.dart';
-import 'package:balaji_points/presentation/widgets/home_nav_bar.dart';
+import 'package:balaji_points/core/widgets/navigation/home_nav_bar.dart';
 import 'dart:async';
 
 class NotificationsPage extends StatefulWidget {
@@ -339,11 +339,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: DesignToken.borderRadiusXL),
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: DesignToken.paddingAllSM,
               decoration: BoxDecoration(
                 color: Colors.red.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
@@ -352,27 +352,28 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 Icons.delete_outline,
                 color: Colors.red.shade700,
                 size: 24,
+                semanticLabel: 'Delete all notifications',
               ),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: DesignToken.widthMD),
             const Expanded(
               child: Text(
                 'Delete All Notifications',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: DesignToken.fontSizeXL, fontWeight: FontWeight.bold),
               ),
             ),
           ],
         ),
         content: const Text(
           'Are you sure you want to delete all notifications? This action cannot be undone.',
-          style: TextStyle(fontSize: 16),
+          style: TextStyle(fontSize: DesignToken.fontSizeLG),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: Text(
               'Cancel',
-              style: TextStyle(color: Colors.grey[600], fontSize: 16),
+              style: TextStyle(color: Colors.grey[600], fontSize: DesignToken.fontSizeLG),
             ),
           ),
           ElevatedButton(
@@ -381,10 +382,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
               backgroundColor: Colors.red.shade600,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: DesignToken.borderRadiusMD,
               ),
             ),
-            child: const Text('Delete All', style: TextStyle(fontSize: 16)),
+            child: const Text('Delete All', style: TextStyle(fontSize: DesignToken.fontSizeLG)),
           ),
         ],
       ),
@@ -574,7 +575,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
         appBar: AppBar(
           backgroundColor: DesignToken.primary,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            icon: const Icon(Icons.arrow_back, color: Colors.white, semanticLabel: 'Go back'),
             onPressed: () => context.pop(),
           ),
           title: const Text(
@@ -604,7 +605,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                       snapshot.hasData && snapshot.data!.isNotEmpty;
 
                   if (!hasNotifications) {
-                    return const SizedBox(width: 44);
+                    return const SizedBox(width: DesignToken.height4XL);
                   }
 
                   return IconButton(
@@ -614,13 +615,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
                           Icons.delete_outline,
                           color: Colors.white,
                           size: 24,
+                          semanticLabel: 'Delete all notifications',
                         ),
                         if (hasNotifications)
                           Positioned(
                             right: 0,
                             top: 0,
                             child: Container(
-                              padding: const EdgeInsets.all(2),
+                              padding: DesignToken.paddingAllXS,
                               decoration: const BoxDecoration(
                                 color: Colors.red,
                                 shape: BoxShape.circle,
@@ -666,16 +668,17 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                     Icons.error_outline,
                                     size: 64,
                                     color: Colors.red.shade300,
+                                    semanticLabel: 'Error',
                                   ),
-                                  const SizedBox(height: 16),
+                                  SizedBox(height: DesignToken.heightLG),
                                   Text(
                                     'Error loading notifications',
                                     style: TextStyle(
                                       color: Colors.grey[600],
-                                      fontSize: 16,
+                                      fontSize: DesignToken.fontSizeLG,
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
+                                  SizedBox(height: DesignToken.heightSM),
                                   TextButton(
                                     onPressed: () => setState(() {}),
                                     child: const Text('Retry'),
@@ -691,7 +694,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.all(24),
+                                    padding: DesignToken.paddingAll2XL,
                                     decoration: BoxDecoration(
                                       color: DesignToken.primary.withValues(
                                         alpha: 0.1,
@@ -704,21 +707,22 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                       color: DesignToken.primary.withValues(
                                         alpha: 0.5,
                                       ),
+                                      semanticLabel: 'No notifications',
                                     ),
                                   ),
-                                  const SizedBox(height: 24),
+                                  SizedBox(height: DesignToken.height2XL),
                                   Text(
                                     'No Notifications',
                                     style: AppTextStyles.nunitoBold.copyWith(
-                                      fontSize: 24,
+                                      fontSize: DesignToken.fontSize3XL,
                                       color: DesignToken.textDark,
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
+                                  SizedBox(height: DesignToken.heightSM),
                                   Text(
                                     'You don\'t have any notifications yet',
                                     style: AppTextStyles.nunitoRegular.copyWith(
-                                      fontSize: 16,
+                                      fontSize: DesignToken.fontSizeLG,
                                       color: Colors.grey[600],
                                     ),
                                   ),
@@ -738,7 +742,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                             },
                             color: DesignToken.primary,
                             child: ListView.builder(
-                              padding: const EdgeInsets.all(16),
+                              padding: DesignToken.paddingAllLG,
                               itemCount: notifications.length,
                               itemBuilder: (context, index) {
                                 final doc = notifications[index];
@@ -757,17 +761,18 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                   key: Key(doc.id),
                                   direction: DismissDirection.endToStart,
                                   background: Container(
-                                    margin: const EdgeInsets.only(bottom: 12),
+                                    margin: const EdgeInsets.only(bottom: DesignToken.paddingMD),
                                     decoration: BoxDecoration(
                                       color: Colors.red.shade400,
-                                      borderRadius: BorderRadius.circular(16),
+                                      borderRadius: DesignToken.borderRadiusLG,
                                     ),
                                     alignment: Alignment.centerRight,
-                                    padding: const EdgeInsets.only(right: 24),
+                                    padding: const EdgeInsets.only(right: DesignToken.padding2XL),
                                     child: const Icon(
                                       Icons.delete_rounded,
                                       color: Colors.white,
                                       size: 26,
+                                      semanticLabel: 'Delete notification',
                                     ),
                                   ),
                                   onDismissed: (direction) {
@@ -779,7 +784,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                           builder: (context) => AlertDialog(
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
-                                                  BorderRadius.circular(16),
+                                                  DesignToken.borderRadiusLG,
                                             ),
                                             title: const Text(
                                               'Delete Notification',
@@ -825,12 +830,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                   child: InkWell(
                                     onTap: () =>
                                         _handleNotificationTap(data, type),
-                                    borderRadius: BorderRadius.circular(14),
+                                    borderRadius: DesignToken.borderRadiusMD,
                                     child: Container(
-                                      margin: const EdgeInsets.only(bottom: 12),
+                                      margin: const EdgeInsets.only(bottom: DesignToken.paddingMD),
                                       decoration: BoxDecoration(
                                         color: Colors.white,
-                                        borderRadius: BorderRadius.circular(14),
+                                        borderRadius: DesignToken.borderRadiusMD,
                                         boxShadow: [
                                           BoxShadow(
                                             color: Colors.black.withValues(
@@ -849,7 +854,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                         ],
                                       ),
                                       child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(14),
+                                        borderRadius: DesignToken.borderRadiusMD,
                                         child: Container(
                                           decoration: BoxDecoration(
                                             border: Border(
@@ -860,7 +865,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                             ),
                                           ),
                                           child: Padding(
-                                            padding: const EdgeInsets.all(14),
+                                            padding: DesignToken.paddingAllMD,
                                             child: Row(
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
@@ -894,9 +899,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                                     _getNotificationIcon(type),
                                                     color: notificationColor,
                                                     size: 22,
+                                                    semanticLabel: 'Notification icon',
                                                   ),
                                                 ),
-                                                const SizedBox(width: 12),
+                                                SizedBox(width: DesignToken.widthMD),
                                                 // Content
                                                 Expanded(
                                                   child: Column(
@@ -933,7 +939,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                                               sentAt,
                                                             ),
                                                             style: TextStyle(
-                                                              fontSize: 12,
+                                                              fontSize: DesignToken.fontSizeSM,
                                                               color: Colors
                                                                   .grey[400],
                                                               fontWeight:
@@ -943,14 +949,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                                           ),
                                                         ],
                                                       ),
-                                                      const SizedBox(height: 4),
+                                                      SizedBox(height: DesignToken.heightXS),
                                                       // Body text
                                                       Text(
                                                         body,
                                                         style: AppTextStyles
                                                             .nunitoRegular
                                                             .copyWith(
-                                                              fontSize: 13,
+                                                              fontSize: DesignToken.fontSizeMD,
                                                               color: Colors
                                                                   .grey[600],
                                                               height: 1.3,

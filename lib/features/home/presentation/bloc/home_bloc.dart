@@ -1,79 +1,35 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:balaji_points/features/home/domain/usecases/get_home_usecase.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:balaji_points/features/home/presentation/bloc/home_event.dart';
 import 'package:balaji_points/features/home/presentation/bloc/home_state.dart';
 
-/// BLoC for home
-/// 
-/// Handles state management for home feature.
-/// Uses use cases to execute business logic.
-class UhomeBloc extends Bloc<UhomeEvent, UhomeState> {
-  final GetUhomeUseCase getUhomeUseCase;
-  // Add other use cases as needed
-  
-  UhomeBloc({
-    required this.getUhomeUseCase,
-  }) : super(const UhomeInitial()) {
-    on<LoadUhome>(_onLoadUhome);
-    on<LoadAllUhomes>(_onLoadAllUhomes);
-    on<CreateUhome>(_onCreateUhome);
-    on<UpdateUhome>(_onUpdateUhome);
-    on<DeleteUhome>(_onDeleteUhome);
+/// BLoC for home - wraps Firebase streams
+class HomeBloc extends Bloc<HomeEvent, HomeState> {
+  HomeBloc() : super(const HomeInitial()) {
+    on<LoadHomeData>(_onLoadHomeData);
   }
   
-  Future<void> _onLoadUhome(
-    LoadUhome event,
-    Emitter<UhomeState> emit,
-  ) async {
-    emit(const UhomeLoading());
+  void _onLoadHomeData(
+    LoadHomeData event,
+    Emitter<HomeState> emit,
+  ) {
+    // Wrap existing Firebase streams in BLoC state
+    final offersStream = FirebaseFirestore.instance
+      .collection('offers')
+      .where('isActive', isEqualTo: true)
+      .orderBy('createdAt', descending: true)
+      .snapshots();
     
-    final result = await getUhomeUseCase(event.id);
+    final carpentersStream = FirebaseFirestore.instance
+      .collection('users')
+      .where('role', isEqualTo: 'carpenter')
+      .orderBy('totalPoints', descending: true)
+      .limit(10)
+      .snapshots();
     
-    result.fold(
-      (failure) => emit(UhomeError(failure.message)),
-      (entity) => emit(UhomeLoaded(entity)),
-    );
-  }
-  
-  Future<void> _onLoadAllUhomes(
-    LoadAllUhomes event,
-    Emitter<UhomeState> emit,
-  ) async {
-    emit(const UhomeLoading());
-    
-    // Implement using GetAllUhomesUseCase
-    // final result = await getAllUhomesUseCase();
-    
-    // result.fold(
-    //   (failure) => emit(UhomeError(failure.message)),
-    //   (entities) => emit(UhomesLoaded(entities)),
-    // );
-  }
-  
-  Future<void> _onCreateUhome(
-    CreateUhome event,
-    Emitter<UhomeState> emit,
-  ) async {
-    emit(const UhomeLoading());
-    
-    // Implement using CreateUhomeUseCase
-  }
-  
-  Future<void> _onUpdateUhome(
-    UpdateUhome event,
-    Emitter<UhomeState> emit,
-  ) async {
-    emit(const UhomeLoading());
-    
-    // Implement using UpdateUhomeUseCase
-  }
-  
-  Future<void> _onDeleteUhome(
-    DeleteUhome event,
-    Emitter<UhomeState> emit,
-  ) async {
-    emit(const UhomeLoading());
-    
-    // Implement using DeleteUhomeUseCase
+    emit(HomeLoaded(
+      offersStream: offersStream,
+      carpentersStream: carpentersStream,
+    ));
   }
 }

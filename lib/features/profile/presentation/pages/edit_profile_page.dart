@@ -374,7 +374,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         SafeArea(
           bottom: false,
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: DesignToken.paddingAllLG,
             child: Row(
               children: [
                 if (!widget.isFirstTime)
@@ -382,14 +382,15 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                     icon: const Icon(
                       Icons.arrow_back,
                       color: DesignToken.white,
+                      semanticLabel: 'Go back',
                     ),
                     onPressed: () => context.pop(),
                   ),
-                const SizedBox(width: 8),
+                SizedBox(width: DesignToken.widthSM),
                 Text(
                   widget.isFirstTime ? 'Complete Your Profile' : 'Edit Profile',
                   style: AppTextStyles.nunitoBold.copyWith(
-                    fontSize: 22,
+                    fontSize: DesignToken.fontSize2XL,
                     color: DesignToken.white,
                   ),
                 ),
@@ -408,12 +409,12 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                     ),
                   )
                 : SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
+                    padding: DesignToken.paddingAll2XL,
                     child: Form(
                       key: _formKey,
                       child: Column(
                         children: [
-                          const SizedBox(height: 24),
+                          SizedBox(height: DesignToken.height2XL),
 
                           // Profile Image Picker
                           GestureDetector(
@@ -445,12 +446,14 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                         ? Image.file(
                                             _imageFile!,
                                             fit: BoxFit.cover,
+                                            semanticLabel: 'Profile picture',
                                           )
                                         : _existingImageUrl != null &&
                                               _existingImageUrl!.isNotEmpty
                                         ? Image.network(
                                             _existingImageUrl!,
                                             fit: BoxFit.cover,
+                                            semanticLabel: 'Profile picture',
                                             loadingBuilder: (context, child, loadingProgress) {
                                               if (loadingProgress == null)
                                                 return child;
@@ -486,6 +489,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                                     size: 60,
                                                     color:
                                                         DesignToken.secondary,
+                                                    semanticLabel: 'Default profile picture',
                                                   );
                                                 },
                                           )
@@ -514,6 +518,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                       Icons.camera_alt,
                                       size: 18,
                                       color: DesignToken.white,
+                                      semanticLabel: 'Change photo',
                                     ),
                                   ),
                                 ),
@@ -521,23 +526,23 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                             ),
                           ),
 
-                          const SizedBox(height: 12),
+                          SizedBox(height: DesignToken.heightMD),
 
                           Text(
                             'Tap to change photo',
                             style: AppTextStyles.nunitoRegular.copyWith(
-                              fontSize: 14,
+                              fontSize: DesignToken.fontSizeMD,
                               color: DesignToken.textDark.withOpacity(0.6),
                             ),
                           ),
 
-                          const SizedBox(height: 40),
+                          SizedBox(height: DesignToken.height4XL),
 
                           // First Name Field
                           Container(
                             decoration: BoxDecoration(
                               color: DesignToken.white,
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: DesignToken.borderRadiusLG,
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withOpacity(0.05),
@@ -549,7 +554,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                             child: TextFormField(
                               controller: _firstNameController,
                               style: AppTextStyles.nunitoRegular.copyWith(
-                                fontSize: 16,
+                                fontSize: DesignToken.fontSizeLG,
                                 color: DesignToken.textDark,
                               ),
                               decoration: InputDecoration(
@@ -564,9 +569,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                 prefixIcon: Icon(
                                   Icons.person_outline,
                                   color: DesignToken.primary,
+                                  semanticLabel: 'First name',
                                 ),
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: DesignToken.borderRadiusLG,
                                   borderSide: BorderSide.none,
                                 ),
                                 filled: true,
@@ -588,13 +594,13 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                             ),
                           ),
 
-                          const SizedBox(height: 20),
+                          SizedBox(height: DesignToken.heightXL),
 
                           // Last Name Field
                           Container(
                             decoration: BoxDecoration(
                               color: DesignToken.white,
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: DesignToken.borderRadiusLG,
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withOpacity(0.05),
@@ -606,7 +612,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                             child: TextFormField(
                               controller: _lastNameController,
                               style: AppTextStyles.nunitoRegular.copyWith(
-                                fontSize: 16,
+                                fontSize: DesignToken.fontSizeLG,
                                 color: DesignToken.textDark,
                               ),
                               decoration: InputDecoration(
@@ -621,9 +627,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                 prefixIcon: Icon(
                                   Icons.person_outline,
                                   color: DesignToken.primary,
+                                  semanticLabel: 'Last name',
                                 ),
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: DesignToken.borderRadiusLG,
                                   borderSide: BorderSide.none,
                                 ),
                                 filled: true,
@@ -636,7 +643,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                             ),
                           ),
 
-                          const SizedBox(height: 40),
+                          SizedBox(height: DesignToken.height4XL),
 
                           // Upload Status
                           if (_isUploadingImage)
@@ -655,11 +662,11 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
+                                  SizedBox(width: DesignToken.widthMD),
                                   Text(
                                     'Uploading image...',
                                     style: AppTextStyles.nunitoMedium.copyWith(
-                                      fontSize: 14,
+                                      fontSize: DesignToken.fontSizeMD,
                                       color: DesignToken.primary,
                                     ),
                                   ),
@@ -671,7 +678,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                           Container(
                             width: double.infinity,
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: DesignToken.borderRadiusLG,
                               boxShadow: [
                                 BoxShadow(
                                   color: DesignToken.secondary.withOpacity(0.3),
@@ -691,7 +698,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                   vertical: 18,
                                 ),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: DesignToken.borderRadiusLG,
                                 ),
                                 elevation: 0,
                               ),
@@ -712,7 +719,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                           ? 'Complete Profile'
                                           : 'Save Changes',
                                       style: AppTextStyles.nunitoBold.copyWith(
-                                        fontSize: 18,
+                                        fontSize: DesignToken.fontSizeXL,
                                         color: DesignToken.white,
                                       ),
                                     ),
@@ -720,12 +727,12 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                           ),
 
                           if (widget.isFirstTime) ...[
-                            const SizedBox(height: 16),
+                            SizedBox(height: DesignToken.heightLG),
                             Text(
                               'You need to complete your profile to continue',
                               textAlign: TextAlign.center,
                               style: AppTextStyles.nunitoRegular.copyWith(
-                                fontSize: 14,
+                                fontSize: DesignToken.fontSizeMD,
                                 color: DesignToken.textDark.withOpacity(0.6),
                               ),
                             ),
@@ -815,13 +822,13 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         backgroundColor: DesignToken.primary,
         type: BottomNavigationBarType.fixed,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+          BottomNavigationBarItem(icon: Icon(Icons.home, semanticLabel: 'Home'), label: "Home"),
           BottomNavigationBarItem(
-            icon: Icon(Icons.monetization_on_outlined),
+            icon: Icon(Icons.monetization_on_outlined, semanticLabel: 'Earn'),
             label: "Earn",
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
+            icon: Icon(Icons.person_outline, semanticLabel: 'Profile'),
             label: "Profile",
           ),
         ],

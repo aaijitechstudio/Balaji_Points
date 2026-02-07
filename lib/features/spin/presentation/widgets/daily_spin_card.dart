@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:balaji_points/presentation/providers/daily_spin_provider.dart';
+import 'package:balaji_points/core/providers/daily_spin_provider.dart';
 
 class DailySpinCard extends ConsumerWidget {
   const DailySpinCard({super.key});

@@ -8,7 +8,8 @@ import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/core/utils/back_button_handler.dart';
-import 'package:balaji_points/presentation/providers/locale_provider.dart';
+import 'package:balaji_points/core/utils/logger.dart';
+import 'package:balaji_points/core/providers/locale_provider.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -101,13 +102,13 @@ class _LoginPageState extends State<LoginPage>
       child: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is UserExistsState) {
-            print('🔍 [DEBUG] User exists, navigating to PIN login');
+            Logger.i('User exists, navigating to PIN login', data: state.phoneNumber);
             context.push('/pin-login?phone=${state.phoneNumber}');
           } else if (state is UserDoesNotExistState) {
-            print('🔍 [DEBUG] User does not exist, navigating to PIN setup');
+            Logger.i('New user, navigating to PIN setup', data: state.phoneNumber);
             context.push('/pin-setup?phone=${state.phoneNumber}');
           } else if (state is AuthErrorState) {
-            print('🔍 [DEBUG] Error checking user: ${state.message}');
+            Logger.e('Error checking user', error: state.message);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('${l10n.error}: ${state.message}'),

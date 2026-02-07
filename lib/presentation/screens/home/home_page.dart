@@ -9,11 +9,11 @@ import 'package:confetti/confetti.dart';
 import 'dart:math';
 
 import 'package:balaji_points/l10n/app_localizations.dart';
-import 'package:balaji_points/presentation/widgets/home_nav_bar.dart';
+import 'package:balaji_points/core/widgets/navigation/home_nav_bar.dart';
 import 'package:balaji_points/presentation/widgets/user_profile_card.dart';
 import 'package:balaji_points/presentation/widgets/top_carpenters_display.dart'; // provides CarpenterRank
 import 'package:balaji_points/presentation/widgets/top_carpenters_list.dart';
-import 'package:balaji_points/presentation/widgets/shimmer_loading.dart';
+import 'package:balaji_points/core/widgets/loading/shimmer_loading.dart';
 import 'package:balaji_points/presentation/widgets/complete_profile_card.dart';
 // Daily spin removed - admin only feature now
 import 'package:balaji_points/services/user_service.dart';

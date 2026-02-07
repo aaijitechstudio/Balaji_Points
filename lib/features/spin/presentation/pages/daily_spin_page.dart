@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:balaji_points/presentation/providers/daily_spin_provider.dart';
+import 'package:balaji_points/core/providers/daily_spin_provider.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
 
 class DailySpinPage extends ConsumerStatefulWidget {
@@ -72,11 +72,11 @@ class _DailySpinPageState extends ConsumerState<DailySpinPage>
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: DesignToken.borderRadiusXL),
         title: const Text(
           '🎉 Congratulations!',
           style: TextStyle(
-            fontSize: 24,
+            fontSize: DesignToken.fontSize3XL,
             fontWeight: FontWeight.bold,
             color: DesignToken.secondary,
           ),
@@ -87,21 +87,21 @@ class _DailySpinPageState extends ConsumerState<DailySpinPage>
           children: [
             Text(
               'You won',
-              style: TextStyle(fontSize: 18, color: Colors.grey[700]),
+              style: TextStyle(fontSize: DesignToken.fontSizeXL, color: Colors.grey[700]),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: DesignToken.heightSM),
             Text(
               '$points Points!',
               style: TextStyle(
-                fontSize: 32,
+                fontSize: DesignToken.fontSize5XL,
                 fontWeight: FontWeight.bold,
                 color: DesignToken.secondary,
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: DesignToken.heightXL),
             Text(
               'Points have been added to your account.',
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              style: TextStyle(fontSize: DesignToken.fontSizeMD, color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),
           ],
@@ -120,10 +120,10 @@ class _DailySpinPageState extends ConsumerState<DailySpinPage>
                   vertical: 12,
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: DesignToken.borderRadiusMD,
                 ),
               ),
-              child: const Text('Great!', style: TextStyle(fontSize: 16)),
+              child: const Text('Great!', style: TextStyle(fontSize: DesignToken.fontSizeLG)),
             ),
           ),
         ],
@@ -166,27 +166,27 @@ class _DailySpinPageState extends ConsumerState<DailySpinPage>
         body: SafeArea(
           child: SingleChildScrollView(
             child: Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: DesignToken.paddingAll2XL,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const SizedBox(height: 40),
+                  SizedBox(height: DesignToken.height4XL),
                   Text(
                     'Spin & Win Points!',
                     style: TextStyle(
-                      fontSize: 28,
+                      fontSize: DesignToken.fontSize4XL,
                       fontWeight: FontWeight.bold,
                       color: DesignToken.secondary,
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: DesignToken.heightSM),
                   Text(
                     'Get your daily spin and win exciting points',
-                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                    style: TextStyle(fontSize: DesignToken.fontSizeLG, color: Colors.grey[600]),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 60),
+                  SizedBox(height: DesignToken.height6XL),
 
                   // Spin Wheel
                   AnimatedBuilder(
@@ -242,6 +242,7 @@ class _DailySpinPageState extends ConsumerState<DailySpinPage>
                                   Icons.radio_button_checked,
                                   size: 40,
                                   color: DesignToken.secondary,
+                                  semanticLabel: 'Spin wheel center',
                                 ),
                               ),
                             ],
@@ -251,7 +252,7 @@ class _DailySpinPageState extends ConsumerState<DailySpinPage>
                     },
                   ),
 
-                  const SizedBox(height: 60),
+                  SizedBox(height: DesignToken.height6XL),
 
                   // Spin Button
                   if (!spinState.isLoading)
@@ -267,13 +268,13 @@ class _DailySpinPageState extends ConsumerState<DailySpinPage>
                           vertical: 18,
                         ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
+                          borderRadius: BorderRadius.circular(DesignToken.radius3XL),
                         ),
                       ),
                       child: Text(
                         _isSpinning ? 'Spinning...' : 'Spin Now!',
                         style: const TextStyle(
-                          fontSize: 20,
+                          fontSize: DesignToken.fontSize2XL,
                           fontWeight: FontWeight.bold,
                           color: DesignToken.white,
                         ),
@@ -282,26 +283,26 @@ class _DailySpinPageState extends ConsumerState<DailySpinPage>
                   else
                     const CircularProgressIndicator(),
 
-                  const SizedBox(height: 30),
+                  SizedBox(height: DesignToken.height3XL),
 
                   // Info
                   if (!spinState.canSpin && spinState.lastSpinDate != null)
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: DesignToken.paddingAllLG,
                       decoration: BoxDecoration(
                         color: DesignToken.blueShade50,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: DesignToken.borderRadiusMD,
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.info_outline, color: DesignToken.blue700),
-                          const SizedBox(width: 10),
+                          Icon(Icons.info_outline, color: DesignToken.blue700, semanticLabel: 'Information'),
+                          SizedBox(width: DesignToken.widthSM),
                           Text(
                             'You\'ve already spun today!\nCome back tomorrow for another chance.',
                             style: TextStyle(
                               color: DesignToken.blue700,
-                              fontSize: 14,
+                              fontSize: DesignToken.fontSizeMD,
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -379,7 +380,7 @@ class SpinWheelPainter extends CustomPainter {
         text: '$points',
         style: TextStyle(
           color: DesignToken.white,
-          fontSize: 24,
+          fontSize: DesignToken.fontSize3XL,
           fontWeight: FontWeight.bold,
         ),
       );

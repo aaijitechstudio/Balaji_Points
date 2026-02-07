@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
-import '../../../services/bill_service.dart';
-import '../../../core/logger.dart';
+import 'package:balaji_points/services/bill_service.dart';
+import 'package:balaji_points/core/logger.dart';
 
 class BillManagementWidget extends StatefulWidget {
   const BillManagementWidget({super.key});
@@ -476,17 +476,11 @@ class _BillManagementWidgetState extends State<BillManagementWidget> {
     );
 
     if (confirm != true) {
-      print('❌ UI (BillManagement): User cancelled approval');
       return;
     }
 
-    print('✅ UI (BillManagement): User confirmed approval');
-    print('   Parameters: billId="$billId", userId="$userId", amount=$amount');
-
     try {
-      print('📞 UI (BillManagement): Calling _billService.approveBill()...');
       final success = await _billService.approveBill(billId, userId, amount);
-      print('📥 UI (BillManagement): approveBill returned: $success');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -503,10 +497,7 @@ class _BillManagementWidgetState extends State<BillManagementWidget> {
         );
       }
     } catch (e, st) {
-      print('❌ UI (BillManagement): Exception caught');
-      print('   Error: $e');
-      print('   StackTrace: $st');
-      AppLogger.error('Error approving bill', e);
+      AppLogger.error('Error approving bill', e, st);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
