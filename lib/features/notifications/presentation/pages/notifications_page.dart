@@ -1,4 +1,4 @@
-// lib/presentation/screens/notifications/notifications_page.dart
+// lib/features/notifications/presentation/pages/notifications_page.dart
 // Notifications screen for carpenters to view and manage their notifications
 
 import 'package:flutter/material.dart';

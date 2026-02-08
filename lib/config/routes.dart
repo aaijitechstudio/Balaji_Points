@@ -24,13 +24,45 @@ import 'package:balaji_points/features/spin/presentation/pages/daily_spin_page.d
 import 'package:balaji_points/features/settings/presentation/pages/notification_settings_page.dart';
 import 'package:balaji_points/features/notifications/presentation/pages/notifications_page.dart';
 import 'package:balaji_points/injection/dependency_injection.dart';
+import 'package:balaji_points/core/utils/app_logger.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+/// GoRouter Observer for logging navigation events
+class _GoRouterObserver extends NavigatorObserver {
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    AppLogger.navigation(
+      route.settings.name ?? 'Unknown',
+      action: 'pushed',
+      extra: previousRoute?.settings.name ?? 'None',
+    );
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    AppLogger.navigation(
+      route.settings.name ?? 'Unknown',
+      action: 'popped',
+      extra: 'back to: ${previousRoute?.settings.name ?? 'None'}',
+    );
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    AppLogger.navigation(
+      newRoute?.settings.name ?? 'Unknown',
+      action: 'replaced',
+      extra: 'from: ${oldRoute?.settings.name ?? 'Unknown'}',
+    );
+  }
+}
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: navigatorKey,
     initialLocation: '/splash',
+    observers: [_GoRouterObserver()], // Add navigation logging
 
     redirect: (context, state) async {
       return null;

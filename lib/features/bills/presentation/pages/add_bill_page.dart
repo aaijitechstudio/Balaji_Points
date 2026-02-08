@@ -8,7 +8,7 @@ import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/services/bill_service.dart';
 import 'package:balaji_points/services/user_service.dart';
 import 'package:balaji_points/services/session_service.dart';
-import 'package:balaji_points/core/logger.dart';
+import 'package:balaji_points/core/utils/app_logger.dart';
 import 'package:balaji_points/core/utils/back_button_handler.dart';
 
 class AddBillPage extends StatefulWidget {
@@ -67,7 +67,7 @@ class _AddBillPageState extends State<AddBillPage> {
         }
       }
     } catch (e) {
-      AppLogger.error('Error checking profile completion', e);
+      AppLogger.error('Error checking profile completion', error: e);
     }
   }
 
@@ -197,7 +197,7 @@ class _AddBillPageState extends State<AddBillPage> {
         });
       }
     } catch (e) {
-      AppLogger.error('Error picking image', e);
+      AppLogger.error('Error picking image', error: e);
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -225,7 +225,7 @@ class _AddBillPageState extends State<AddBillPage> {
         });
       }
     } catch (e) {
-      AppLogger.error('Error taking photo', e);
+      AppLogger.error('Error taking photo', error: e);
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -375,7 +375,7 @@ class _AddBillPageState extends State<AddBillPage> {
         }
       }
     } catch (e) {
-      AppLogger.error('Error submitting bill', e);
+      AppLogger.error('Error submitting bill', error: e);
       if (mounted) {
         setState(() {
           _isSubmitting = false;

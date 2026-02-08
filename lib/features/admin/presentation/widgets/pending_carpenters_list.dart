@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/services/user_service.dart';
-import 'package:balaji_points/core/logger.dart';
+import 'package:balaji_points/core/utils/app_logger.dart';
 
 class PendingCarpentersList extends StatefulWidget {
   const PendingCarpentersList({super.key});
@@ -409,7 +409,7 @@ class _PendingCarpentersListState extends State<PendingCarpentersList> {
 
       AppLogger.info('Carpenter approved: $phone');
     } catch (e) {
-      AppLogger.error('Error approving user', e);
+      AppLogger.error('Error approving user', error: e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -493,7 +493,7 @@ class _PendingCarpentersListState extends State<PendingCarpentersList> {
         );
       }
     } catch (e) {
-      AppLogger.error('Error rejecting user', e);
+      AppLogger.error('Error rejecting user', error: e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

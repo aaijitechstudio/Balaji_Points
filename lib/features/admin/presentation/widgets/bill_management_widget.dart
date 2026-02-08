@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/services/bill_service.dart';
-import 'package:balaji_points/core/logger.dart';
+import 'package:balaji_points/core/utils/app_logger.dart';
 
 class BillManagementWidget extends StatefulWidget {
   const BillManagementWidget({super.key});
@@ -497,7 +497,7 @@ class _BillManagementWidgetState extends State<BillManagementWidget> {
         );
       }
     } catch (e, st) {
-      AppLogger.error('Error approving bill', e, st);
+      AppLogger.error('Error approving bill', error: e, stackTrace: st);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -568,7 +568,7 @@ class _BillManagementWidgetState extends State<BillManagementWidget> {
         );
       }
     } catch (e) {
-      AppLogger.error('Error rejecting bill', e);
+      AppLogger.error('Error rejecting bill', error:  e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

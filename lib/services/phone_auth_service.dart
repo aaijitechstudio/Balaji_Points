@@ -5,7 +5,7 @@
 // The login system now uses PIN + Firestore only.
 
 import 'package:firebase_auth/firebase_auth.dart';
-import '../core/logger.dart';
+import 'package:balaji_points/core/utils/app_logger.dart';
 
 class PhoneAuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -23,7 +23,7 @@ class PhoneAuthService {
       AppLogger.info('Anonymous sign-in successful: ${userCred.user?.uid}');
       return userCred.user;
     } catch (e) {
-      AppLogger.error('Anonymous sign-in failed', e);
+      AppLogger.error('Anonymous sign-in failed', error:  e);
       return null;
     }
   }
@@ -59,7 +59,7 @@ class PhoneAuthService {
       await _auth.signOut();
       AppLogger.info('User signed out successfully');
     } catch (e) {
-      AppLogger.error('Sign out failed', e);
+      AppLogger.error('Sign out failed', error:  e);
     }
   }
 

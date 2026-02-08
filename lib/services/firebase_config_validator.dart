@@ -1,7 +1,7 @@
 // Updated FirebaseConfigValidator without PhoneAuth / SHA checks
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import '../core/logger.dart';
+import 'package:balaji_points/core/utils/app_logger.dart';
 
 class FirebaseConfigValidator {
   /// Main validator (OTP removed → no SHA, no CAPTCHA check)
@@ -65,7 +65,7 @@ class FirebaseConfigValidator {
         errorType: ConfigErrorType.none,
       );
     } catch (e, stack) {
-      AppLogger.error('Unexpected Firebase validation error', e, stack);
+      AppLogger.error('Unexpected Firebase validation error', error: e, stackTrace: stack);
       return FirebaseConfigStatus(
         isValid: false,
         message: 'Unexpected error: $e',
@@ -119,7 +119,7 @@ class FirebaseConfigValidator {
       AppLogger.info('API Key: ${options.apiKey.substring(0, 10)}...');
       AppLogger.info('========================================');
     } catch (e) {
-      AppLogger.error('Failed to log Firebase configuration', e);
+      AppLogger.error('Failed to log Firebase configuration', error:  e);
     }
   }
 }

@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
-import '../core/logger.dart';
+import 'package:balaji_points/core/utils/app_logger.dart';
 
 class StorageService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
@@ -44,9 +44,9 @@ class StorageService {
       AppLogger.info('Profile image uploaded successfully: $downloadUrl');
       return downloadUrl;
     } on FirebaseException catch (e) {
-      AppLogger.error(
+      AppLogger.warning(
         'Firebase Storage error',
-        'Code: ${e.code}, Message: ${e.message}',
+        data: 'Code: ${e.code}, Message: ${e.message}',
       );
       if (e.code == 'storage/unauthorized') {
         throw Exception(
@@ -61,7 +61,7 @@ class StorageService {
       }
       throw Exception('Failed to upload image: ${e.message}');
     } catch (e) {
-      AppLogger.error('Error uploading profile image', e);
+      AppLogger.error('Error uploading profile image', error:  e);
       throw Exception('Failed to upload image: $e');
     }
   }
@@ -82,7 +82,7 @@ class StorageService {
       AppLogger.info('Profile image deleted successfully');
       return true;
     } catch (e) {
-      AppLogger.error('Error deleting profile image', e);
+      AppLogger.error('Error deleting profile image', error:  e);
       return false;
     }
   }

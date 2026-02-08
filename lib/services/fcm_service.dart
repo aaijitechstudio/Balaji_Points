@@ -8,7 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../config/routes.dart';
-import '../core/logger.dart';
+import 'package:balaji_points/core/utils/app_logger.dart';
 import 'local_notification_service.dart';
 import 'session_service.dart';
 
@@ -62,7 +62,7 @@ class FCMService {
 
       _setupMessageHandlers();
     } catch (e) {
-      AppLogger.error('Error initializing FCM', e);
+      AppLogger.error('Error initializing FCM', error: e);
     }
   }
 
@@ -74,7 +74,7 @@ class FCMService {
         await _saveTokenToFirestore(_token!);
       }
     } catch (e) {
-      AppLogger.error('Error getting FCM token', e);
+      AppLogger.error('Error getting FCM token', error: e);
     }
   }
 
@@ -135,7 +135,7 @@ class FCMService {
         }
       }
     } catch (e) {
-      AppLogger.error('Error saving FCM token', e);
+      AppLogger.error('Error saving FCM token', error: e);
     }
   }
 
@@ -186,7 +186,7 @@ class FCMService {
         _pendingNavigation = true;
       }
     } catch (e) {
-      AppLogger.error('Navigation error', e);
+      AppLogger.error('Navigation error', error: e);
     }
   }
 
@@ -240,7 +240,7 @@ class FCMService {
       _token = null;
       AppLogger.info('🧹 FCM token deleted from device');
     } catch (e) {
-      AppLogger.error('Error deleting token', e);
+      AppLogger.error('Error deleting token', error: e);
     }
   }
 }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
-import 'package:balaji_points/core/utils/logger.dart';
+import 'package:balaji_points/core/utils/app_logger.dart';
 import 'package:balaji_points/services/bill_service.dart';
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
@@ -55,7 +55,7 @@ class _BillDetailsPageState extends State<BillDetailsPage> {
         }
       }
     } catch (e) {
-      Logger.e('Error loading bill data', error: e);
+      AppLogger.error('Error loading bill data', error: e);
     } finally {
       setState(() => _isLoading = false);
     }
@@ -81,7 +81,7 @@ class _BillDetailsPageState extends State<BillDetailsPage> {
         _carpenterData = query.docs.first.data();
       }
     } catch (e) {
-      Logger.e('Error loading carpenter data', error: e);
+      AppLogger.error('Error loading carpenter data', error: e);
     }
   }
 

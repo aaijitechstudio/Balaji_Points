@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../core/logger.dart';
+import 'package:balaji_points/core/utils/app_logger.dart';
 import 'session_service.dart';
 import 'notification_service.dart';
 
@@ -16,7 +16,7 @@ class UserService {
           .get();
       return doc.exists;
     } catch (e) {
-      AppLogger.error('Error checking pending user', e);
+      AppLogger.error('Error checking pending user', error: e);
       return false;
     }
   }
@@ -30,7 +30,7 @@ class UserService {
       }
       return null;
     } catch (e) {
-      AppLogger.error('Error checking verified user', e);
+      AppLogger.error('Error checking verified user', error: e);
       return null;
     }
   }
@@ -53,7 +53,7 @@ class UserService {
       }
       return null;
     } catch (e) {
-      AppLogger.error('Error getting user by phone', e);
+      AppLogger.error('Error getting user by phone', error: e);
       return null;
     }
   }
@@ -85,7 +85,7 @@ class UserService {
 
       return true;
     } catch (e) {
-      AppLogger.error('Error creating pending user', e);
+      AppLogger.error('Error creating pending user', error: e);
       return false;
     }
   }
@@ -145,7 +145,7 @@ class UserService {
 
       return true;
     } catch (e) {
-      AppLogger.error('Error creating verified user', e);
+      AppLogger.error('Error creating verified user', error: e);
       return false;
     }
   }
@@ -194,7 +194,7 @@ class UserService {
 
       return true;
     } catch (e) {
-      AppLogger.error('Error updating user after verification', e);
+      AppLogger.error('Error updating user after verification', error: e);
       return false;
     }
   }
@@ -226,7 +226,7 @@ class UserService {
       AppLogger.warning('No user document found for phone: $phoneNumber');
       return null;
     } catch (e) {
-      AppLogger.error('Error getting current user data', e);
+      AppLogger.error('Error getting current user data', error: e);
       return null;
     }
   }
@@ -237,7 +237,7 @@ class UserService {
       final data = await getCurrentUserData(forceRefresh: true);
       return data?['role'] == 'admin';
     } catch (e) {
-      AppLogger.error('Error checking admin status', e);
+      AppLogger.error('Error checking admin status', error: e);
       return false;
     }
   }
@@ -280,9 +280,9 @@ class UserService {
           (phone != null ? 1 : 0);
 
       if (totalOperations > 500) {
-        AppLogger.error(
+        AppLogger.warning(
           'Too many operations for batch delete',
-          'Total: $totalOperations',
+          data: 'Total: $totalOperations',
         );
         // Delete in multiple batches if needed
         return await _deleteCarpenterInBatches(
@@ -328,7 +328,7 @@ class UserService {
       AppLogger.info('Carpenter deleted successfully: $userId');
       return true;
     } catch (e) {
-      AppLogger.error('Error deleting carpenter', e);
+      AppLogger.error('Error deleting carpenter', error: e);
       rethrow; // Re-throw to get better error messages
     }
   }
@@ -382,7 +382,7 @@ class UserService {
       AppLogger.info('Carpenter deleted successfully in batches: $userId');
       return true;
     } catch (e) {
-      AppLogger.error('Error deleting carpenter in batches', e);
+      AppLogger.error('Error deleting carpenter in batches', error: e);
       return false;
     }
   }

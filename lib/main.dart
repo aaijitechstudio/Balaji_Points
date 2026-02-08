@@ -8,7 +8,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'app.dart';
 import 'firebase_options.dart';
-import 'core/logger.dart';
+import 'package:balaji_points/core/utils/app_logger.dart';
+import 'core/utils/app_logger.dart';
 import 'services/fcm_service.dart';
 import 'services/local_notification_service.dart';
 import 'injection/dependency_injection.dart';
@@ -42,7 +43,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         channelId: channelId,
       );
     } catch (e) {
-      AppLogger.error('Background notification error', e);
+      AppLogger.error('Background notification error', error: e);
     }
   }
 }
@@ -69,28 +70,42 @@ class _Bootstrap extends StatelessWidget {
   const _Bootstrap();
 
   Future<void> _init() async {
+    final startTime = DateTime.now();
+    AppLogger.appInit('Starting', detail: 'Initializing Firebase & Dependencies');
+    
     try {
       // Initialize Firebase
+      final firebaseStart = DateTime.now();
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
+      final firebaseDuration = DateTime.now().difference(firebaseStart).inMilliseconds;
+      AppLogger.performance('Firebase initialization', firebaseDuration);
 
       // Setup dependency injection
+      final diStart = DateTime.now();
       await setupDependencyInjection();
+      final diDuration = DateTime.now().difference(diStart).inMilliseconds;
+      AppLogger.performance('Dependency injection', diDuration);
 
       // FCM (Safe Initialization)
       try {
+        final fcmStart = DateTime.now();
         FirebaseMessaging.onBackgroundMessage(
           _firebaseMessagingBackgroundHandler,
         );
         await FCMService().initialize();
+        final fcmDuration = DateTime.now().difference(fcmStart).inMilliseconds;
+        AppLogger.performance('FCM initialization', fcmDuration);
       } catch (fcmError) {
-        AppLogger.warning('⚠️ FCM initialization failed: $fcmError');
+        AppLogger.warning('⚠️ FCM initialization failed', data: fcmError);
       }
       
-      AppLogger.info('✅ App initialized');
+      final totalDuration = DateTime.now().difference(startTime).inMilliseconds;
+      AppLogger.appInit('Complete', detail: 'Total: ${totalDuration}ms');
+      AppLogger.info('✅ App initialized successfully');
     } catch (e) {
-      AppLogger.error('❌ App initialization failed', e);
+      AppLogger.error('❌ App initialization failed', error: e);
       rethrow;
     }
   }

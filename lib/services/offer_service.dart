@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
-import '../core/logger.dart';
+import 'package:balaji_points/core/utils/app_logger.dart';
 import 'session_service.dart';
 import 'notification_service.dart';
 
@@ -33,9 +33,9 @@ class OfferService {
       AppLogger.info('Offer banner uploaded: $imageUrl');
       return imageUrl;
     } on FirebaseException catch (e) {
-      AppLogger.error(
+      AppLogger.warning(
         'Firebase Storage error',
-        'Code: ${e.code}, Message: ${e.message}',
+        data: 'Code: ${e.code}, Message: ${e.message}',
       );
       if (e.code == 'storage/unauthorized') {
         throw Exception(
@@ -50,7 +50,7 @@ class OfferService {
       }
       throw Exception('Failed to upload banner: ${e.message}');
     } catch (e) {
-      AppLogger.error('Error uploading offer banner', e);
+      AppLogger.error('Error uploading offer banner', error:  e);
       throw Exception('Failed to upload banner: $e');
     }
   }
@@ -65,7 +65,7 @@ class OfferService {
       await ref.delete();
       AppLogger.info('Deleted old banner: $bannerUrl');
     } catch (e) {
-      AppLogger.error('Error deleting banner', e);
+      AppLogger.error('Error deleting banner', error:  e);
       // Don't throw - banner deletion is not critical
     }
   }
@@ -125,13 +125,13 @@ class OfferService {
 
       return true;
     } on FirebaseException catch (e) {
-      AppLogger.error(
+      AppLogger.warning(
         'Firebase error creating offer',
-        'Code: ${e.code}, Message: ${e.message}',
+        data: 'Code: ${e.code}, Message: ${e.message}',
       );
       return false;
     } catch (e) {
-      AppLogger.error('Error creating offer', e.toString());
+      AppLogger.error('Error creating offer', error:  e.toString());
       return false;
     }
   }
@@ -198,13 +198,13 @@ class OfferService {
       AppLogger.info('Offer updated successfully: $offerId');
       return true;
     } on FirebaseException catch (e) {
-      AppLogger.error(
+      AppLogger.warning(
         'Firebase error updating offer',
-        'Code: ${e.code}, Message: ${e.message}',
+        data: 'Code: ${e.code}, Message: ${e.message}',
       );
       return false;
     } catch (e) {
-      AppLogger.error('Error updating offer', e.toString());
+      AppLogger.error('Error updating offer', error:  e.toString());
       return false;
     }
   }
@@ -223,13 +223,13 @@ class OfferService {
       AppLogger.info('Offer deleted successfully: $offerId');
       return true;
     } on FirebaseException catch (e) {
-      AppLogger.error(
+      AppLogger.warning(
         'Firebase error deleting offer',
-        'Code: ${e.code}, Message: ${e.message}',
+        data: 'Code: ${e.code}, Message: ${e.message}',
       );
       return false;
     } catch (e) {
-      AppLogger.error('Error deleting offer', e.toString());
+      AppLogger.error('Error deleting offer', error:  e.toString());
       return false;
     }
   }
@@ -257,7 +257,7 @@ class OfferService {
 
       return offers;
     } catch (e) {
-      AppLogger.error('Error getting active offers', e);
+      AppLogger.error('Error getting active offers', error:  e);
       return [];
     }
   }
@@ -272,7 +272,7 @@ class OfferService {
 
       return query.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
     } catch (e) {
-      AppLogger.error('Error getting all offers', e);
+      AppLogger.error('Error getting all offers', error:  e);
       return [];
     }
   }
@@ -291,7 +291,7 @@ class OfferService {
       final userDoc = await userRef.get();
 
       if (!userDoc.exists) {
-        AppLogger.error('User not found', 'carpenterId: $carpenterId');
+        AppLogger.error('User not found', error:  'carpenterId: $carpenterId');
         throw Exception('Carpenter not found');
       }
 
@@ -299,9 +299,9 @@ class OfferService {
       final currentPoints = (userData['totalPoints'] ?? 0) as int;
 
       if (currentPoints < pointsRequired) {
-        AppLogger.error(
+        AppLogger.warning(
           'Insufficient points',
-          'Required: $pointsRequired, Available: $currentPoints',
+          data: 'Required: $pointsRequired, Available: $currentPoints',
         );
         throw Exception('Insufficient points');
       }
@@ -388,13 +388,13 @@ class OfferService {
 
       return true;
     } on FirebaseException catch (e) {
-      AppLogger.error(
+      AppLogger.warning(
         'Firebase error redeeming offer',
-        'Code: ${e.code}, Message: ${e.message}',
+        data: 'Code: ${e.code}, Message: ${e.message}',
       );
       return false;
     } catch (e) {
-      AppLogger.error('Error redeeming offer', e.toString());
+      AppLogger.error('Error redeeming offer', error:  e.toString());
       return false;
     }
   }
@@ -412,7 +412,7 @@ class OfferService {
 
       return query.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
     } catch (e) {
-      AppLogger.error('Error getting redemption history', e);
+      AppLogger.error('Error getting redemption history', error:  e);
       return [];
     }
   }

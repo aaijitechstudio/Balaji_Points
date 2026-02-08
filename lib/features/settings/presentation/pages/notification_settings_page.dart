@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart';
 import 'package:balaji_points/services/session_service.dart';
-import 'package:balaji_points/core/logger.dart';
+import 'package:balaji_points/core/utils/app_logger.dart';
 import 'package:balaji_points/core/widgets/navigation/home_nav_bar.dart';
 
 class NotificationSettingsPage extends StatefulWidget {
@@ -72,7 +72,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
         }
       }
     } catch (e) {
-      AppLogger.error('Error loading notification preferences', e);
+      AppLogger.error('Error loading notification preferences', error:  e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -119,7 +119,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
         );
       }
     } catch (e) {
-      AppLogger.error('Error saving notification preferences', e);
+      AppLogger.error('Error saving notification preferences', error:  e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

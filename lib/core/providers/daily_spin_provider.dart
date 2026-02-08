@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import '../../services/notification_service.dart';
-import '../../core/logger.dart';
+import 'package:balaji_points/core/utils/app_logger.dart';
 
 class DailySpinState {
   final bool canSpin;

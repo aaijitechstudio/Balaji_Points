@@ -8,7 +8,7 @@ import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/services/bill_service.dart';
 import 'package:balaji_points/services/session_service.dart';
 import 'package:balaji_points/services/user_service.dart';
-import 'package:balaji_points/core/logger.dart';
+import 'package:balaji_points/core/utils/app_logger.dart';
 import 'package:balaji_points/core/utils/back_button_handler.dart';
 import 'package:balaji_points/features/admin/presentation/widgets/carpenter_selection_widget.dart';
 import 'package:intl/intl.dart';
@@ -56,7 +56,7 @@ class _AdminAddBillPageState extends State<AdminAddBillPage> {
     try {
       _adminData = await _userService.getCurrentUserData();
     } catch (e) {
-      AppLogger.error('Error loading admin data', e);
+      AppLogger.error('Error loading admin data', error:  e);
     }
   }
 
@@ -111,7 +111,7 @@ class _AdminAddBillPageState extends State<AdminAddBillPage> {
         });
       }
     } catch (e) {
-      AppLogger.error('Error picking image', e);
+      AppLogger.error('Error picking image', error:  e);
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -139,7 +139,7 @@ class _AdminAddBillPageState extends State<AdminAddBillPage> {
         });
       }
     } catch (e) {
-      AppLogger.error('Error taking photo', e);
+      AppLogger.error('Error taking photo', error:  e);
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -321,7 +321,7 @@ class _AdminAddBillPageState extends State<AdminAddBillPage> {
         }
       }
     } catch (e) {
-      AppLogger.error('Error submitting bill', e);
+      AppLogger.error('Error submitting bill', error:  e);
       if (mounted) {
         setState(() {
           _isSubmitting = false;

@@ -5,7 +5,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
 
-import '../core/utils/logger.dart';
+import 'package:balaji_points/core/utils/app_logger.dart';
 import 'user_service.dart';
 
 class PinAuthService {
@@ -74,7 +74,7 @@ class PinAuthService {
         }
 
         await doc.reference.set(data, SetOptions(merge: true));
-        Logger.i('PIN updated for existing user: $normalized');
+        AppLogger.info('PIN updated for existing user: $normalized');
         return true;
       } else {
         // Create new user
@@ -109,11 +109,11 @@ class PinAuthService {
           'pointsHistory': [],
         });
 
-        Logger.i('New user created with PIN: $normalized');
+        AppLogger.info('New user created with PIN: $normalized');
         return true;
       }
     } catch (e, st) {
-      Logger.e('Error setting PIN for phone $phone', error: e, stackTrace: st);
+      AppLogger.error('Error setting PIN for phone $phone', error: e, stackTrace: st);
       return false;
     }
   }
@@ -148,13 +148,13 @@ class PinAuthService {
 
       final computedHash = _hashPin(pin, salt);
       if (computedHash == storedHash) {
-        Logger.i('PIN verified for $normalized');
+        AppLogger.info('PIN verified for $normalized');
         return {...data, 'docId': doc.id};
       }
 
       return null;
     } catch (e, st) {
-      Logger.e('Error verifying PIN for phone $phone', error: e, stackTrace: st);
+      AppLogger.error('Error verifying PIN for phone $phone', error: e, stackTrace: st);
       return null;
     }
   }
@@ -186,7 +186,7 @@ class PinAuthService {
 
       return false;
     } catch (e) {
-      Logger.e('Error checking user existence for phone $phone', error: e);
+      AppLogger.error('Error checking user existence for phone $phone', error: e);
       return false;
     }
   }
@@ -205,7 +205,7 @@ class PinAuthService {
       final data = query.docs.first.data();
       return data['pinHash'] != null && data['pinSalt'] != null;
     } catch (e) {
-      Logger.e('Error checking PIN for phone $phone', error: e);
+      AppLogger.error('Error checking PIN for phone $phone', error: e);
       return false;
     }
   }
@@ -235,7 +235,7 @@ class PinAuthService {
           .get();
 
       if (query.docs.isEmpty) {
-        Logger.w(
+        AppLogger.warning(
           'PIN reset failed: User not found for phone $normalized',
         );
         return false;
@@ -250,27 +250,27 @@ class PinAuthService {
         final userService = UserService();
         final isActuallyAdmin = await userService.isAdmin();
         if (!isActuallyAdmin) {
-          Logger.w(
+          AppLogger.warning(
             'PIN reset denied: User is not authorized as admin for phone $normalized',
           );
           return false;
         }
         // Admin verified - skip security checks and proceed
-        Logger.i('Admin PIN reset authorized for phone $normalized');
+        AppLogger.info('Admin PIN reset authorized for phone $normalized');
       } else {
         // Regular user reset - apply security checks
         // Check 1: Verify phone ownership (if logged in)
         if (loggedInPhone != null) {
           final normalizedLoggedIn = normalizePhone(loggedInPhone);
           if (normalized != normalizedLoggedIn) {
-            Logger.w(
+            AppLogger.warning(
               'PIN reset denied: Phone mismatch. Logged in: $normalizedLoggedIn, Requested: $normalized',
             );
             return false;
           }
         } else {
           // Not logged in and not admin - deny reset
-          Logger.w(
+          AppLogger.warning(
             'PIN reset denied: User not logged in and not admin for phone $normalized',
           );
           return false;
@@ -282,7 +282,7 @@ class PinAuthService {
           final storedHash = userData['pinHash'] as String?;
 
           if (salt == null || storedHash == null) {
-            Logger.w(
+            AppLogger.warning(
               'PIN reset denied: No PIN set for phone $normalized',
             );
             return false;
@@ -290,14 +290,14 @@ class PinAuthService {
 
           final computedHash = _hashPin(currentPin, salt);
           if (computedHash != storedHash) {
-            Logger.w(
+            AppLogger.warning(
               'PIN reset denied: Current PIN verification failed for phone $normalized',
             );
             return false;
           }
         } else {
           // Current PIN required for non-admin resets
-          Logger.w(
+          AppLogger.warning(
             'PIN reset denied: Current PIN not provided for phone $normalized',
           );
           return false;
@@ -314,10 +314,10 @@ class PinAuthService {
         'pinUpdatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      Logger.i('PIN reset successful for $normalized');
+      AppLogger.info('PIN reset successful for $normalized');
       return true;
     } catch (e, st) {
-      Logger.e('Error resetting PIN for phone $phone', error: e, stackTrace: st);
+      AppLogger.error('Error resetting PIN for phone $phone', error: e, stackTrace: st);
       return false;
     }
   }
@@ -377,14 +377,14 @@ class PinAuthService {
         // User found by phone field
         userDoc = queryByPhone.docs.first;
         userDocRef = userDoc.reference;
-        Logger.i('User found by phone field query: ${userDoc.id}');
+        AppLogger.info('User found by phone field query: ${userDoc.id}');
       } else {
         // Check by document ID (phone number might be document ID)
         final docRef = usersRef.doc(normalized);
         userDoc = await docRef.get();
         if (userDoc.exists) {
           userDocRef = docRef;
-          Logger.i('User found by document ID: $normalized');
+          AppLogger.info('User found by document ID: $normalized');
         }
       }
 
@@ -401,19 +401,19 @@ class PinAuthService {
             pinSalt != null &&
             pinSalt.toString().trim().isNotEmpty;
 
-        Logger.i(
+        AppLogger.info(
           'User document exists. PIN hash: ${pinHash != null ? "present (${pinHash.length} chars)" : "null"}, PIN salt: ${pinSalt != null ? "present (${pinSalt.length} chars)" : "null"}, Has PIN: $hasPin',
         );
 
         if (hasPin) {
           // User already exists with PIN - they should use Reset PIN instead
-          Logger.w(
+          AppLogger.warning(
             'Account already exists with PIN for phone $normalized. Use Reset PIN instead.',
           );
           return false;
         } else {
           // User document exists but no PIN set - complete the account setup
-          Logger.i(
+          AppLogger.info(
             'User document exists but no PIN set. Completing account setup for $normalized.',
           );
 
@@ -477,7 +477,7 @@ class PinAuthService {
             });
           }
 
-          Logger.i(
+          AppLogger.info(
             'Account setup completed for existing user: $normalized',
           );
           return true;
@@ -527,10 +527,10 @@ class PinAuthService {
       // Commit batch - atomic operation
       await batch.commit();
 
-      Logger.i('New account created successfully: $normalized');
+      AppLogger.info('New account created successfully: $normalized');
       return true;
     } on FirebaseException catch (e, st) {
-      Logger.e(
+      AppLogger.error(
         'Firebase error creating account for phone $phone',
         error: e,
         stackTrace: st,
@@ -544,7 +544,7 @@ class PinAuthService {
       }
       throw Exception('Firebase error: ${e.message}');
     } catch (e, st) {
-      Logger.e(
+      AppLogger.error(
         'Error creating account for phone $phone',
         error: e,
         stackTrace: st,

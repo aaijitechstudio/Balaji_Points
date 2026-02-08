@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../core/utils/logger.dart';
+import 'package:balaji_points/core/utils/app_logger.dart';
 
 /// Notification types for different events
 enum NotificationType {
@@ -45,7 +45,7 @@ class NotificationService {
     Map<String, dynamic>? data,
   }) async {
     try {
-      Logger.i('Sending notification: $type to user: $userId');
+      AppLogger.info('Sending notification: $type to user: $userId');
 
       // Get user's FCM token
       // Try multiple userId formats to find the user document
@@ -56,7 +56,7 @@ class NotificationService {
       userDoc = await _firestore.collection('users').doc(userId).get();
       if (userDoc.exists) {
         actualUserId = userId;
-        Logger.i('Found user with direct userId: $userId');
+        AppLogger.info('Found user with direct userId: $userId');
       } else {
         // Second try: search by phone number if userId is phone number format
         if (userId.length >= 10 && RegExp(r'^\d+$').hasMatch(userId)) {
@@ -70,7 +70,7 @@ class NotificationService {
           if (phoneQuery.docs.isNotEmpty) {
             userDoc = phoneQuery.docs.first;
             actualUserId = userDoc.id;
-            Logger.i(
+            AppLogger.info(
               'Found user by phone number: $userId -> document ID: $actualUserId',
             );
           }
@@ -87,7 +87,7 @@ class NotificationService {
           if (carpenterQuery.docs.isNotEmpty) {
             userDoc = carpenterQuery.docs.first;
             actualUserId = userDoc.id;
-            Logger.i(
+            AppLogger.info(
               'Found user by carpenterId: $userId -> document ID: $actualUserId',
             );
           }
@@ -95,7 +95,7 @@ class NotificationService {
       }
 
       if (!userDoc.exists) {
-        Logger.e(
+        AppLogger.error(
           'User not found: $userId (tried direct lookup, phone, and carpenterId)',
         );
         return false;
@@ -105,17 +105,17 @@ class NotificationService {
       final fcmToken = userData?['fcmToken'] as String?;
 
       if (fcmToken == null || fcmToken.isEmpty) {
-        Logger.e(
+        AppLogger.error(
           'No FCM token found for user: $userId (document ID: ${actualUserId ?? userDoc.id})',
         );
-        Logger.i('User data keys: ${userData?.keys.toList()}');
-        Logger.i(
+        AppLogger.info('User data keys: ${userData?.keys.toList()}');
+        AppLogger.info(
           'User has fcmToken field: ${userData?.containsKey('fcmToken')}',
         );
         return false;
       }
 
-      Logger.i(
+      AppLogger.info(
         'FCM token found for user: $userId (document ID: ${actualUserId ?? userDoc.id})',
       );
 
@@ -125,7 +125,7 @@ class NotificationService {
       if (notificationPrefs != null) {
         final enabled = notificationPrefs['enabled'] as bool? ?? true;
         if (!enabled) {
-          Logger.i('Notifications disabled for user: $userId');
+          AppLogger.info('Notifications disabled for user: $userId');
           return false;
         }
 
@@ -133,7 +133,7 @@ class NotificationService {
         final typeKey = _getNotificationTypeKey(type);
         final typeEnabled = notificationPrefs[typeKey] as bool? ?? true;
         if (!typeEnabled) {
-          Logger.i(
+          AppLogger.info(
             'Notification type $typeKey disabled for user: $userId',
           );
           return false;
@@ -172,10 +172,10 @@ class NotificationService {
         isBroadcast: false,
       );
 
-      Logger.i('Notification queued successfully: $type');
+      AppLogger.info('Notification queued successfully: $type');
       return true;
     } catch (e, stackTrace) {
-      Logger.e('Error sending notification', error: e, stackTrace: stackTrace);
+      AppLogger.error('Error sending notification', error: e, stackTrace: stackTrace);
       return false;
     }
   }
@@ -202,9 +202,9 @@ class NotificationService {
         'priority': _getNotificationPriority(type),
       });
 
-      Logger.i('Notification queued in Firestore');
+      AppLogger.info('Notification queued in Firestore');
     } catch (e) {
-      Logger.e('Error queueing notification in Firestore', error: e);
+      AppLogger.error('Error queueing notification in Firestore', error: e);
       rethrow;
     }
   }
@@ -365,7 +365,7 @@ class NotificationService {
     required int pointsWon,
   }) async {
     try {
-      Logger.i('📢 Broadcasting daily spin winner: $winnerName');
+      AppLogger.info('📢 Broadcasting daily spin winner: $winnerName');
 
       // Get all users (carpenters only, exclude admins)
       final usersQuery = await _firestore.collection('users').get();
@@ -425,14 +425,14 @@ class NotificationService {
           );
           successCount++;
         } catch (e) {
-          Logger.w(
+          AppLogger.warning(
             'Failed to queue spin winner notification for user $userId: $e',
           );
           skippedCount++;
         }
       }
 
-      Logger.i(
+      AppLogger.info(
         '📢 Spin winner broadcast complete: $successCount sent, $skippedCount skipped',
       );
 
@@ -448,7 +448,7 @@ class NotificationService {
 
       return successCount;
     } catch (e) {
-      Logger.e('Error broadcasting daily spin winner', error: e);
+      AppLogger.error('Error broadcasting daily spin winner', error: e);
       return 0;
     }
   }
@@ -499,7 +499,7 @@ class NotificationService {
     required int points,
   }) async {
     try {
-      Logger.i('📢 Broadcasting new offer notification: $offerTitle');
+      AppLogger.info('📢 Broadcasting new offer notification: $offerTitle');
 
       // Get all users (carpenters only, exclude admins)
       // Note: Firestore doesn't support isNotEqualTo directly
@@ -563,14 +563,14 @@ class NotificationService {
           );
           successCount++;
         } catch (e) {
-          Logger.w(
+          AppLogger.warning(
             'Failed to queue notification for user $userId: $e',
           );
           skippedCount++;
         }
       }
 
-      Logger.i(
+      AppLogger.info(
         '📢 Broadcast complete: $successCount sent, $skippedCount skipped',
       );
 
@@ -586,7 +586,7 @@ class NotificationService {
 
       return successCount;
     } catch (e) {
-      Logger.e('Error broadcasting new offer notification', error: e);
+      AppLogger.error('Error broadcasting new offer notification', error: e);
       return 0;
     }
   }
@@ -631,9 +631,9 @@ class NotificationService {
         'status': 'queued',
       });
 
-      Logger.i('Notification analytics logged: $type');
+      AppLogger.info('Notification analytics logged: $type');
     } catch (e) {
-      Logger.w('Failed to log notification analytics', data: e);
+      AppLogger.warning('Failed to log notification analytics', data: e);
       // Don't throw - analytics logging is not critical
     }
   }
@@ -668,7 +668,7 @@ class NotificationService {
     Map<String, dynamic>? data,
   }) async {
     try {
-      Logger.i('📢 Sending notification to all admins: $title');
+      AppLogger.info('📢 Sending notification to all admins: $title');
 
       // Get all admin users with FCM tokens
       final usersQuery = await _firestore.collection('users').get();
@@ -682,7 +682,7 @@ class NotificationService {
       }).toList();
 
       if (adminUsers.isEmpty) {
-        Logger.w('No admin users found with FCM tokens');
+        AppLogger.warning('No admin users found with FCM tokens');
         return 0;
       }
 
@@ -723,20 +723,20 @@ class NotificationService {
           );
           successCount++;
         } catch (e) {
-          Logger.w(
+          AppLogger.warning(
             'Failed to queue admin notification for $adminId: $e',
           );
           skippedCount++;
         }
       }
 
-      Logger.i(
+      AppLogger.info(
         '📢 Admin notification complete: $successCount sent, $skippedCount skipped',
       );
 
       return successCount;
     } catch (e) {
-      Logger.e('Error sending notification to admins', error: e);
+      AppLogger.error('Error sending notification to admins', error: e);
       return 0;
     }
   }

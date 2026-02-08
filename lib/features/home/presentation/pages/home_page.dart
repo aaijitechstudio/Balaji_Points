@@ -1,4 +1,4 @@
-// lib/presentation/screens/home/home_page.dart
+// lib/features/home/presentation/pages/home_page.dart
 // Complete Home screen: Offers (dynamic) + Top 10 carpenters (dynamic) + current user rank
 // Uses CarpenterRank (version A: rank, name, points, imageUrl) from top_carpenters_display.dart
 

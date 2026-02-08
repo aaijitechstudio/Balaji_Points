@@ -8,7 +8,7 @@ import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/core/utils/back_button_handler.dart';
-import 'package:balaji_points/core/utils/logger.dart';
+import 'package:balaji_points/core/utils/app_logger.dart';
 import 'package:balaji_points/core/providers/locale_provider.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
@@ -21,8 +21,7 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage>
-    with TickerProviderStateMixin {
+class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   late AnimationController _animationController;
   late List<FloatingElement> _floatingElements;
 
@@ -102,13 +101,18 @@ class _LoginPageState extends State<LoginPage>
       child: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is UserExistsState) {
-            Logger.i('User exists, navigating to PIN login', data: state.phoneNumber);
+            AppLogger.info(
+              'User exists, navigating to PIN login',
+              data: state.phoneNumber,
+            );
             context.push('/pin-login?phone=${state.phoneNumber}');
           } else if (state is UserDoesNotExistState) {
-            Logger.i('New user, navigating to PIN setup', data: state.phoneNumber);
+            AppLogger.info(
+              'New user, navigating to PIN setup',
+              data: state.phoneNumber,
+            );
             context.push('/pin-setup?phone=${state.phoneNumber}');
           } else if (state is AuthErrorState) {
-            Logger.e('Error checking user', error: state.message);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('${l10n.error}: ${state.message}'),
@@ -166,13 +170,16 @@ class _LoginPageState extends State<LoginPage>
                                   child: Consumer(
                                     builder: (context, ref, child) {
                                       return Container(
-                                        padding: DesignToken.paddingHorizontalMD,
+                                        padding:
+                                            DesignToken.paddingHorizontalMD,
                                         height: 40,
                                         decoration: BoxDecoration(
                                           color: DesignToken.white,
-                                          borderRadius: DesignToken.borderRadiusMD,
+                                          borderRadius:
+                                              DesignToken.borderRadiusMD,
                                           border: Border.all(
-                                            color: DesignToken.primary.withOpacity(0.3),
+                                            color: DesignToken.primary
+                                                .withOpacity(0.3),
                                           ),
                                         ),
                                         child: DropdownButtonHideUnderline(
@@ -181,14 +188,18 @@ class _LoginPageState extends State<LoginPage>
                                             onChanged: (Locale? newLocale) {
                                               if (newLocale != null) {
                                                 ref
-                                                    .read(localeProvider.notifier)
+                                                    .read(
+                                                      localeProvider.notifier,
+                                                    )
                                                     .setLocale(newLocale);
                                               }
                                             },
                                             items: [
                                               DropdownMenuItem(
                                                 value: const Locale('en'),
-                                                child: Text(l10n.languageEnglish),
+                                                child: Text(
+                                                  l10n.languageEnglish,
+                                                ),
                                               ),
                                               DropdownMenuItem(
                                                 value: const Locale('hi'),
@@ -232,7 +243,9 @@ class _LoginPageState extends State<LoginPage>
                                   l10n.enterPhoneNumber,
                                   style: AppTextStyles.nunitoRegular.copyWith(
                                     fontSize: DesignToken.fontSizeLG,
-                                    color: DesignToken.textDark.withOpacity(0.9),
+                                    color: DesignToken.textDark.withOpacity(
+                                      0.9,
+                                    ),
                                   ),
                                 ),
 
@@ -247,7 +260,9 @@ class _LoginPageState extends State<LoginPage>
                                       sigmaY: 10,
                                     ),
                                     child: Container(
-                                      padding: EdgeInsets.all(DesignToken.padding3XL),
+                                      padding: EdgeInsets.all(
+                                        DesignToken.padding3XL,
+                                      ),
                                       decoration: BoxDecoration(
                                         gradient: LinearGradient(
                                           begin: Alignment.topLeft,
@@ -257,14 +272,18 @@ class _LoginPageState extends State<LoginPage>
                                             DesignToken.white.withOpacity(0.7),
                                           ],
                                         ),
-                                        borderRadius: DesignToken.borderRadius2XL,
+                                        borderRadius:
+                                            DesignToken.borderRadius2XL,
                                         border: Border.all(
-                                          color: DesignToken.white.withOpacity(0.5),
+                                          color: DesignToken.white.withOpacity(
+                                            0.5,
+                                          ),
                                           width: 1.5,
                                         ),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: DesignToken.primary.withOpacity(0.1),
+                                            color: DesignToken.primary
+                                                .withOpacity(0.1),
                                             blurRadius: 20,
                                             offset: const Offset(0, 10),
                                           ),
@@ -280,18 +299,24 @@ class _LoginPageState extends State<LoginPage>
                                             keyboardType: TextInputType.phone,
                                             style: AppTextStyles.nunitoSemiBold
                                                 .copyWith(
-                                                  fontSize: DesignToken.fontSizeXL,
+                                                  fontSize:
+                                                      DesignToken.fontSizeXL,
                                                   color: DesignToken.textDark,
                                                 ),
                                             decoration: InputDecoration(
                                               labelText: l10n.mobileNumber,
-                                              labelStyle: AppTextStyles.nunitoMedium
-                                                  .copyWith(fontSize: DesignToken.fontSizeLG),
+                                              labelStyle: AppTextStyles
+                                                  .nunitoMedium
+                                                  .copyWith(
+                                                    fontSize:
+                                                        DesignToken.fontSizeLG,
+                                                  ),
                                               prefixText: "+91 ",
                                               prefixStyle: AppTextStyles
                                                   .nunitoSemiBold
                                                   .copyWith(
-                                                    fontSize: DesignToken.fontSizeXL,
+                                                    fontSize:
+                                                        DesignToken.fontSizeXL,
                                                     color: DesignToken.primary,
                                                   ),
                                               counterText: "",
@@ -299,7 +324,8 @@ class _LoginPageState extends State<LoginPage>
                                               fillColor: DesignToken.primary
                                                   .withOpacity(0.05),
                                               border: OutlineInputBorder(
-                                                borderRadius: DesignToken.borderRadiusLG,
+                                                borderRadius:
+                                                    DesignToken.borderRadiusLG,
                                                 borderSide: BorderSide(
                                                   color: DesignToken.primary
                                                       .withOpacity(0.3),
@@ -307,7 +333,8 @@ class _LoginPageState extends State<LoginPage>
                                                 ),
                                               ),
                                               enabledBorder: OutlineInputBorder(
-                                                borderRadius: DesignToken.borderRadiusLG,
+                                                borderRadius:
+                                                    DesignToken.borderRadiusLG,
                                                 borderSide: BorderSide(
                                                   color: DesignToken.primary
                                                       .withOpacity(0.2),
@@ -315,7 +342,8 @@ class _LoginPageState extends State<LoginPage>
                                                 ),
                                               ),
                                               focusedBorder: OutlineInputBorder(
-                                                borderRadius: DesignToken.borderRadiusLG,
+                                                borderRadius:
+                                                    DesignToken.borderRadiusLG,
                                                 borderSide: const BorderSide(
                                                   color: DesignToken.primary,
                                                   width: 2,
@@ -334,7 +362,9 @@ class _LoginPageState extends State<LoginPage>
                                             },
                                           ),
 
-                                          SizedBox(height: DesignToken.height2XL),
+                                          SizedBox(
+                                            height: DesignToken.height2XL,
+                                          ),
 
                                           // Gradient Button
                                           Container(
@@ -342,17 +372,18 @@ class _LoginPageState extends State<LoginPage>
                                               gradient: LinearGradient(
                                                 colors: [
                                                   DesignToken.secondary,
-                                                  DesignToken.secondary.withOpacity(
-                                                    0.8,
-                                                  ),
+                                                  DesignToken.secondary
+                                                      .withOpacity(0.8),
                                                 ],
                                                 begin: Alignment.topLeft,
                                                 end: Alignment.bottomRight,
                                               ),
-                                              borderRadius: DesignToken.borderRadiusLG,
+                                              borderRadius:
+                                                  DesignToken.borderRadiusLG,
                                               boxShadow: [
                                                 BoxShadow(
-                                                  color: DesignToken.secondary.withOpacity(0.4),
+                                                  color: DesignToken.secondary
+                                                      .withOpacity(0.4),
                                                   blurRadius: 12,
                                                   offset: const Offset(0, 6),
                                                 ),
@@ -367,12 +398,13 @@ class _LoginPageState extends State<LoginPage>
                                                     DesignToken.transparent,
                                                 shadowColor:
                                                     DesignToken.transparent,
-                                                padding: const EdgeInsets.symmetric(
-                                                  vertical: 18,
-                                                ),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 18,
+                                                    ),
                                                 shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      DesignToken.borderRadiusLG,
+                                                  borderRadius: DesignToken
+                                                      .borderRadiusLG,
                                                 ),
                                               ),
                                               child: isChecking
@@ -381,8 +413,8 @@ class _LoginPageState extends State<LoginPage>
                                                       height: 24,
                                                       child:
                                                           CircularProgressIndicator(
-                                                            color:
-                                                                DesignToken.white,
+                                                            color: DesignToken
+                                                                .white,
                                                             strokeWidth: 2.5,
                                                           ),
                                                     )
@@ -391,9 +423,11 @@ class _LoginPageState extends State<LoginPage>
                                                       style: AppTextStyles
                                                           .nunitoBold
                                                           .copyWith(
-                                                            fontSize: DesignToken.fontSizeXL,
-                                                            color:
-                                                                DesignToken.white,
+                                                            fontSize:
+                                                                DesignToken
+                                                                    .fontSizeXL,
+                                                            color: DesignToken
+                                                                .white,
                                                             letterSpacing: 0.5,
                                                           ),
                                                     ),

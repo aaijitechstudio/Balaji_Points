@@ -1,7 +1,7 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:io' show Platform;
 import 'package:go_router/go_router.dart';
-import '../core/logger.dart';
+import 'package:balaji_points/core/utils/app_logger.dart';
 import '../config/routes.dart';
 
 /// Local Notification Service for displaying notifications
@@ -58,7 +58,7 @@ class LocalNotificationService {
         AppLogger.warning('Local notifications initialization failed');
       }
     } catch (e) {
-      AppLogger.error('Error initializing local notifications', e);
+      AppLogger.error('Error initializing local notifications', error: e);
     }
   }
 
@@ -102,7 +102,7 @@ class LocalNotificationService {
 
       AppLogger.info('Notification channels created');
     } catch (e) {
-      AppLogger.error('Error creating notification channels', e);
+      AppLogger.error('Error creating notification channels', error: e);
     }
   }
 
@@ -168,7 +168,7 @@ class LocalNotificationService {
 
       AppLogger.info('Local notification shown: $title');
     } catch (e) {
-      AppLogger.error('Error showing local notification', e);
+      AppLogger.error('Error showing local notification', error: e);
     }
   }
 
@@ -186,7 +186,7 @@ class LocalNotificationService {
         AppLogger.warning('Navigator context not available for notification tap');
       }
     } catch (e) {
-      AppLogger.error('Error navigating from notification tap', e);
+      AppLogger.error('Error navigating from notification tap', error: e);
     }
   }
 

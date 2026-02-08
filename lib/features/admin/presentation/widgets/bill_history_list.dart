@@ -5,7 +5,7 @@ import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/features/admin/presentation/pages/bill_details_page.dart';
 import 'package:intl/intl.dart';
-import 'package:balaji_points/core/utils/logger.dart';
+import 'package:balaji_points/core/utils/app_logger.dart';
 
 /// Bill History Widget - Shows all approved bills with filters
 /// Displays bill images, carpenter info, dates, and amounts
@@ -127,7 +127,7 @@ class _BillHistoryListState extends State<BillHistoryList> {
       _carpenterCache[carpenterId] = null;
       return null;
     } catch (e) {
-      Logger.e('Error fetching carpenter data', error: e);
+      AppLogger.error('Error fetching carpenter data', error: e);
       _carpenterCache[carpenterId] = null;
       return null;
     }

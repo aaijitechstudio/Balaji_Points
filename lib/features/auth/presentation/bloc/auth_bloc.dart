@@ -6,7 +6,7 @@ import 'package:balaji_points/services/fcm_service.dart';
 import 'package:balaji_points/features/auth/domain/entities/user.dart';
 import 'package:balaji_points/features/auth/presentation/bloc/auth_event.dart';
 import 'package:balaji_points/features/auth/presentation/bloc/auth_state.dart';
-import 'package:balaji_points/core/logger.dart';
+import 'package:balaji_points/core/utils/app_logger.dart';
 
 /// BLoC for authentication
 ///
@@ -29,16 +29,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required PinAuthService pinAuthService,
     required SessionService sessionService,
     required FCMService fcmService,
-  })  : _pinAuthService = pinAuthService,
-        _sessionService = sessionService,
-        _fcmService = fcmService,
-        super(const AuthInitial()) {
+  }) : _pinAuthService = pinAuthService,
+       _sessionService = sessionService,
+       _fcmService = fcmService,
+       super(const AuthInitial()) {
     on<CheckUserExistsEvent>(_onCheckUserExists);
     on<LoginWithPinEvent>(_onLoginWithPin);
     on<SetupPinEvent>(_onSetupPin);
     on<ResetPinEvent>(_onResetPin);
     on<LogoutRequestedEvent>(_onLogoutRequested);
     on<CheckSessionEvent>(_onCheckSession);
+
+    // Log BLoC events
+    on<AuthEvent>((event, emit) {
+      AppLogger.blocEvent('AuthBloc', event.runtimeType.toString());
+    });
+  }
+
+  @override
+  void onChange(Change<AuthState> change) {
+    super.onChange(change);
+    AppLogger.blocState('AuthBloc', change.nextState.runtimeType.toString());
   }
 
   /// Check if user exists by phone number
@@ -46,6 +57,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     CheckUserExistsEvent event,
     Emitter<AuthState> emit,
   ) async {
+    AppLogger.blocEvent(
+      'AuthBloc',
+      'CheckUserExists',
+      data: {'phone': event.phoneNumber},
+    );
     emit(const CheckingUserState());
 
     try {
@@ -57,7 +73,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(UserDoesNotExistState(event.phoneNumber));
       }
     } catch (e) {
-      AppLogger.error('Error checking user existence', e);
+      AppLogger.error('Error checking user existence');
       emit(AuthErrorState('Error checking user: $e'));
     }
   }
@@ -94,15 +110,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       // Refresh FCM token after successful login
       try {
         // FCM token refresh handled in datasource
-      // await _fcmService.initialize(event.phoneNumber);
+        // await _fcmService.initialize(event.phoneNumber);
       } catch (e) {
         // Don't fail login if FCM fails
       }
 
       // Create User entity from Firebase data
       final user = User(
-        id: userData['id'] as String? ?? 
-            userData['userId'] as String? ?? 
+        id:
+            userData['id'] as String? ??
+            userData['userId'] as String? ??
             event.phoneNumber,
         email: userData['email'] as String? ?? '',
         phoneNumber: event.phoneNumber,
@@ -118,16 +135,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
       emit(AuthAuthenticatedState(user, role: user.role));
     } catch (e) {
-      AppLogger.error('Login failed', e);
+      AppLogger.error('Login failed');
       emit(AuthErrorState('Login failed: $e'));
     }
   }
 
   /// Setup PIN for new user
-  Future<void> _onSetupPin(
-    SetupPinEvent event,
-    Emitter<AuthState> emit,
-  ) async {
+  Future<void> _onSetupPin(SetupPinEvent event, Emitter<AuthState> emit) async {
     emit(const PinSetupLoadingState());
 
     try {
@@ -167,22 +181,20 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       // Refresh FCM token
       try {
         // FCM token refresh handled in datasource
-      // await _fcmService.initialize(event.phoneNumber);
+        // await _fcmService.initialize(event.phoneNumber);
       } catch (e) {
         // Don't fail setup if FCM fails
       }
 
       // Create User entity
       final user = User(
-        id: userData['id'] as String? ?? 
-            userData['userId'] as String? ?? 
+        id:
+            userData['id'] as String? ??
+            userData['userId'] as String? ??
             event.phoneNumber,
         email: userData['email'] as String? ?? '',
         phoneNumber: event.phoneNumber,
-        displayName: _buildDisplayName(
-          event.firstName,
-          event.lastName,
-        ),
+        displayName: _buildDisplayName(event.firstName, event.lastName),
         photoUrl: event.profileImageUrl,
         role: userData['role'] as String? ?? 'carpenter',
         isEmailVerified: true,
@@ -191,16 +203,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
       emit(PinSetupSuccessState(user));
     } catch (e) {
-      AppLogger.error('PIN setup failed', e);
+      AppLogger.error('PIN setup failed');
       emit(PinSetupErrorState('PIN setup failed: $e'));
     }
   }
 
   /// Reset PIN (requires old PIN verification)
-  Future<void> _onResetPin(
-    ResetPinEvent event,
-    Emitter<AuthState> emit,
-  ) async {
+  Future<void> _onResetPin(ResetPinEvent event, Emitter<AuthState> emit) async {
     emit(const ResetPinLoadingState());
 
     try {
@@ -227,7 +236,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(const ResetPinErrorState('Failed to reset PIN'));
       }
     } catch (e) {
-      AppLogger.error('PIN reset failed', e);
+      AppLogger.error('PIN reset failed');
       emit(ResetPinErrorState('PIN reset failed: $e'));
     }
   }
@@ -241,7 +250,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       await _sessionService.clearSession();
       emit(const AuthUnauthenticatedState());
     } catch (e) {
-      AppLogger.error('Logout failed', e);
+      AppLogger.error('Logout failed');
       emit(AuthErrorState('Logout failed: $e'));
     }
   }
@@ -274,7 +283,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(const AuthUnauthenticatedState());
       }
     } catch (e) {
-      AppLogger.error('Session check failed', e);
+      AppLogger.error('Session check failed');
       emit(const AuthUnauthenticatedState());
     }
   }
