@@ -5,13 +5,13 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
+import 'package:balaji_points/core/widgets/navigation/unified_app_bar.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/services/user_service.dart';
 import 'package:balaji_points/services/session_service.dart';
 import 'package:balaji_points/services/fcm_service.dart';
 import 'package:balaji_points/core/providers/theme_provider.dart';
 import 'package:balaji_points/core/providers/locale_provider.dart';
-import 'package:balaji_points/core/widgets/navigation/home_nav_bar.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   final bool showBottomNav;
@@ -218,11 +218,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
       body: Column(
         children: [
           // Modern Navigation Bar - Consistent height
-          HomeNavBar(
+          UnifiedAppBar(
             title: l10n.profile,
-            showLogo: false,
-            showProfileButton:
-                false, // Don't show profile button on profile screen
+            backgroundColor: DesignToken.primary,
+            iconColor: DesignToken.white,
+            textColor: DesignToken.white,
+            showProfileButton: false,
           ),
           // Content with wooden background
           Expanded(

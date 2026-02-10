@@ -8,7 +8,7 @@ class RedeemPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF001F3F), // Navy blue background
+      backgroundColor: DesignToken.navyBackground, // Navy blue background
       body: SafeArea(
         child: Padding(
           padding: DesignToken.paddingAllLG,

@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
+import 'package:balaji_points/core/widgets/navigation/unified_app_bar.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:intl/intl.dart';
 
@@ -222,73 +223,80 @@ class _DiagnosticPageState extends State<DiagnosticPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Diagnostic: User ${widget.phoneNumber}'),
-        backgroundColor: DesignToken.primary,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _runDiagnostics,
-            tooltip: 'Refresh',
+      body: Column(
+        children: [
+          UnifiedAppBar(
+            title: 'Diagnostic: User ${widget.phoneNumber}',
+            backgroundColor: DesignToken.primary,
+            iconColor: DesignToken.white,
+            textColor: DesignToken.white,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: _runDiagnostics,
+                tooltip: 'Refresh',
+              ),
+            ],
+          ),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error, color: Colors.red, size: 64),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Error: $_error',
+                          style: const TextStyle(color: Colors.red),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _runDiagnostics,
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  )
+                : _diagnosticData == null
+                ? const Center(child: Text('No data'))
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSection('Phone Number Information', [
+                          _buildInfoRow(
+                            'Original Phone',
+                            _diagnosticData!['phoneNumber'],
+                          ),
+                          _buildInfoRow(
+                            'Normalized Phone',
+                            _diagnosticData!['normalizedPhone'],
+                          ),
+                          _buildInfoRow(
+                            'Match',
+                            _diagnosticData!['phoneNumber'] ==
+                                    _diagnosticData!['normalizedPhone']
+                                ? '✅ YES'
+                                : '❌ NO',
+                          ),
+                        ]),
+                        const SizedBox(height: 24),
+                        _buildUserDocumentSection(),
+                        const SizedBox(height: 24),
+                        _buildBillsSection(),
+                        const SizedBox(height: 24),
+                        _buildPendingBillsSection(),
+                      ],
+                    ),
+                  ),
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error, color: Colors.red, size: 64),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Error: $_error',
-                    style: const TextStyle(color: Colors.red),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: _runDiagnostics,
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
-            )
-          : _diagnosticData == null
-          ? const Center(child: Text('No data'))
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSection('Phone Number Information', [
-                    _buildInfoRow(
-                      'Original Phone',
-                      _diagnosticData!['phoneNumber'],
-                    ),
-                    _buildInfoRow(
-                      'Normalized Phone',
-                      _diagnosticData!['normalizedPhone'],
-                    ),
-                    _buildInfoRow(
-                      'Match',
-                      _diagnosticData!['phoneNumber'] ==
-                              _diagnosticData!['normalizedPhone']
-                          ? '✅ YES'
-                          : '❌ NO',
-                    ),
-                  ]),
-                  const SizedBox(height: 24),
-                  _buildUserDocumentSection(),
-                  const SizedBox(height: 24),
-                  _buildBillsSection(),
-                  const SizedBox(height: 24),
-                  _buildPendingBillsSection(),
-                ],
-              ),
-            ),
     );
   }
 

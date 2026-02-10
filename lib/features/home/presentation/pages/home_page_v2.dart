@@ -10,10 +10,11 @@ import 'package:confetti/confetti.dart';
 
 import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/core/theme/design_token_extensions.dart';
-import 'package:balaji_points/core/widgets/navigation/unified_app_bar.dart';
+import 'package:balaji_points/core/widgets/navigation/balaji_top_nav_bar.dart';
 import 'package:balaji_points/features/home/presentation/bloc/home_bloc.dart';
 import 'package:balaji_points/features/home/presentation/bloc/home_event.dart';
 import 'package:balaji_points/features/home/presentation/bloc/home_state.dart';
+import 'package:balaji_points/features/home/presentation/widgets/hero_section/hero_section.dart';
 import 'package:balaji_points/features/home/presentation/widgets/complete_profile_card.dart';
 import 'package:balaji_points/features/home/presentation/widgets/offers/offers_carousel_v2.dart';
 import 'package:balaji_points/features/home/presentation/widgets/achievement_highlights/achievement_highlights.dart';
@@ -25,14 +26,14 @@ import 'package:balaji_points/features/home/data/repositories/home_repository.da
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/core/utils/app_logger.dart';
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+class HomePageV2 extends StatefulWidget {
+  const HomePageV2({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<HomePageV2> createState() => _HomePageV2State();
 }
 
-class _HomePageState extends State<HomePage>
+class _HomePageV2State extends State<HomePageV2>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late ConfettiController _confettiController;
   late HomeBloc _homeBloc;
@@ -57,11 +58,7 @@ class _HomePageState extends State<HomePage>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      AppLogger.navigation(
-        'HomePage',
-        action: 'resumed',
-        extra: 'refreshing data',
-      );
+      AppLogger.navigation('HomePage', action: 'resumed', extra: 'refreshing data');
       _homeBloc.add(const RefreshHomeData());
     }
   }
@@ -83,44 +80,16 @@ class _HomePageState extends State<HomePage>
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final gradientHeight = screenHeight / 2;
-
     return BlocProvider.value(
       value: _homeBloc,
       child: BlocBuilder<HomeBloc, HomeState>(
         builder: (context, state) {
           return Scaffold(
-            backgroundColor: DesignToken.background,
+            backgroundColor: DesignToken.primary,
+            appBar: _buildAppBar(context, state),
             body: Stack(
               children: [
-                // Gradient background for top half of screen (including app bar)
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    height: gradientHeight,
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          DesignToken.woodenBackground,
-                          DesignToken.woodenBackground,
-                          DesignToken.transparent,
-                        ],
-                        stops: [0.0, 0.2, 1.0],
-                      ),
-                    ),
-                  ),
-                ),
-                Column(
-                  children: [
-                    _buildAppBar(context, state),
-                    Expanded(child: _buildBody(context, state)),
-                  ],
-                ),
+                _buildBody(context, state),
                 _buildConfetti(),
               ],
             ),
@@ -130,52 +99,102 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  Widget _buildAppBar(BuildContext context, HomeState state) {
+  PreferredSizeWidget _buildAppBar(BuildContext context, HomeState state) {
     final isCarpenter = state.isCarpenter;
     final userId = state.userId;
-    final userImageUrl = state.userImageUrl;
 
-    return StreamBuilder<QuerySnapshot>(
-      stream: isCarpenter && userId != null
-          ? HomeRepository().getNotificationsStream(userId)
-          : null,
-      builder: (context, snapshot) {
-        int notificationCount = 0;
-
-        if (snapshot.hasData) {
-          // Filter out admin-only notifications
-          final docs = snapshot.data!.docs.where((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            final type = data['type'] as String?;
-            const adminOnlyTypes = [
-              'dailySpinReminder',
-              'newPendingBill',
-              'newUserRegistered',
-            ];
-            return !adminOnlyTypes.contains(type);
-          }).toList();
-
-          notificationCount = docs.length;
-        }
-
-        return UnifiedAppBar(
-          showLogo: true,
-          showProfileButton: true,
-          userImageUrl: userImageUrl,
-          showNotificationButton: isCarpenter,
-          notificationCount: notificationCount,
-          onNotificationTap: isCarpenter
-              ? () {
-                  AppLogger.navigation(
-                    'HomePage',
-                    action: 'navigate to notifications',
-                  );
-                  context.push('/notifications');
-                }
+    return BalajiTopNavBar(
+      titleText: '',
+      backgroundColor: DesignToken.primary,
+      elevation: 0,
+      leading: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: CircleAvatar(
+          backgroundColor: Colors.white.withOpacity(0.2),
+          backgroundImage: state.userImageUrl != null && state.userImageUrl!.isNotEmpty
+              ? NetworkImage(state.userImageUrl!)
               : null,
-          backgroundColor: DesignToken.transparent,
-        );
-      },
+          child: state.userImageUrl == null || state.userImageUrl!.isEmpty
+              ? Text(
+                  state.userName.isNotEmpty ? state.userName[0].toUpperCase() : 'U',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                )
+              : null,
+        ),
+      ),
+      actions: isCarpenter && userId != null
+          ? [
+              // Notification button with badge
+              StreamBuilder<QuerySnapshot>(
+                stream: HomeRepository().getNotificationsStream(userId),
+                builder: (context, snapshot) {
+                  int notificationCount = 0;
+
+                  if (snapshot.hasData) {
+                    // Filter out admin-only notifications
+                    final docs = snapshot.data!.docs.where((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final type = data['type'] as String?;
+                      const adminOnlyTypes = [
+                        'dailySpinReminder',
+                        'newPendingBill',
+                        'newUserRegistered',
+                      ];
+                      return !adminOnlyTypes.contains(type);
+                    }).toList();
+
+                    notificationCount = docs.length;
+                  }
+
+                  return Stack(
+                    children: [
+                      IconButton(
+                        icon: const Icon(
+                          Icons.notifications_outlined,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                        onPressed: () {
+                          AppLogger.navigation('HomePage', action: 'navigate to notifications');
+                          context.push('/notifications');
+                        },
+                        tooltip: 'Notifications',
+                      ),
+                      if (notificationCount > 0)
+                        Positioned(
+                          right: 8,
+                          top: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            child: Center(
+                              child: Text(
+                                notificationCount > 99 ? '99+' : '$notificationCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ]
+          : null,
     );
   }
 
@@ -189,109 +208,30 @@ class _HomePageState extends State<HomePage>
     }
 
     return Container(
-      color: DesignToken.transparent, // Make transparent to show gradient
+      color: DesignToken.woodenBackground,
       child: SafeArea(
         top: false,
         child: RefreshIndicator(
           onRefresh: _onRefresh,
           color: DesignToken.primary,
-          backgroundColor: DesignToken.white,
+          backgroundColor: Colors.white,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(height: context.spacing.lg),
+                SizedBox(height: context.spacing.xl),
 
-                // Hero Section (greeting + points) - COMPACT VERSION
-                Container(
-                  margin: EdgeInsets.symmetric(horizontal: context.spacing.lg),
-                  padding: context.spacing.paddingLG,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        DesignToken.white.withValues(alpha: 0.95),
-                        DesignToken.white.withValues(alpha: 0.85),
-                      ],
-                    ),
-                    borderRadius: context.radius.borderMD,
-                    boxShadow: [
-                      BoxShadow(
-                        color: DesignToken.black.withValues(alpha: 0.1),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Greeting
-                      Text(
-                        _getGreeting(state.userName),
-                        style: const TextStyle(
-                          color: DesignToken.textDark,
-                          fontWeight: FontWeight.w600,
-                          fontSize: DesignToken.fontSizeLG, // 16px
-                        ),
-                      ),
-                      SizedBox(height: context.spacing.sm),
-                      // Points display
-                      Row(
-                        children: [
-                          Text(
-                            '${state.userPoints}',
-                            style: const TextStyle(
-                              color: DesignToken.primary,
-                              fontWeight: FontWeight.bold,
-                              fontSize:
-                                  DesignToken.fontSize4XL, // 28px for numbers
-                            ),
-                          ),
-                          SizedBox(width: context.spacing.sm),
-                          const Text(
-                            'Points',
-                            style: TextStyle(
-                              color: DesignToken.grey600,
-                              fontSize: DesignToken.fontSizeMD, // 14px
-                            ),
-                          ),
-                          const Spacer(),
-                          // Tier badge
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: context.spacing.md,
-                              vertical: context.spacing.xs,
-                            ),
-                            decoration: BoxDecoration(
-                              color: DesignToken.getTierColor(
-                                state.userTier,
-                              ).withOpacity(0.1),
-                              borderRadius: context.radius.borderSM,
-                              border: Border.all(
-                                color: DesignToken.getTierColor(state.userTier),
-                                width: 1,
-                              ),
-                            ),
-                            child: Text(
-                              state.userTier,
-                              style: TextStyle(
-                                color: DesignToken.getTierColor(state.userTier),
-                                fontWeight: FontWeight.bold,
-                                fontSize:
-                                    DesignToken.fontSizeSM, // 12px for badges
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                // Hero Section (greeting + points)
+                HeroSection(
+                  userName: state.userName,
+                  points: state.userPoints,
+                  tier: state.userTier,
+                  userImageUrl: state.userImageUrl,
+                  showQuickActions: false, // Can enable later with navigation
                 ),
 
-                SizedBox(height: context.spacing.lg),
+                SizedBox(height: context.spacing.xl),
 
                 // Profile Completion Card (if incomplete)
                 if (!state.isProfileComplete) ...[
@@ -305,7 +245,7 @@ class _HomePageState extends State<HomePage>
                   AppLocalizations.of(context)!.latestOffers,
                 ),
                 SizedBox(height: context.spacing.md),
-
+                
                 state.offersLoading
                     ? _buildOffersShimmer()
                     : OffersCarouselV2(offers: state.offers),
@@ -313,18 +253,13 @@ class _HomePageState extends State<HomePage>
                 SizedBox(height: context.spacing.xl2),
 
                 // Achievement Highlights (Today's Winner + Your Ranking)
-                if (state.todaysWinner != null ||
-                    state.currentUserRank != null) ...[
+                if (state.todaysWinner != null || state.currentUserRank != null) ...[
                   AchievementHighlights(
                     todaysWinner: state.todaysWinner,
                     currentUserRank: state.currentUserRank,
                     totalCarpenters: state.topCarpenters.length,
                     onViewLeaderboard: () {
-                      AppLogger.navigation(
-                        'HomePage',
-                        action: 'view leaderboard',
-                        extra: 'from achievements',
-                      );
+                      AppLogger.navigation('HomePage', action: 'view leaderboard', extra: 'from achievements');
                       _showFullLeaderboard(context, state);
                     },
                   ),
@@ -340,10 +275,7 @@ class _HomePageState extends State<HomePage>
                     currentUserRank: state.currentUserRank,
                     isLoading: state.leaderboardLoading,
                     onViewFull: () {
-                      AppLogger.navigation(
-                        'HomePage',
-                        action: 'view full leaderboard',
-                      );
+                      AppLogger.navigation('HomePage', action: 'view full leaderboard');
                       _showFullLeaderboard(context, state);
                     },
                   ),
@@ -360,28 +292,14 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  String _getGreeting(String userName) {
-    final hour = DateTime.now().hour;
-    String greeting;
-    if (hour < 12) {
-      greeting = 'Good Morning';
-    } else if (hour < 17) {
-      greeting = 'Good Afternoon';
-    } else {
-      greeting = 'Good Evening';
-    }
-    return '$greeting, ${userName.split(' ').first}!';
-  }
-
   Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: context.spacing.lg),
       child: Text(
         title,
-        style: const TextStyle(
+        style: context.text.heading2.copyWith(
           color: DesignToken.primary,
           fontWeight: FontWeight.bold,
-          fontSize: DesignToken.fontSize2XL, // 20px for section headers
         ),
       ),
     );
@@ -389,18 +307,19 @@ class _HomePageState extends State<HomePage>
 
   Widget _buildLoadingState() {
     return Container(
-      color: DesignToken.transparent,
+      color: DesignToken.woodenBackground,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const CircularProgressIndicator(color: DesignToken.white),
+            CircularProgressIndicator(
+              color: DesignToken.primary,
+            ),
             SizedBox(height: context.spacing.lg),
-            const Text(
+            Text(
               'Loading...',
-              style: TextStyle(
-                color: DesignToken.white,
-                fontSize: DesignToken.fontSizeMD, // 14px
+              style: context.text.bodyMedium.copyWith(
+                color: DesignToken.grey600,
               ),
             ),
           ],
@@ -411,34 +330,31 @@ class _HomePageState extends State<HomePage>
 
   Widget _buildErrorState(BuildContext context, String? errorMessage) {
     return Container(
-      color: DesignToken.transparent,
+      color: DesignToken.woodenBackground,
       child: Center(
         child: Padding(
           padding: EdgeInsets.all(context.spacing.xl2),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
+              Icon(
                 Icons.error_outline,
                 size: 64,
-                color: DesignToken.white,
+                color: DesignToken.error,
               ),
               SizedBox(height: context.spacing.lg),
-              const Text(
+              Text(
                 'Oops! Something went wrong',
-                style: TextStyle(
-                  color: DesignToken.white,
-                  fontSize: DesignToken.fontSizeXL, // 18px
-                  fontWeight: FontWeight.w600,
+                style: context.text.heading3.copyWith(
+                  color: DesignToken.textDark,
                 ),
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: context.spacing.md),
               Text(
                 errorMessage ?? 'Please try again',
-                style: TextStyle(
-                  color: DesignToken.white.withValues(alpha: 0.9),
-                  fontSize: DesignToken.fontSizeMD, // 14px
+                style: context.text.bodyMedium.copyWith(
+                  color: DesignToken.grey600,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -450,8 +366,8 @@ class _HomePageState extends State<HomePage>
                 icon: const Icon(Icons.refresh),
                 label: const Text('Retry'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: DesignToken.white,
-                  foregroundColor: DesignToken.primary,
+                  backgroundColor: DesignToken.primary,
+                  foregroundColor: Colors.white,
                   padding: EdgeInsets.symmetric(
                     horizontal: context.spacing.xl2,
                     vertical: context.spacing.md,
@@ -474,7 +390,9 @@ class _HomePageState extends State<HomePage>
         borderRadius: context.radius.borderMD,
       ),
       child: Center(
-        child: CircularProgressIndicator(color: DesignToken.primary),
+        child: CircularProgressIndicator(
+          color: DesignToken.primary,
+        ),
       ),
     );
   }
@@ -535,7 +453,7 @@ class _HomePageState extends State<HomePage>
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-
+              
               // Header
               Padding(
                 padding: EdgeInsets.symmetric(
@@ -548,9 +466,8 @@ class _HomePageState extends State<HomePage>
                     SizedBox(width: context.spacing.sm),
                     Text(
                       'Full Leaderboard',
-                      style: const TextStyle(
+                      style: context.text.heading2.copyWith(
                         fontWeight: FontWeight.bold,
-                        fontSize: DesignToken.fontSize2XL, // 20px
                       ),
                     ),
                     const Spacer(),
@@ -561,9 +478,9 @@ class _HomePageState extends State<HomePage>
                   ],
                 ),
               ),
-
+              
               const Divider(height: 1),
-
+              
               // List
               Expanded(
                 child: TopCarpentersList(

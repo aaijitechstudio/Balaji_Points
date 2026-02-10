@@ -6,9 +6,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
+import 'package:balaji_points/core/widgets/navigation/unified_app_bar.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/services/session_service.dart';
-import 'package:balaji_points/core/widgets/navigation/home_nav_bar.dart';
 import 'dart:async';
 
 class NotificationsPage extends StatefulWidget {
@@ -591,11 +591,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
       backgroundColor: DesignToken.primary,
       body: Column(
         children: [
-          HomeNavBar(
+          UnifiedAppBar(
             title: 'Notifications',
             showProfileButton: false,
-            showLogo: false,
-            showBackButton: true,
+            backgroundColor: DesignToken.primary,
+            iconColor: DesignToken.white,
+            textColor: DesignToken.white,
             actions: [
               // Delete All Button
               StreamBuilder<List<QueryDocumentSnapshot>>(

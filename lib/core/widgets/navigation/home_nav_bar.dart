@@ -13,6 +13,9 @@ class HomeNavBar extends StatelessWidget {
   final VoidCallback? onProfileTap;
   final VoidCallback? onBackTap;
   final List<Widget>? actions;
+  final bool showNotificationButton;
+  final int notificationCount;
+  final VoidCallback? onNotificationTap;
 
   const HomeNavBar({
     super.key,
@@ -25,142 +28,165 @@ class HomeNavBar extends StatelessWidget {
     this.onProfileTap,
     this.onBackTap,
     this.actions,
+    this.showNotificationButton = false,
+    this.notificationCount = 0,
+    this.onNotificationTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Debug: Log the image URL
-    if (userImageUrl != null && userImageUrl!.isNotEmpty) {
-      debugPrint('HomeNavBar: Loading profile image from: $userImageUrl');
-    } else {
-      debugPrint('HomeNavBar: No profile image URL available');
-    }
-
     return Container(
-      color: DesignToken.primary,
+      decoration: const BoxDecoration(
+        color: DesignToken.transparent, // Make transparent to show gradient
+      ),
       child: SafeArea(
         bottom: false,
         child: Container(
-          height: kToolbarHeight, // Material Design standard: 56dp
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                DesignToken.primary,
-                DesignToken.primary.withValues(alpha: 0.95),
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+          height: kToolbarHeight,
+          padding: EdgeInsets.symmetric(
+            horizontal: DesignToken.spacingLG,
+            vertical: DesignToken.spacingXS,
+          ),
+          decoration: const BoxDecoration(
+            color: DesignToken.transparent, // Make transparent to show gradient
           ),
           child: Row(
             children: [
-              // Left side - Profile Image, Back Button, or empty space
-              if (showProfileButton)
-                _buildProfileButton(context)
-              else if (showBackButton)
+              // Left side - Logo (or Back Button if needed)
+              if (showBackButton)
                 _buildBackButton(context)
-              else
-                const SizedBox(width: 44),
-
-              // Center - Logo and Title
-              Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+              else if (showLogo)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (showLogo) ...[
-                      // Logo with modern styling
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Image.asset(
-                          'assets/images/balaji_point_logo.png',
-                          width: 28,
-                          height: 28,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              width: 28,
-                              height: 28,
-                              decoration: BoxDecoration(
-                                color: DesignToken.secondary,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: const Icon(
-                                Icons.star,
-                                color: Colors.white,
-                                size: 18,
-                              ),
-                            );
-                          },
-                        ),
+                    // Logo with rounded corners
+                    Container(
+                      padding: EdgeInsets.all(DesignToken.spacingSM),
+                      child: Image.asset(
+                        'assets/images/balaji_point_logo.png',
+                        width: 28,
+                        height: 28,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color: DesignToken.secondary,
+                              borderRadius: DesignToken.borderRadiusSM,
+                            ),
+                            child: const Icon(
+                              Icons.star_rounded,
+                              color: DesignToken.white,
+                              size: 18,
+                            ),
+                          );
+                        },
                       ),
-                      const SizedBox(width: 12),
-                    ],
+                    ),
+                    SizedBox(width: DesignToken.spacingXS),
                     // Title and Subtitle
-                    Flexible(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: showLogo
-                            ? CrossAxisAlignment.start
-                            : CrossAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          title ?? 'Balaji Points',
+                          style: AppTextStyles.nunitoBold.copyWith(
+                            fontSize: subtitle != null ? 18 : 20,
+                            color: DesignToken.white,
+                            letterSpacing: 0.5,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (subtitle != null) ...[
+                          const SizedBox(height: 2),
                           Text(
-                            title ?? 'Balaji Points',
-                            style: AppTextStyles.nunitoBold.copyWith(
-                              fontSize: subtitle != null ? 18 : 22,
-                              color: Colors.white,
-                              letterSpacing: 0.5,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.black.withValues(alpha: 0.2),
-                                  offset: const Offset(0, 1),
-                                  blurRadius: 2,
-                                ),
-                              ],
+                            subtitle!,
+                            style: AppTextStyles.nunitoRegular.copyWith(
+                              fontSize: 12,
+                              color: DesignToken.white.withValues(alpha: 0.9),
+                              letterSpacing: 0.3,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          if (subtitle != null) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              subtitle!,
-                              style: AppTextStyles.nunitoRegular.copyWith(
-                                fontSize: 11,
-                                color: Colors.white.withValues(alpha: 0.85),
-                                letterSpacing: 0.3,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
                         ],
-                      ),
+                      ],
                     ),
                   ],
-                ),
-              ),
-
-              // Right side - Actions or Balance space
-              if (actions != null && actions!.isNotEmpty)
-                Row(mainAxisSize: MainAxisSize.min, children: actions!)
+                )
               else
-                const SizedBox(width: 44),
+                const SizedBox.shrink(),
+
+              // Spacer to push actions to right
+              const Spacer(),
+
+              // Right side - Actions (Profile and Notifications)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Custom actions if provided
+                  if (actions != null && actions!.isNotEmpty)
+                    ...actions!,
+                  
+                  // Notification button
+                  if (showNotificationButton)
+                    _buildNotificationButton(context),
+                  
+                  // Profile button
+                  if (showProfileButton)
+                    _buildProfileButton(context),
+                ],
+              ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildNotificationButton(BuildContext context) {
+    return Stack(
+      children: [
+        IconButton(
+          icon: const Icon(
+            Icons.notifications_outlined,
+            color: DesignToken.white,
+            size: 26,
+          ),
+          onPressed: onNotificationTap,
+          tooltip: 'Notifications',
+        ),
+        if (notificationCount > 0)
+          Positioned(
+            right: 8,
+            top: 8,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: DesignToken.error,
+                shape: BoxShape.circle,
+                border: Border.all(color: DesignToken.white, width: 2),
+              ),
+              constraints: const BoxConstraints(
+                minWidth: 18,
+                minHeight: 18,
+              ),
+              child: Center(
+                child: Text(
+                  notificationCount > 99 ? '99+' : '$notificationCount',
+                  style: const TextStyle(
+                    color: DesignToken.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -169,30 +195,19 @@ class HomeNavBar extends StatelessWidget {
       onTap:
           onProfileTap ??
           () {
-            debugPrint('Profile button tapped, navigating to /profile');
             context.push('/profile');
           },
       child: Container(
-        width: 44,
-        height: 44,
+        width: 40,
+        height: 40,
+        margin: const EdgeInsets.only(left: 8),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: LinearGradient(
-            colors: [
-              Colors.white.withValues(alpha: 0.2),
-              Colors.white.withValues(alpha: 0.1),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.3),
-            width: 2,
-          ),
+          border: Border.all(color: DesignToken.white, width: 2),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 8,
+              color: DesignToken.black.withValues(alpha: 0.2),
+              blurRadius: 4,
               offset: const Offset(0, 2),
             ),
           ],
@@ -205,7 +220,7 @@ class HomeNavBar extends StatelessWidget {
                   loadingBuilder: (context, child, loadingProgress) {
                     if (loadingProgress == null) return child;
                     return Container(
-                      color: DesignToken.secondary.withValues(alpha: 0.3),
+                      color: DesignToken.grey200,
                       child: Center(
                         child: SizedBox(
                           width: 16,
@@ -217,7 +232,7 @@ class HomeNavBar extends StatelessWidget {
                                 : null,
                             strokeWidth: 2,
                             valueColor: const AlwaysStoppedAnimation<Color>(
-                              Colors.white,
+                              DesignToken.white,
                             ),
                           ),
                         ),
@@ -225,36 +240,21 @@ class HomeNavBar extends StatelessWidget {
                     );
                   },
                   errorBuilder: (context, error, stackTrace) {
-                    debugPrint('HomeNavBar: Error loading image: $error');
                     return Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            DesignToken.secondary,
-                            DesignToken.secondary.withValues(alpha: 0.8),
-                          ],
-                        ),
-                      ),
+                      color: DesignToken.white.withValues(alpha: 0.9),
                       child: const Icon(
                         Icons.person,
-                        color: Colors.white,
+                        color: DesignToken.primary,
                         size: 24,
                       ),
                     );
                   },
                 )
               : Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        DesignToken.secondary,
-                        DesignToken.secondary.withValues(alpha: 0.8),
-                      ],
-                    ),
-                  ),
+                  color: DesignToken.white.withValues(alpha: 0.9),
                   child: const Icon(
                     Icons.person,
-                    color: Colors.white,
+                    color: DesignToken.primary,
                     size: 24,
                   ),
                 ),
@@ -265,7 +265,7 @@ class HomeNavBar extends StatelessWidget {
 
   Widget _buildBackButton(BuildContext context) {
     return IconButton(
-      icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+      icon: const Icon(Icons.arrow_back, color: DesignToken.white, size: 24),
       onPressed:
           onBackTap ??
           () {

@@ -38,9 +38,9 @@ class BottomNavWrapper extends StatelessWidget {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: selectedIndex >= 0 ? selectedIndex : 0,
         onTap: (index) => _onItemTapped(context, index),
-        selectedItemColor: DesignToken.secondary,
-        unselectedItemColor: Colors.white,
-        backgroundColor: DesignToken.primary,
+        selectedItemColor: DesignToken.primary,
+        unselectedItemColor: DesignToken.grey500,
+        backgroundColor: DesignToken.white,
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),

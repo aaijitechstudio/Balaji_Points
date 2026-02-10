@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:balaji_points/config/theme.dart' as LegacyTheme;
 import 'package:balaji_points/core/theme/design_token.dart';
+import 'package:balaji_points/core/widgets/navigation/unified_app_bar.dart';
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -114,53 +115,51 @@ class _PINLoginPageState extends State<PINLoginPage>
           return Scaffold(
             backgroundColor: DesignToken.woodenBackground,
 
-            appBar: AppBar(
-              backgroundColor: DesignToken.transparent,
-              elevation: DesignToken.elevationNone,
-              leading: BackButton(
-                color: DesignToken.primary,
-                onPressed: () => context.pop(),
-              ),
-            ),
-
-            body: Stack(
+            body: Column(
               children: [
-                // Animated Background Elements
-                IgnorePointer(
-                  child: RepaintBoundary(
-                    child: ListenableBuilder(
-                      listenable: _animationController,
-                      builder: (context, child) {
-                        return CustomPaint(
-                          size: Size.infinite,
-                          painter: CelebrationPainter(
-                            animationValue: _animationController.value,
-                            elements: _floatingElements,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
+                UnifiedAppBar(
+                  backgroundColor: DesignToken.transparent,
+                  iconColor: DesignToken.primary,
                 ),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      // Animated Background Elements
+                      IgnorePointer(
+                        child: RepaintBoundary(
+                          child: ListenableBuilder(
+                            listenable: _animationController,
+                            builder: (context, child) {
+                              return CustomPaint(
+                                size: Size.infinite,
+                                painter: CelebrationPainter(
+                                  animationValue: _animationController.value,
+                                  elements: _floatingElements,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
 
-                // Main Content
-                SingleChildScrollView(
-                  padding: EdgeInsets.fromLTRB(
-                    DesignToken.spacing2XL,
-                    DesignToken.spacingXL,
-                    DesignToken.spacing2XL,
-                    bottomInset + DesignToken.spacingXL,
-                  ),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      children: [
-                        SizedBox(height: DesignToken.heightXL),
+                      // Main Content
+                      SingleChildScrollView(
+                        padding: EdgeInsets.fromLTRB(
+                          DesignToken.spacing2XL,
+                          DesignToken.spacingXL,
+                          DesignToken.spacing2XL,
+                          bottomInset + DesignToken.spacingXL,
+                        ),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            children: [
+                              SizedBox(height: DesignToken.heightXL),
 
-                        // Logo
-                        ClipRRect(
-                          borderRadius: DesignToken.borderRadiusSM,
-                          child: Image.asset(
+                              // Logo
+                              ClipRRect(
+                                borderRadius: DesignToken.borderRadiusSM,
+                                child: Image.asset(
                             'assets/images/balaji_point_logo.png',
                             width: 90,
                             height: 90,
@@ -417,6 +416,9 @@ class _PINLoginPageState extends State<PINLoginPage>
                       ],
                     ),
                   ),
+                ),
+              ],
+            ),
                 ),
               ],
             ),

@@ -2161,15 +2161,5 @@ class _AdminResetPINDialogState extends State<AdminResetPINDialog> {
 }
 
 Color _getTierColor(String tier) {
-  switch (tier) {
-    case 'Platinum':
-      return const Color(0xFF00D4FF);
-    case 'Gold':
-      return const Color(0xFFFFD700);
-    case 'Silver':
-      return const Color(0xFFC0C0C0);
-    case 'Bronze':
-    default:
-      return const Color(0xFFCD7F32);
-  }
+  return DesignToken.getTierColor(tier);
 }

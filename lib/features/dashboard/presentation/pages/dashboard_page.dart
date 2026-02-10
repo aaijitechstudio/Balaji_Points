@@ -29,7 +29,8 @@ class _DashboardView extends StatefulWidget {
   State<_DashboardView> createState() => _DashboardViewState();
 }
 
-class _DashboardViewState extends State<_DashboardView> with DoubleTapExitMixin {
+class _DashboardViewState extends State<_DashboardView>
+    with DoubleTapExitMixin {
   final List<Widget> _pages = const [
     HomePage(),
     WalletPage(),
@@ -53,9 +54,9 @@ class _DashboardViewState extends State<_DashboardView> with DoubleTapExitMixin 
       child: BlocBuilder<DashboardBloc, DashboardState>(
         builder: (context, state) {
           final selectedIndex = state is DashboardTab ? state.selectedIndex : 0;
-          
+
           return Scaffold(
-            backgroundColor: const Color(0xFF001F3F),
+            backgroundColor: DesignToken.white,
             body: _pages[selectedIndex],
             bottomNavigationBar: BottomNavigationBar(
               currentIndex: selectedIndex,
@@ -63,8 +64,8 @@ class _DashboardViewState extends State<_DashboardView> with DoubleTapExitMixin 
                 context.read<DashboardBloc>().add(TabChanged(index));
               },
               selectedItemColor: DesignToken.secondary,
-              unselectedItemColor: DesignToken.white,
-              backgroundColor: DesignToken.primary,
+              unselectedItemColor: DesignToken.grey700,
+              backgroundColor: DesignToken.white,
               type: BottomNavigationBarType.fixed,
               items: [
                 BottomNavigationBarItem(
@@ -72,11 +73,17 @@ class _DashboardViewState extends State<_DashboardView> with DoubleTapExitMixin 
                   label: l10n.home,
                 ),
                 BottomNavigationBarItem(
-                  icon: const Icon(Icons.monetization_on_outlined, semanticLabel: 'Earn points'),
+                  icon: const Icon(
+                    Icons.monetization_on_outlined,
+                    semanticLabel: 'Earn points',
+                  ),
                   label: l10n.earn,
                 ),
                 BottomNavigationBarItem(
-                  icon: const Icon(Icons.person_outline, semanticLabel: 'User profile'),
+                  icon: const Icon(
+                    Icons.person_outline,
+                    semanticLabel: 'User profile',
+                  ),
                   label: l10n.profile,
                 ),
               ],

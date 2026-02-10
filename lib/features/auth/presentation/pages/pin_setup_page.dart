@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:balaji_points/config/theme.dart' as LegacyTheme;
 import 'package:balaji_points/core/theme/design_token.dart';
+import 'package:balaji_points/core/widgets/navigation/unified_app_bar.dart';
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/core/utils/back_button_handler.dart';
 import 'package:flutter/material.dart';
@@ -82,11 +83,7 @@ class _PINSetupPageState extends State<PINSetupPage>
     }
 
     context.read<AuthBloc>().add(
-      SetupPinEvent(
-        phoneNumber: phone,
-        pin: pin,
-        firstName: '',
-      ),
+      SetupPinEvent(phoneNumber: phone, pin: pin, firstName: ''),
     );
   }
 
@@ -137,9 +134,9 @@ class _PINSetupPageState extends State<PINSetupPage>
             ScaffoldMessenger.of(context).clearSnackBars();
 
             String errorMessage = state.message;
-            
+
             // Check if account already exists
-            if (errorMessage.contains('already exists') || 
+            if (errorMessage.contains('already exists') ||
                 errorMessage.contains('User already exists')) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -154,7 +151,10 @@ class _PINSetupPageState extends State<PINSetupPage>
                     textColor: DesignToken.white,
                     onPressed: () {
                       ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                      context.push('/reset-pin', extra: _phoneController.text.trim());
+                      context.push(
+                        '/reset-pin',
+                        extra: _phoneController.text.trim(),
+                      );
                     },
                   ),
                 ),
@@ -186,14 +186,7 @@ class _PINSetupPageState extends State<PINSetupPage>
 
           return Scaffold(
             backgroundColor: DesignToken.woodenBackground,
-            appBar: AppBar(
-              backgroundColor: DesignToken.transparent,
-              elevation: DesignToken.elevationNone,
-              leading: BackButton(
-                color: DesignToken.primary,
-                onPressed: () => context.pop(),
-              ),
-            ),
+
             body: Stack(
               children: [
                 // Animated Background Elements
@@ -251,10 +244,11 @@ class _PINSetupPageState extends State<PINSetupPage>
                         SizedBox(height: DesignToken.heightXS),
                         Text(
                           l10n.createPinSubtitle,
-                          style: LegacyTheme.AppTextStyles.nunitoRegular.copyWith(
-                            fontSize: DesignToken.fontSizeMD,
-                            color: DesignToken.textDark.withOpacity(0.7),
-                          ),
+                          style: LegacyTheme.AppTextStyles.nunitoRegular
+                              .copyWith(
+                                fontSize: DesignToken.fontSizeMD,
+                                color: DesignToken.textDark.withOpacity(0.7),
+                              ),
                         ),
 
                         SizedBox(height: DesignToken.height2XL),
@@ -280,9 +274,15 @@ class _PINSetupPageState extends State<PINSetupPage>
                                   color: DesignToken.white.withOpacity(0.5),
                                   width: 1.5,
                                 ),
-                                boxShadow: DesignToken.shadowLG.map((shadow) => shadow.copyWith(
-                                  color: DesignToken.primary.withOpacity(0.1),
-                                )).toList(),
+                                boxShadow: DesignToken.shadowLG
+                                    .map(
+                                      (shadow) => shadow.copyWith(
+                                        color: DesignToken.primary.withOpacity(
+                                          0.1,
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
                               ),
                               child: Column(
                                 children: [
@@ -291,36 +291,40 @@ class _PINSetupPageState extends State<PINSetupPage>
                                     controller: _phoneController,
                                     keyboardType: TextInputType.phone,
                                     maxLength: 10,
-                                    style: LegacyTheme.AppTextStyles.nunitoSemiBold
-                                        .copyWith(fontSize: DesignToken.fontSizeLG),
+                                    style: LegacyTheme
+                                        .AppTextStyles
+                                        .nunitoSemiBold
+                                        .copyWith(
+                                          fontSize: DesignToken.fontSizeLG,
+                                        ),
                                     decoration: InputDecoration(
                                       labelText: l10n.mobileNumber,
                                       prefixText: "+91 ",
                                       counterText: "",
                                       filled: true,
-                                      fillColor: DesignToken.primary.withOpacity(
-                                        0.05,
-                                      ),
+                                      fillColor: DesignToken.primary
+                                          .withOpacity(0.05),
                                       border: OutlineInputBorder(
-                                        borderRadius: DesignToken.borderRadiusLG,
+                                        borderRadius:
+                                            DesignToken.borderRadiusLG,
                                         borderSide: BorderSide(
-                                          color: DesignToken.primary.withOpacity(
-                                            0.3,
-                                          ),
+                                          color: DesignToken.primary
+                                              .withOpacity(0.3),
                                           width: 1.5,
                                         ),
                                       ),
                                       enabledBorder: OutlineInputBorder(
-                                        borderRadius: DesignToken.borderRadiusLG,
+                                        borderRadius:
+                                            DesignToken.borderRadiusLG,
                                         borderSide: BorderSide(
-                                          color: DesignToken.primary.withOpacity(
-                                            0.2,
-                                          ),
+                                          color: DesignToken.primary
+                                              .withOpacity(0.2),
                                           width: 1.5,
                                         ),
                                       ),
                                       focusedBorder: OutlineInputBorder(
-                                        borderRadius: DesignToken.borderRadiusLG,
+                                        borderRadius:
+                                            DesignToken.borderRadiusLG,
                                         borderSide: const BorderSide(
                                           color: DesignToken.primary,
                                           width: 2,
@@ -356,29 +360,29 @@ class _PINSetupPageState extends State<PINSetupPage>
                                       labelText: l10n.fourDigitPin,
                                       counterText: '',
                                       filled: true,
-                                      fillColor: DesignToken.primary.withOpacity(
-                                        0.05,
-                                      ),
+                                      fillColor: DesignToken.primary
+                                          .withOpacity(0.05),
                                       border: OutlineInputBorder(
-                                        borderRadius: DesignToken.borderRadiusLG,
+                                        borderRadius:
+                                            DesignToken.borderRadiusLG,
                                         borderSide: BorderSide(
-                                          color: DesignToken.primary.withOpacity(
-                                            0.3,
-                                          ),
+                                          color: DesignToken.primary
+                                              .withOpacity(0.3),
                                           width: 1.5,
                                         ),
                                       ),
                                       enabledBorder: OutlineInputBorder(
-                                        borderRadius: DesignToken.borderRadiusLG,
+                                        borderRadius:
+                                            DesignToken.borderRadiusLG,
                                         borderSide: BorderSide(
-                                          color: DesignToken.primary.withOpacity(
-                                            0.2,
-                                          ),
+                                          color: DesignToken.primary
+                                              .withOpacity(0.2),
                                           width: 1.5,
                                         ),
                                       ),
                                       focusedBorder: OutlineInputBorder(
-                                        borderRadius: DesignToken.borderRadiusLG,
+                                        borderRadius:
+                                            DesignToken.borderRadiusLG,
                                         borderSide: const BorderSide(
                                           color: DesignToken.primary,
                                           width: 2,
@@ -412,29 +416,29 @@ class _PINSetupPageState extends State<PINSetupPage>
                                       labelText: l10n.confirmPin,
                                       counterText: '',
                                       filled: true,
-                                      fillColor: DesignToken.primary.withOpacity(
-                                        0.05,
-                                      ),
+                                      fillColor: DesignToken.primary
+                                          .withOpacity(0.05),
                                       border: OutlineInputBorder(
-                                        borderRadius: DesignToken.borderRadiusLG,
+                                        borderRadius:
+                                            DesignToken.borderRadiusLG,
                                         borderSide: BorderSide(
-                                          color: DesignToken.primary.withOpacity(
-                                            0.3,
-                                          ),
+                                          color: DesignToken.primary
+                                              .withOpacity(0.3),
                                           width: 1.5,
                                         ),
                                       ),
                                       enabledBorder: OutlineInputBorder(
-                                        borderRadius: DesignToken.borderRadiusLG,
+                                        borderRadius:
+                                            DesignToken.borderRadiusLG,
                                         borderSide: BorderSide(
-                                          color: DesignToken.primary.withOpacity(
-                                            0.2,
-                                          ),
+                                          color: DesignToken.primary
+                                              .withOpacity(0.2),
                                           width: 1.5,
                                         ),
                                       ),
                                       focusedBorder: OutlineInputBorder(
-                                        borderRadius: DesignToken.borderRadiusLG,
+                                        borderRadius:
+                                            DesignToken.borderRadiusLG,
                                         borderSide: const BorderSide(
                                           color: DesignToken.primary,
                                           width: 2,
@@ -453,36 +457,47 @@ class _PINSetupPageState extends State<PINSetupPage>
                                         gradient: LinearGradient(
                                           colors: [
                                             DesignToken.secondary,
-                                            DesignToken.secondary.withOpacity(0.8),
+                                            DesignToken.secondary.withOpacity(
+                                              0.8,
+                                            ),
                                           ],
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
                                         ),
-                                        borderRadius: DesignToken.borderRadiusLG,
-                                        boxShadow: DesignToken.shadowMD.map((shadow) => shadow.copyWith(
-                                          color: DesignToken.secondary.withOpacity(0.4),
-                                        )).toList(),
+                                        borderRadius:
+                                            DesignToken.borderRadiusLG,
+                                        boxShadow: DesignToken.shadowMD
+                                            .map(
+                                              (shadow) => shadow.copyWith(
+                                                color: DesignToken.secondary
+                                                    .withOpacity(0.4),
+                                              ),
+                                            )
+                                            .toList(),
                                       ),
                                       child: ElevatedButton(
                                         onPressed: isSaving ? null : _savePin,
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: DesignToken.transparent,
+                                          backgroundColor:
+                                              DesignToken.transparent,
                                           shadowColor: DesignToken.transparent,
                                           padding: const EdgeInsets.symmetric(
                                             vertical: 18,
                                           ),
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: DesignToken.borderRadiusLG,
+                                            borderRadius:
+                                                DesignToken.borderRadiusLG,
                                           ),
                                         ),
                                         child: isSaving
                                             ? const SizedBox(
                                                 width: 24,
                                                 height: 24,
-                                                child: CircularProgressIndicator(
-                                                  color: DesignToken.white,
-                                                  strokeWidth: 2.5,
-                                                ),
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      color: DesignToken.white,
+                                                      strokeWidth: 2.5,
+                                                    ),
                                               )
                                             : Text(
                                                 l10n.savePin,
@@ -490,7 +505,8 @@ class _PINSetupPageState extends State<PINSetupPage>
                                                     .AppTextStyles
                                                     .nunitoBold
                                                     .copyWith(
-                                                      fontSize: DesignToken.fontSizeXL,
+                                                      fontSize: DesignToken
+                                                          .fontSizeXL,
                                                       color: DesignToken.white,
                                                       letterSpacing: 0.5,
                                                     ),

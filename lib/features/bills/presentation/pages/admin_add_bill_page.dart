@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
+import 'package:balaji_points/core/widgets/navigation/unified_app_bar.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/services/bill_service.dart';
@@ -371,23 +372,14 @@ class _AdminAddBillPageState extends State<AdminAddBillPage> {
 
           return Scaffold(
             backgroundColor: DesignToken.woodenBackground,
-            appBar: AppBar(
-              backgroundColor: DesignToken.primary,
-              elevation: 0,
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back, color: DesignToken.white),
-                onPressed: () => context.pop(),
-              ),
-              title: Text(
-                'Add Bill for Carpenter',
-                style: AppTextStyles.nunitoBold.copyWith(
-                  color: DesignToken.white,
-                  fontSize: DesignToken.fontSize2XL,
-                ),
-              ),
-            ),
             body: Column(
               children: [
+                UnifiedAppBar(
+                  title: 'Add Bill for Carpenter',
+                  backgroundColor: DesignToken.primary,
+                  iconColor: DesignToken.white,
+                  textColor: DesignToken.white,
+                ),
                 // Scrollable Form Content
                 Expanded(
                   child: SingleChildScrollView(

@@ -3,8 +3,6 @@
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:balaji_points/features/home/data/repositories/home_repository.dart';
-import 'package:balaji_points/features/home/data/models/offer_model.dart';
-import 'package:balaji_points/features/home/data/models/carpenter_rank_model.dart';
 import 'package:balaji_points/features/home/presentation/bloc/home_event.dart';
 import 'package:balaji_points/features/home/presentation/bloc/home_state.dart';
 import 'package:balaji_points/core/utils/app_logger.dart';
@@ -33,12 +31,6 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       // Load user data first (most important)
       final userData = await repository.loadUserData();
 
-      AppLogger.info('HomeBloc: User data loaded', data: {
-        'userName': userData?['userName'],
-        'role': userData?['role'],
-        'points': userData?['points'],
-      });
-
       emit(state.copyWith(
         userData: userData,
         status: HomeStatus.success,
@@ -52,20 +44,11 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         repository.getTodaysWinner(),
       ]);
 
-      final topCarpenters = results[1] as List<CarpenterRankModel>;
-      
-      AppLogger.info('HomeBloc: Leaderboard data received', data: {
-        'topCarpenters_count': topCarpenters.length,
-        'top3_names': topCarpenters.take(3).map((c) => c.name).toList(),
-        'top3_points': topCarpenters.take(3).map((c) => c.points).toList(),
-        'top3_ranks': topCarpenters.take(3).map((c) => c.rank).toList(),
-      });
-
       emit(state.copyWith(
-        offers: results[0] as List<OfferModel>,
-        topCarpenters: topCarpenters,
-        currentUserRank: results[2] as CarpenterRankModel?,
-        todaysWinner: results[3] as CarpenterRankModel?,
+        offers: results[0] as List,
+        topCarpenters: results[1] as List,
+        currentUserRank: results[2],
+        todaysWinner: results[3],
         status: HomeStatus.success,
       ));
 
@@ -99,10 +82,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
       emit(state.copyWith(
         userData: results[0] as Map<String, dynamic>?,
-        offers: results[1] as List<OfferModel>,
-        topCarpenters: results[2] as List<CarpenterRankModel>,
-        currentUserRank: results[3] as CarpenterRankModel?,
-        todaysWinner: results[4] as CarpenterRankModel?,
+        offers: results[1] as List,
+        topCarpenters: results[2] as List,
+        currentUserRank: results[3],
+        todaysWinner: results[4],
         status: HomeStatus.success,
       ));
 
@@ -152,9 +135,9 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       ]);
 
       emit(state.copyWith(
-        topCarpenters: results[0] as List<CarpenterRankModel>,
-        currentUserRank: results[1] as CarpenterRankModel?,
-        todaysWinner: results[2] as CarpenterRankModel?,
+        topCarpenters: results[0] as List,
+        currentUserRank: results[1],
+        todaysWinner: results[2],
         leaderboardLoading: false,
       ));
 

@@ -27,11 +27,12 @@ class UserModel extends User {
   /// Convert from JSON
   factory UserModel.fromJson(Map<String, dynamic> json, [String? id]) {
     return UserModel(
-      id: id ?? json['id'] as String,
-      email: json['email'] as String,
-      phoneNumber: json['phoneNumber'] as String?,
-      displayName: json['displayName'] as String?,
-      photoUrl: json['photoUrl'] as String?,
+      id: id ?? json['docId'] as String? ?? json['id'] as String,
+      email: json['email'] as String? ?? '',
+      phoneNumber: json['phoneNumber'] as String? ?? json['phone'] as String?,
+      displayName: json['displayName'] as String? ?? 
+          '${json['firstName'] ?? ''} ${json['lastName'] ?? ''}'.trim(),
+      photoUrl: json['photoUrl'] as String? ?? json['imageUrl'] as String?,
       role: json['role'] as String? ?? 'carpenter',
       isEmailVerified: json['isEmailVerified'] as bool? ?? false,
       createdAt: json['createdAt'] != null

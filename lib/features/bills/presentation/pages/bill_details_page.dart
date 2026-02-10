@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
+import 'package:balaji_points/core/widgets/navigation/unified_app_bar.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/core/utils/app_logger.dart';
 import 'package:balaji_points/services/bill_service.dart';
@@ -343,17 +344,20 @@ class _BillDetailsPageState extends State<BillDetailsPage> {
     if (_isLoading) {
       return Scaffold(
         backgroundColor: DesignToken.primary,
-        appBar: AppBar(
-          title: Text(
-            'Bill Details',
-            style: AppTextStyles.nunitoBold.copyWith(fontSize: DesignToken.fontSize2XL, color: Colors.white),
-          ),
-          backgroundColor: DesignToken.primary,
-          iconTheme: const IconThemeData(color: Colors.white),
-          elevation: 0,
-        ),
-        body: const Center(
-          child: CircularProgressIndicator(color: Colors.white),
+        body: Column(
+          children: [
+            UnifiedAppBar(
+              title: 'Bill Details',
+              backgroundColor: DesignToken.primary,
+              iconColor: DesignToken.white,
+              textColor: DesignToken.white,
+            ),
+            const Expanded(
+              child: Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
+            ),
+          ],
         ),
       );
     }
@@ -361,27 +365,33 @@ class _BillDetailsPageState extends State<BillDetailsPage> {
     if (_billData == null) {
       return Scaffold(
         backgroundColor: DesignToken.primary,
-        appBar: AppBar(
-          title: Text(
-            'Bill Details',
-            style: AppTextStyles.nunitoBold.copyWith(fontSize: DesignToken.fontSize2XL, color: Colors.white),
-          ),
-          backgroundColor: DesignToken.primary,
-          iconTheme: const IconThemeData(color: Colors.white),
-          elevation: 0,
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.white),
-              SizedBox(height: DesignToken.heightLG),
-              Text(
-                'Bill not found',
-                style: AppTextStyles.nunitoBold.copyWith(fontSize: DesignToken.fontSizeXL, color: Colors.white),
+        body: Column(
+          children: [
+            UnifiedAppBar(
+              title: 'Bill Details',
+              backgroundColor: DesignToken.primary,
+              iconColor: DesignToken.white,
+              textColor: DesignToken.white,
+            ),
+            Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, size: 64, color: Colors.white),
+                    SizedBox(height: DesignToken.heightLG),
+                    Text(
+                      'Bill not found',
+                      style: AppTextStyles.nunitoRegular.copyWith(
+                        color: Colors.white,
+                        fontSize: DesignToken.fontSizeLG,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     }
@@ -407,17 +417,14 @@ class _BillDetailsPageState extends State<BillDetailsPage> {
 
     return Scaffold(
       backgroundColor: DesignToken.primary,
-      appBar: AppBar(
-        title: Text(
-          'Bill Details',
-          style: AppTextStyles.nunitoBold.copyWith(fontSize: DesignToken.fontSize2XL, color: Colors.white),
-        ),
-        backgroundColor: DesignToken.primary,
-        iconTheme: const IconThemeData(color: Colors.white),
-        elevation: 0,
-      ),
       body: Column(
         children: [
+          UnifiedAppBar(
+            title: 'Bill Details',
+            backgroundColor: DesignToken.primary,
+            iconColor: DesignToken.white,
+            textColor: DesignToken.white,
+          ),
           Expanded(
             child: Container(
               color: DesignToken.woodenBackground,

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
+import 'package:balaji_points/core/widgets/navigation/unified_app_bar.dart';
 import 'package:balaji_points/config/theme.dart';
 import 'package:balaji_points/services/session_service.dart';
 import 'package:balaji_points/core/utils/app_logger.dart';
-import 'package:balaji_points/core/widgets/navigation/home_nav_bar.dart';
 
 class NotificationSettingsPage extends StatefulWidget {
   const NotificationSettingsPage({super.key});
@@ -138,11 +138,12 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
       body: Column(
         children: [
           // Navigation Bar
-          HomeNavBar(
+          UnifiedAppBar(
             title: 'Notification Settings',
-            showLogo: false,
+            backgroundColor: DesignToken.primary,
+            iconColor: DesignToken.white,
+            textColor: DesignToken.white,
             showProfileButton: false,
-            showBackButton: true,
           ),
           // Content
           Expanded(
