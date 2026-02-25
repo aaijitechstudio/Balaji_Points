@@ -149,7 +149,8 @@ class PinAuthService {
       final computedHash = _hashPin(pin, salt);
       if (computedHash == storedHash) {
         AppLogger.info('PIN verified for $normalized');
-        return {...data, 'docId': doc.id};
+        // Include doc.id so session and FCM token are saved to the correct user doc
+        return {...data, 'docId': doc.id, 'id': doc.id};
       }
 
       return null;

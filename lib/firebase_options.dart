@@ -5,19 +5,13 @@ import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
 /// Default [FirebaseOptions] for use with your Firebase apps.
-///
-/// Example:
-/// ```dart
-/// import 'firebase_options.dart';
-/// // ...
-/// await Firebase.initializeApp(
-///   options: DefaultFirebaseOptions.currentPlatform,
-/// );
-/// ```
+/// Web platform is not supported.
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      return web;
+      throw UnsupportedError(
+        'Web is not a supported platform for this app.',
+      );
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -39,16 +33,6 @@ class DefaultFirebaseOptions {
         );
     }
   }
-
-  static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyAmCcBsbGah2kEHsXk10o-IcpWMjm7OxHk',
-    appId: '1:53571317085:web:bf8e5031a99a928f158cb4',
-    messagingSenderId: '53571317085',
-    projectId: 'balajipoints',
-    authDomain: 'balajipoints.firebaseapp.com',
-    storageBucket: 'balajipoints.firebasestorage.app',
-    measurementId: 'G-BRYRJMN6EF',
-  );
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyC1sfFB_qTXzIGaI0QonxGEZo8MICouGzU',

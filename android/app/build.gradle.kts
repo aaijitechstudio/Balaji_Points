@@ -97,11 +97,23 @@ tasks.register<Copy>("copyFlutterDebugApk") {
     rename { "app-debug.apk" }
 }
 
+tasks.register<Copy>("copyFlutterReleaseApk") {
+    from(layout.buildDirectory.file("outputs/apk/release/app-release.apk"))
+    into(flutterApkDir)
+    rename { "app-release.apk" }
+}
+
 afterEvaluate {
     tasks.named("assembleDebug") {
         finalizedBy("copyFlutterDebugApk")
     }
     tasks.named("copyFlutterDebugApk") {
         dependsOn("assembleDebug")
+    }
+    tasks.named("assembleRelease") {
+        finalizedBy("copyFlutterReleaseApk")
+    }
+    tasks.named("copyFlutterReleaseApk") {
+        dependsOn("assembleRelease")
     }
 }

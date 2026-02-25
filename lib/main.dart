@@ -65,10 +65,12 @@ void main() {
 /// ------------------------------------------------------
 /// BOOTSTRAP WIDGET — Handles ALL initialization cleanly
 /// ------------------------------------------------------
+/// Init future is cached so it runs only ONCE (FutureBuilder would
+/// otherwise call _init() on every rebuild and slow/hang the app).
 class _Bootstrap extends StatelessWidget {
   const _Bootstrap();
 
-  Future<void> _init() async {
+  static Future<void> _init() async {
     try {
       // Initialize Firebase
       await Firebase.initializeApp(
@@ -95,10 +97,12 @@ class _Bootstrap extends StatelessWidget {
     }
   }
 
+  static late final Future<void> _initFuture = _init();
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-      future: _init(),
+      future: _initFuture,
       builder: (context, snapshot) {
         // Show splash until Firebase is ready
         if (snapshot.connectionState != ConnectionState.done) {

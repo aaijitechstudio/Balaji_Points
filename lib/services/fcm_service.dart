@@ -28,7 +28,8 @@ class FCMService {
   String? _token;
   String? get token => _token;
 
-  /// Initialize FCM and permissions
+  /// Initialize FCM and permissions.
+  /// Token fetch and Firestore save run in background so app shows faster.
   Future<void> initialize() async {
     try {
       await _localNotificationService.initialize();
@@ -51,9 +52,6 @@ class FCMService {
         sound: true,
       );
 
-      // 🔑 Token
-      await _getToken();
-
       _messaging.onTokenRefresh.listen((newToken) async {
         _token = newToken;
         AppLogger.info('🔄 FCM token refreshed');
@@ -61,6 +59,9 @@ class FCMService {
       });
 
       _setupMessageHandlers();
+
+      // Defer token fetch and Firestore save so first frame shows faster
+      _getToken();
     } catch (e) {
       AppLogger.error('Error initializing FCM', e);
     }
@@ -101,36 +102,44 @@ class FCMService {
         targetDocIds.add(sessionUserId);
       }
 
+      final tokenData = {
+        'fcmToken': token,
+        'lastTokenUpdate': FieldValue.serverTimestamp(),
+        'platform': defaultTargetPlatform.name,
+      };
+
+      // Track which doc IDs were successfully updated
+      final Set<String> updatedDocIds = {};
+
       // Save token to collected IDs (only the current user's documents)
       for (final docId in targetDocIds) {
-        await _firestore.collection('users').doc(docId).set({
-          'fcmToken': token,
-          'lastTokenUpdate': FieldValue.serverTimestamp(),
-          'platform': defaultTargetPlatform.name,
-        }, SetOptions(merge: true));
-
-        AppLogger.info('✅ FCM token saved to users/$docId');
+        try {
+          // Use update first (existing doc), fall back to set+merge (new doc)
+          final docRef = _firestore.collection('users').doc(docId);
+          final docSnap = await docRef.get();
+          if (docSnap.exists) {
+            await docRef.update(tokenData);
+            updatedDocIds.add(docId);
+            AppLogger.info('✅ FCM token saved to users/$docId');
+          }
+        } catch (e) {
+          AppLogger.warning('Could not save token to users/$docId: $e');
+        }
       }
 
-      // ✅ ONLY sync to admin documents if the CURRENT user is actually an admin
-      final userRole = await _sessionService.getUserRole();
-      if (userRole == 'admin') {
-        // Get all admin documents and ensure token is synced
-        final adminDocs = await _firestore
+      // ✅ Find the actual user document by phone field
+      // This handles cases where the doc ID is auto-generated (not the phone number)
+      if (phone != null && phone.isNotEmpty) {
+        final userDocs = await _firestore
             .collection('users')
-            .where('role', isEqualTo: 'admin')
+            .where('phone', isEqualTo: phone)
             .get();
 
-        for (final doc in adminDocs.docs) {
-          // Only update if this is one of our target documents
-          if (targetDocIds.contains(doc.id)) {
-            await doc.reference.set({
-              'fcmToken': token,
-              'lastTokenUpdate': FieldValue.serverTimestamp(),
-              'platform': defaultTargetPlatform.name,
-            }, SetOptions(merge: true));
-
-            AppLogger.info('👑 Admin token synced: ${doc.id}');
+        for (final doc in userDocs.docs) {
+          if (!updatedDocIds.contains(doc.id)) {
+            await doc.reference.update(tokenData);
+            updatedDocIds.add(doc.id);
+            AppLogger.info('✅ FCM token saved to users/${doc.id} (by phone lookup)');
           }
         }
       }
@@ -228,11 +237,34 @@ class FCMService {
 
       // Clear FCM token from Firestore for all user documents
       for (final docId in targetDocIds) {
-        await _firestore.collection('users').doc(docId).update({
-          'fcmToken': FieldValue.delete(),
-          'lastTokenUpdate': FieldValue.serverTimestamp(),
-        });
-        AppLogger.info('🧹 FCM token cleared from users/$docId');
+        try {
+          await _firestore.collection('users').doc(docId).update({
+            'fcmToken': FieldValue.delete(),
+            'lastTokenUpdate': FieldValue.serverTimestamp(),
+          });
+          AppLogger.info('🧹 FCM token cleared from users/$docId');
+        } catch (e) {
+          AppLogger.warning('Could not clear token from users/$docId: $e');
+        }
+      }
+
+      // Also clear token from admin docs found by phone (handles auto-generated doc IDs)
+      if (phone != null && phone.isNotEmpty) {
+        final adminDocs = await _firestore
+            .collection('users')
+            .where('role', isEqualTo: 'admin')
+            .where('phone', isEqualTo: phone)
+            .get();
+
+        for (final doc in adminDocs.docs) {
+          if (!targetDocIds.contains(doc.id)) {
+            await doc.reference.update({
+              'fcmToken': FieldValue.delete(),
+              'lastTokenUpdate': FieldValue.serverTimestamp(),
+            });
+            AppLogger.info('🧹 FCM token cleared from admin doc: ${doc.id}');
+          }
+        }
       }
 
       // Delete token from FCM
