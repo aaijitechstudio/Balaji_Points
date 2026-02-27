@@ -3,466 +3,31 @@
 // Uses CarpenterRank (version A: rank, name, points, imageUrl) from top_carpenters_display.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:confetti/confetti.dart';
 import 'dart:math';
+import 'dart:async';
 
 import 'package:balaji_points/l10n/app_localizations.dart';
-import 'package:balaji_points/presentation/widgets/home_nav_bar.dart';
-import 'package:balaji_points/presentation/widgets/user_profile_card.dart';
 import 'package:balaji_points/presentation/widgets/top_carpenters_display.dart'; // provides CarpenterRank
 import 'package:balaji_points/presentation/widgets/top_carpenters_list.dart';
 import 'package:balaji_points/presentation/widgets/shimmer_loading.dart';
-import 'package:balaji_points/presentation/widgets/complete_profile_card.dart';
+import 'package:balaji_points/presentation/screens/home/widgets/complete_profile_card.dart';
+import 'package:balaji_points/presentation/widgets/offers_carousel.dart';
 // Daily spin removed - admin only feature now
 import 'package:balaji_points/services/user_service.dart';
 import 'package:balaji_points/services/session_service.dart';
+import 'package:balaji_points/services/cart_service.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
-
-/// ---------------------------------------------------------------------------
-/// OFFER MODEL
-/// ---------------------------------------------------------------------------
-class OfferItem {
-  final String id;
-  final String title;
-  final String description;
-  final String bannerUrl;
-  final int points;
-  final DateTime? validUntil;
-  final bool isActive;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-
-  OfferItem({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.bannerUrl,
-    required this.points,
-    required this.validUntil,
-    required this.isActive,
-    required this.createdAt,
-    required this.updatedAt,
-  });
-
-  // Robust converter for Firestore timestamps / iso strings / null
-  static DateTime _toDate(dynamic ts, [DateTime? fallback]) {
-    final fb = fallback ?? DateTime.now();
-    try {
-      if (ts == null) return fb;
-      if (ts is Timestamp) return ts.toDate();
-      if (ts is DateTime) return ts;
-      if (ts is String) return DateTime.parse(ts);
-    } catch (_) {}
-    return fb;
-  }
-
-  factory OfferItem.fromDoc(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>? ?? <String, dynamic>{};
-    return OfferItem(
-      id: doc.id,
-      title: (data['title'] ?? '') as String,
-      description: (data['description'] ?? '') as String,
-      bannerUrl: (data['bannerUrl'] ?? '') as String,
-      points: (data['points'] ?? 0) as int,
-      validUntil: data['validUntil'] != null
-          ? _toDate(data['validUntil'])
-          : null,
-      isActive: data['isActive'] ?? true,
-      createdAt: _toDate(data['createdAt'], DateTime.now()),
-      updatedAt: _toDate(data['updatedAt'], DateTime.now()),
-    );
-  }
-}
 
 /// ---------------------------------------------------------------------------
 /// OFFERS CAROUSEL & CARDS
 /// - horizontal list for banner offers with page indicators
 /// - vertical list with full-width cards when no banners
 /// ---------------------------------------------------------------------------
-class OffersCarousel extends StatefulWidget {
-  final List<OfferItem> offers;
-
-  const OffersCarousel({super.key, required this.offers});
-
-  @override
-  State<OffersCarousel> createState() => _OffersCarouselState();
-}
-
-class _OffersCarouselState extends State<OffersCarousel> {
-  final PageController _pageController = PageController();
-  int _currentPage = 0;
-
-  bool get _hasBanners =>
-      widget.offers.any((offer) => offer.bannerUrl.isNotEmpty);
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // If no banners, show vertical list with full-width cards
-    if (!_hasBanners) {
-      return Column(
-        children: widget.offers.asMap().entries.map((entry) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: _FullWidthOfferCard(offer: entry.value, index: entry.key),
-          );
-        }).toList(),
-      );
-    }
-
-    // If banners exist, show horizontal carousel with page indicators
-    return Column(
-      children: [
-        SizedBox(
-          height: 200,
-          child: PageView.builder(
-            controller: _pageController,
-            onPageChanged: (index) {
-              setState(() {
-                _currentPage = index;
-              });
-            },
-            itemCount: widget.offers.length,
-            itemBuilder: (context, index) {
-              final offer = widget.offers[index];
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: offer.bannerUrl.isNotEmpty
-                    ? _BannerOfferCard(offer: offer)
-                    : _BasicOfferCard(offer: offer),
-              );
-            },
-          ),
-        ),
-        // Page indicators (dots) - only show if more than 1 offer
-        if (widget.offers.length > 1) ...[
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(
-              widget.offers.length,
-              (index) => _buildDot(index),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildDot(int index) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      width: _currentPage == index ? 24 : 8,
-      height: 8,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(4),
-        color: _currentPage == index
-            ? DesignToken.primary
-            : DesignToken.primary.withOpacity(0.3),
-      ),
-    );
-  }
-}
-
-class _BannerOfferCard extends StatelessWidget {
-  final OfferItem offer;
-  const _BannerOfferCard({required this.offer});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      clipBehavior: Clip.hardEdge,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [DesignToken.primary, DesignToken.secondary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: DesignToken.primary.withOpacity(0.3),
-          width: 2,
-        ),
-      ),
-      child: Stack(
-        children: [
-          offer.bannerUrl.isNotEmpty
-              ? Image.network(
-                  offer.bannerUrl,
-                  width: double.infinity,
-                  height: double.infinity,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [DesignToken.primary, DesignToken.secondary],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.image_not_supported,
-                        size: 48,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  loadingBuilder: (context, child, progress) {
-                    if (progress == null) return child;
-                    return Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [DesignToken.primary, DesignToken.secondary],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: const Center(
-                        child: CircularProgressIndicator(color: Colors.white),
-                      ),
-                    );
-                  },
-                )
-              : Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [DesignToken.primary, DesignToken.secondary],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: const Center(
-                    child: Icon(Icons.image, size: 48, color: Colors.white),
-                  ),
-                ),
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.center,
-                  colors: [DesignToken.black54, DesignToken.transparent],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: 6,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  offer.title,
-                  style: const TextStyle(
-                    color: DesignToken.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                // const SizedBox(height: 6),
-                // Text(
-                //   offer.description,
-                //   maxLines: 2,
-                //   overflow: TextOverflow.ellipsis,
-                //   style: TextStyle(color: DesignToken.white70, fontSize: 14),
-                // ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BasicOfferCard extends StatelessWidget {
-  final OfferItem offer;
-  const _BasicOfferCard({required this.offer});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: DesignToken.transparent, // no white background
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: DesignToken.primary.withOpacity(0.3),
-          width: 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: DesignToken.black12,
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            offer.title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            offer.description,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 14, color: DesignToken.black54),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FullWidthOfferCard extends StatelessWidget {
-  final OfferItem offer;
-  final int index;
-  const _FullWidthOfferCard({required this.offer, required this.index});
-
-  // Generate dynamic gradient based on index
-  LinearGradient _getGradient() {
-    final gradients = [
-      LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          DesignToken.primary,
-          DesignToken.primary.withOpacity(0.7),
-          DesignToken.secondary.withOpacity(0.8),
-        ],
-      ),
-      LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          DesignToken.secondary,
-          DesignToken.secondary.withOpacity(0.7),
-          DesignToken.primary.withOpacity(0.8),
-        ],
-      ),
-      LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          DesignToken.blue600,
-          DesignToken.primary,
-          DesignToken.secondary,
-        ],
-      ),
-      LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          DesignToken.purpleShade500,
-          DesignToken.secondary,
-          DesignToken.primary.withOpacity(0.9),
-        ],
-      ),
-      LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          DesignToken.primary.withOpacity(0.9),
-          DesignToken.blue500,
-          DesignToken.secondary.withOpacity(0.9),
-        ],
-      ),
-    ];
-    return gradients[index % gradients.length];
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: _getGradient(),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: DesignToken.primary.withOpacity(0.4),
-          width: 2,
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: DesignToken.black26,
-            blurRadius: 12,
-            offset: Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  offer.title,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: DesignToken.white,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  offer.description,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    color: DesignToken.white70,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.25),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: Colors.white.withOpacity(0.3),
-                width: 1,
-              ),
-            ),
-            child: const Icon(
-              Icons.card_giftcard,
-              color: Colors.white,
-              size: 28,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 /// ---------------------------------------------------------------------------
 /// HOME PAGE
 /// ---------------------------------------------------------------------------
@@ -474,13 +39,21 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage>
-    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+    with
+        SingleTickerProviderStateMixin,
+        WidgetsBindingObserver,
+        AutomaticKeepAliveClientMixin<HomePage> {
   final UserService _userService = UserService();
   final SessionService _sessionService = SessionService();
+  final CartService _cartService = CartService();
 
   // Offers
   List<OfferItem> _offers = [];
   bool _isLoadingOffers = true;
+
+  // Cart count for header badge
+  int _cartItemCount = 0;
+  StreamSubscription<int>? _cartSubscription;
 
   // Top carpenters
   List<CarpenterRank> _topCarpenters = [];
@@ -491,15 +64,105 @@ class _HomePageState extends State<HomePage>
   int? _currentUserRank;
   int _currentUserPoints = 0;
   bool _isCarpenter = false;
+  // ignore: unused_field
   String? _currentUserId;
+  // ignore: unused_field
   String? _userRole;
 
   // animation for add points button
   late AnimationController _animationController;
   late Animation<double> _glowAnimation;
+  bool _greetingIconPressed = false;
 
   // Confetti controller for celebration
   late ConfettiController _confettiController;
+
+  // Product hero carousel
+  late final PageController _productHeroPageController;
+  int _currentProductHeroPage = 0;
+
+  static const List<_HomeProductCategory> _categories =
+      <_HomeProductCategory>[
+    _HomeProductCategory(
+      title: 'Bedroom',
+      icon: Icons.bed_rounded,
+      background: Color(0xFFF5F0FF),
+      imageAsset: 'docs/furnitures_pics/luxirous lifestyle.jpeg',
+    ),
+    _HomeProductCategory(
+      title: 'Kitchen',
+      icon: Icons.kitchen_rounded,
+      background: Color(0xFFFFF3E0),
+      imageAsset:
+          'docs/furnitures_pics/22 Gorgeous Brown Kitchen Cabinet Designs.jpeg',
+    ),
+    _HomeProductCategory(
+      title: 'Living Room',
+      icon: Icons.chair_rounded,
+      background: Color(0xFFE3F2FD),
+      imageAsset: 'docs/furnitures_pics/_ (6).jpeg',
+    ),
+    _HomeProductCategory(
+      title: 'Wardrobe',
+      icon: Icons.checkroom_rounded,
+      background: Color(0xFFE8F5E9),
+      imageAsset: 'docs/furnitures_pics/_ (10).jpeg',
+    ),
+    _HomeProductCategory(
+      title: 'Office',
+      icon: Icons.workspaces_rounded,
+      background: Color(0xFFE8F0FE),
+      imageAsset:
+          'docs/furnitures_pics/Home Office_Todos os direitos da autoria e imagem são reservados aos responsáveis_.jpeg',
+    ),
+    _HomeProductCategory(
+      title: 'Bathroom',
+      icon: Icons.bathtub_rounded,
+      background: Color(0xFFF3E5F5),
+      imageAsset:
+          'docs/furnitures_pics/Elegant Sage Green Kitchen with Brass Accents & Marble Island.jpeg',
+    ),
+  ];
+
+  static const List<_ProductHeroCardData> _heroCards =
+      <_ProductHeroCardData>[
+    _ProductHeroCardData(
+      title: 'Surfaces that\nradiate luxury',
+      subtitle: 'Decorative laminates,\nveneers and acrylic panels.',
+      imageAsset:
+          'docs/furnitures_pics/22 Gorgeous Brown Kitchen Cabinet Designs.jpeg',
+      icon: Icons.layers_rounded,
+    ),
+    _ProductHeroCardData(
+      title: 'Bedroom that feels premium',
+      subtitle: 'Warm finishes for\ncozy master bedrooms.',
+      imageAsset: 'docs/furnitures_pics/luxirous lifestyle.jpeg',
+      icon: Icons.bed_rounded,
+    ),
+    _ProductHeroCardData(
+      title: 'Kitchen that inspires',
+      subtitle: 'Modern finishes for\npremium modular kitchens.',
+      imageAsset:
+          'docs/furnitures_pics/Elegant Sage Green Kitchen with Brass Accents & Marble Island.jpeg',
+      icon: Icons.kitchen_rounded,
+    ),
+    _ProductHeroCardData(
+      title: 'Living room that welcomes',
+      subtitle: 'TV units & wall panels\nfor family time.',
+      imageAsset: 'docs/furnitures_pics/_ (6).jpeg',
+      icon: Icons.weekend_rounded,
+    ),
+    _ProductHeroCardData(
+      title: 'Office that boosts focus',
+      subtitle: 'Create productive workspaces\nwith designer surfaces.',
+      imageAsset:
+          'docs/furnitures_pics/Home Office_Todos os direitos da autoria e imagem são reservados aos responsáveis_.jpeg',
+      icon: Icons.chair_rounded,
+    ),
+  ];
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -518,6 +181,8 @@ class _HomePageState extends State<HomePage>
       duration: const Duration(seconds: 3),
     );
 
+    _productHeroPageController = PageController(viewportFraction: 0.9);
+
     _loadInitialData();
   }
 
@@ -533,6 +198,7 @@ class _HomePageState extends State<HomePage>
     ]);
   }
 
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
@@ -546,8 +212,10 @@ class _HomePageState extends State<HomePage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _cartSubscription?.cancel();
     _animationController.dispose();
     _confettiController.dispose();
+    _productHeroPageController.dispose();
     super.dispose();
   }
 
@@ -561,7 +229,17 @@ class _HomePageState extends State<HomePage>
           .orderBy('createdAt', descending: true)
           .limit(10) // Limit to 10 offers for performance
           .get();
-      final list = snapshot.docs.map((d) => OfferItem.fromDoc(d)).toList();
+      final list = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>? ?? {};
+        return OfferItem(
+          title: data['title'] as String? ?? '',
+          description: data['description'] as String? ?? '',
+          actionText: (data['bannerUrl'] != null && data['bannerUrl'] != '')
+              ? 'View Offer'
+              : 'Learn More',
+          imageUrl: data['bannerUrl'] as String? ?? '',
+        );
+      }).toList();
       if (mounted) {
         setState(() {
           _offers = list;
@@ -675,6 +353,7 @@ class _HomePageState extends State<HomePage>
               _userRole = (data?['role'] ?? '') as String?;
               _currentUserId = userId;
             });
+            _subscribeCartCount(userId);
             debugPrint(
               'User data refreshed: totalPoints=${_currentUserPoints}, profileImage=${data?['profileImage']}, isCarpenter=$_isCarpenter',
             );
@@ -688,7 +367,7 @@ class _HomePageState extends State<HomePage>
       // Fallback to service method
       final data = await _user_service_getCurrentUserDataSafe();
       final fallbackUserId = await _sessionService.getUserId();
-      if (mounted)
+      if (mounted) {
         setState(() {
           _currentUserData = data;
           _currentUserPoints = (data?['totalPoints'] ?? 0) as int;
@@ -696,13 +375,17 @@ class _HomePageState extends State<HomePage>
           _userRole = (data?['role'] ?? '') as String?;
           _currentUserId = fallbackUserId;
         });
+        if (fallbackUserId != null) {
+          _subscribeCartCount(fallbackUserId);
+        }
+      }
     } catch (e) {
       debugPrint('Error loading current user data: $e');
       // Fallback to service method on error
       try {
         final data = await _user_service_getCurrentUserDataSafe();
         final errorFallbackUserId = await _sessionService.getUserId();
-        if (mounted)
+        if (mounted) {
           setState(() {
             _currentUserData = data;
             _currentUserPoints = (data?['totalPoints'] ?? 0) as int;
@@ -710,6 +393,10 @@ class _HomePageState extends State<HomePage>
             _userRole = (data?['role'] ?? '') as String?;
             _currentUserId = errorFallbackUserId;
           });
+          if (errorFallbackUserId != null) {
+            _subscribeCartCount(errorFallbackUserId);
+          }
+        }
       } catch (e2) {
         debugPrint('Error in fallback user data load: $e2');
       }
@@ -724,33 +411,14 @@ class _HomePageState extends State<HomePage>
     }
   }
 
-  /// Get filtered notifications stream based on user role
-  /// For carpenters: user-specific notifications (excluding admin-only types)
-  /// For admins: all notifications
-  Stream<QuerySnapshot> _getFilteredNotificationsStream() {
-    if (_currentUserId == null) {
-      // Return empty stream if no user ID - use a dummy query that returns empty
-      return FirebaseFirestore.instance
-          .collection('notification_logs')
-          .where('userId', isEqualTo: '__dummy__')
-          .snapshots();
-    }
-
-    // For admins, show all notifications
-    if (_userRole == 'admin') {
-      return FirebaseFirestore.instance
-          .collection('notification_logs')
-          .orderBy('sentAt', descending: true)
-          .snapshots();
-    }
-
-    // For carpenters, show only user-specific notifications
-    // Admin-only types will be filtered in the StreamBuilder
-    return FirebaseFirestore.instance
-        .collection('notification_logs')
-        .where('userId', isEqualTo: _currentUserId)
-        .orderBy('sentAt', descending: true)
-        .snapshots();
+  void _subscribeCartCount(String userId) {
+    _cartSubscription?.cancel();
+    _cartSubscription = _cartService.watchCartCount(userId).listen((count) {
+      if (!mounted) return;
+      setState(() {
+        _cartItemCount = count;
+      });
+    });
   }
 
   // ------------------ Current user rank ------------------
@@ -837,72 +505,6 @@ class _HomePageState extends State<HomePage>
     return trimmed.startsWith('http://') || trimmed.startsWith('https://');
   }
 
-  /// Show dialog when user tries to add bill with incomplete profile
-  void _showCompleteProfileDialog(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.person_add_alt_1,
-                color: Colors.orange.shade700,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                l10n.profileIncomplete,
-                style: AppTextStyles.nunitoBold.copyWith(fontSize: 20),
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          l10n.completeProfileMessage,
-          style: AppTextStyles.nunitoRegular.copyWith(fontSize: 16),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              l10n.cancel,
-              style: AppTextStyles.nunitoMedium.copyWith(
-                color: Colors.grey[600],
-                fontSize: 16,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              context.push('/edit-profile');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange.shade600,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text(
-              l10n.completeProfile,
-              style: AppTextStyles.nunitoSemiBold.copyWith(fontSize: 16),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Future<CarpenterRank?> _buildCurrentUserAsCarpenterRank() async {
     final currentUserId = await _sessionService.getUserId();
@@ -932,213 +534,111 @@ class _HomePageState extends State<HomePage>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     // Note: currentUserRankObj is now async, handled in FutureBuilder below
     final top3 = _topCarpenters.take(3).toList();
 
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: DesignToken.primary,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      drawer: _buildHomeDrawer(context),
+      appBar: _buildHomeAppBar(context, theme),
       body: Stack(
         children: [
-          Column(
-            children: [
-              HomeNavBar(
-                userImageUrl: _getUserProfileImage(),
-                actions: _isCarpenter && _currentUserId != null
-                    ? [
-                        // Notification button with badge
-                        StreamBuilder<QuerySnapshot>(
-                          stream: _getFilteredNotificationsStream(),
-                          builder: (context, snapshot) {
-                            int notificationCount = 0;
-
-                            if (snapshot.hasData) {
-                              // Filter out admin-only notification types for carpenters
-                              final docs = snapshot.data!.docs.where((doc) {
-                                final data = doc.data() as Map<String, dynamic>;
-                                final type = data['type'] as String?;
-                                // Hide admin-only notifications from carpenters
-                                const adminOnlyTypes = [
-                                  'dailySpinReminder',
-                                  'newPendingBill',
-                                  'newUserRegistered',
-                                ];
-                                return !adminOnlyTypes.contains(type);
-                              }).toList();
-
-                              notificationCount = docs.length;
-                            }
-
-                            return Stack(
-                              children: [
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.notifications_outlined,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                  onPressed: () {
-                                    debugPrint('Navigating to /notifications');
-                                    context.push('/notifications');
-                                  },
-                                  tooltip: 'Notifications',
-                                ),
-                                if (notificationCount > 0)
-                                  Positioned(
-                                    right: 8,
-                                    top: 8,
-                                    child: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: const BoxDecoration(
-                                        color: Colors.red,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      constraints: const BoxConstraints(
-                                        minWidth: 16,
-                                        minHeight: 16,
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          notificationCount > 99
-                                              ? '99+'
-                                              : '$notificationCount',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            );
-                          },
-                        ),
-                      ]
-                    : null,
-              ),
-
-              Expanded(
-                child: Container(
-                  color: DesignToken.woodenBackground,
-                  child: SafeArea(
-                    top: false,
-                    child: RefreshIndicator(
-                      onRefresh: _loadInitialData,
-                      color: DesignToken.primary,
-                      backgroundColor: Colors.white,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 16),
-
-                          // User profile card
-                          UserProfileCard(
-                            userName: _getUserDisplayName(),
-                            totalPoints: _getUserPoints(),
-                            tier: _getUserTier(),
-                            userImageUrl: _getUserProfileImage(),
+          Container(
+            color: theme.colorScheme.surface,
+            child: RefreshIndicator(
+              onRefresh: _loadInitialData,
+              color: DesignToken.primary,
+              backgroundColor: theme.colorScheme.surface,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.only(bottom: 120),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 12),
+                      _buildHomeHeroCard(context),
+                      const SizedBox(height: 12),
+                      // Complete Profile Card (shown if profile is incomplete)
+                      if (!_isProfileComplete()) ...[
+                        const CompleteProfileCard(),
+                        const SizedBox(height: 16),
+                      ],
+                      const SizedBox(height: 8),
+                      // Latest Offers header
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          AppLocalizations.of(context)!.latestOffers,
+                          style: AppTextStyles.nunitoSemiBold.copyWith(
+                            color: DesignToken.primary,
+                            fontSize: DesignToken.fontSizeMD,
                           ),
-
-                          const SizedBox(height: 16),
-
-                          // Complete Profile Card (shown if profile is incomplete)
-                          if (!_isProfileComplete()) ...[
-                            const CompleteProfileCard(),
-                            const SizedBox(height: 16),
-                          ],
-
-                          const SizedBox(height: 4),
-
-                          // Latest Offers header
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      // Offers carousel
+                      _isLoadingOffers
+                          ? const ShimmerOfferCard()
+                          : OffersCarousel(offers: _offers),
+                      const SizedBox(height: 16),
+                      // Products section (horizontal carousel)
+                      _buildProductsSection(context),
+                      const SizedBox(height: 16),
+                      // Today's Winner Display
+                      _buildTodaysWinner(),
+                      const SizedBox(height: 16),
+                      // Current User Position Card
+                      _buildCurrentUserPositionCard(),
+                      const SizedBox(height: 16),
+                      // Top carpenters
+                      if (_isLoadingCarpenters)
+                        const ShimmerTopCarpenters()
+                      else if (_topCarpenters.isNotEmpty) ...[
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surface,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: DesignToken.black.withValues(
+                                  alpha: 0.05,
+                                ),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: FutureBuilder<CarpenterRank?>(
+                            future: _buildCurrentUserAsCarpenterRank(),
+                            builder: (context, snapshot) {
+                              return TopCarpentersDisplay(
+                                topCarpenters: top3,
+                                currentUser: snapshot.data,
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Top 10 Carpenters List (without bordered card container)
+                        if (_topCarpenters.isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(
-                              AppLocalizations.of(context)!.latestOffers,
-                              style: TextStyle(
-                                color: DesignToken.primary,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ).merge(AppTextStyles.nunitoBold),
+                            child: TopCarpentersList(
+                              carpenters: _topCarpenters,
+                              showViewAll: false,
                             ),
                           ),
-                          const SizedBox(height: 12),
-
-                          // Offers carousel
-                          _isLoadingOffers
-                              ? const ShimmerOfferCard()
-                              : OffersCarousel(offers: _offers),
-
-                          const SizedBox(height: 20),
-
-                          // Today's Winner Display
-                          _buildTodaysWinner(),
-
-                          const SizedBox(height: 20),
-
-                          // Current User Position Card
-                          _buildCurrentUserPositionCard(),
-
-                          const SizedBox(height: 20),
-
-                          // Top carpenters
-                          if (_isLoadingCarpenters)
-                            const ShimmerTopCarpenters()
-                          else if (_topCarpenters.isNotEmpty) ...[
-                            Container(
-                              margin: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: DesignToken.white,
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
-                                    blurRadius: 10,
-                                    offset: Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: FutureBuilder<CarpenterRank?>(
-                                future: _buildCurrentUserAsCarpenterRank(),
-                                builder: (context, snapshot) {
-                                  return TopCarpentersDisplay(
-                                    topCarpenters: top3,
-                                    currentUser: snapshot.data,
-                                  );
-                                },
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-
-                            // Top 10 Carpenters List (without bordered card container)
-                            if (_topCarpenters.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                ),
-                                child: TopCarpentersList(
-                                  carpenters: _topCarpenters,
-                                  showViewAll: false,
-                                ),
-                              ),
-                          ],
-
-                          const SizedBox(height: 20),
-                        ],
-                      ),
-                    ),
-                  ),
+                      ],
+                      const SizedBox(height: 16),
+                    ],
                   ),
                 ),
               ),
-            ],
           ),
-
           // Confetti widget for celebration
           Align(
             alignment: Alignment.topCenter,
@@ -1152,8 +652,8 @@ class _HomePageState extends State<HomePage>
               gravity: 0.3,
               shouldLoop: false,
               colors: const [
-                Colors.amber,
-                Colors.orange,
+                DesignToken.amber,
+                DesignToken.orange,
                 DesignToken.red,
                 DesignToken.pink,
                 DesignToken.purple,
@@ -1163,45 +663,813 @@ class _HomePageState extends State<HomePage>
           ),
         ],
       ),
-      floatingActionButton: AnimatedBuilder(
-        animation: _animationController,
-        builder: (context, child) {
-          return Container(
+    );
+  }
+
+  Drawer _buildHomeDrawer(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final Color titleColor =
+        isDark ? DesignToken.white : DesignToken.textDark;
+    final Color subtitleColor = isDark
+        ? DesignToken.white.withValues(alpha: 0.80)
+        : DesignToken.textDark.withValues(alpha: 0.70);
+
+    final String name = _getUserDisplayName();
+    final String phone = (_currentUserData?['phone'] as String?) ?? '';
+
+    return Drawer(
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: DesignToken.primaryGradient,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: DesignToken.white.withValues(alpha: 0.8),
+                        width: 2,
+                      ),
+                    ),
+                    child: const CircleAvatar(
+                      backgroundColor: DesignToken.white,
+                      child: Icon(
+                        Icons.person,
+                        color: DesignToken.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          name,
+                          style: AppTextStyles.nunitoSemiBold.copyWith(
+                            color: DesignToken.white,
+                            fontSize: DesignToken.fontSizeLG,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        if (phone.isNotEmpty)
+                          Text(
+                            phone,
+                            style: AppTextStyles.nunitoRegular.copyWith(
+                              color:
+                                  DesignToken.white.withValues(alpha: 0.85),
+                              fontSize: DesignToken.fontSizeSM,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.home_rounded),
+              title: Text(
+                AppLocalizations.of(context)!.home,
+                style: AppTextStyles.nunitoRegular.copyWith(
+                  color: titleColor,
+                ),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                context.go('/');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.account_balance_wallet_rounded),
+              title: Text(
+                AppLocalizations.of(context)!.wallet,
+                style: AppTextStyles.nunitoRegular.copyWith(
+                  color: titleColor,
+                ),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                context.go('/wallet');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.notifications_rounded),
+              title: Text(
+                AppLocalizations.of(context)!.notifications,
+                style: AppTextStyles.nunitoRegular.copyWith(
+                  color: titleColor,
+                ),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                context.go('/notifications');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.layers_rounded),
+              title: Text(
+                'Products',
+                style: AppTextStyles.nunitoRegular.copyWith(
+                  color: titleColor,
+                ),
+              ),
+              subtitle: Text(
+                'Browse all product categories',
+                style: AppTextStyles.nunitoRegular.copyWith(
+                  color: subtitleColor,
+                  fontSize: DesignToken.fontSizeSM,
+                ),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                context.push('/products');
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.person_rounded),
+              title: Text(
+                AppLocalizations.of(context)!.profile,
+                style: AppTextStyles.nunitoRegular.copyWith(
+                  color: titleColor,
+                ),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                context.go('/profile');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.settings_rounded),
+              title: Text(
+                AppLocalizations.of(context)!.settings,
+                style: AppTextStyles.nunitoRegular.copyWith(
+                  color: titleColor,
+                ),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                context.push('/notification-settings');
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProductsSection(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final Color titleColor =
+        isDark ? DesignToken.white : DesignToken.textDark;
+    final surfaceColor = theme.colorScheme.surface;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: DesignToken.woodenGradient,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.layers_rounded,
+                      size: 18,
+                      color: DesignToken.brownShade800,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Wood & Plywood',
+                        style: AppTextStyles.nunitoSemiBold.copyWith(
+                          color: DesignToken.textDark,
+                          fontSize: DesignToken.fontSizeMD,
+                        ),
+                      ),
+                      Text(
+                        'Premium laminates & surfaces',
+                        style: AppTextStyles.nunitoRegular.copyWith(
+                          color: DesignToken.textDark.withValues(alpha: 0.70),
+                          fontSize: DesignToken.fontSizeSM,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              TextButton(
+                onPressed: () => context.push('/products'),
+                child: Text(
+                  'View all',
+                  style: AppTextStyles.nunitoRegular.copyWith(
+                    color: DesignToken.primary,
+                    fontSize: DesignToken.fontSizeSM,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 190,
+          child: PageView.builder(
+            controller: _productHeroPageController,
+            itemCount: _heroCards.length,
+            onPageChanged: (index) {
+              setState(() => _currentProductHeroPage = index);
+            },
+            itemBuilder: (context, index) {
+              final hero = _heroCards[index];
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color:
+                            DesignToken.brownShade800.withValues(alpha: 0.18),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.asset(
+                          hero.imageAsset,
+                          fit: BoxFit.cover,
+                        ),
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.black.withValues(alpha: 0.10),
+                                Colors.black.withValues(alpha: 0.65),
+                              ],
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 34,
+                                height: 34,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: DesignToken.white.withValues(
+                                    alpha: 0.92,
+                                  ),
+                                ),
+                                child: Icon(
+                                  hero.icon,
+                                  size: 20,
+                                  color: DesignToken.brownShade800,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                hero.title,
+                                style: AppTextStyles.nunitoBold.copyWith(
+                                  color: DesignToken.white,
+                                  fontSize: DesignToken.fontSizeLG,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                hero.subtitle,
+                                style: AppTextStyles.nunitoRegular.copyWith(
+                                  color: DesignToken.white.withValues(
+                                    alpha: 0.92,
+                                  ),
+                                  fontSize: DesignToken.fontSizeSM,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
+        Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(_heroCards.length, (index) {
+              final isActive = index == _currentProductHeroPage;
+              return AnimatedContainer(
+                duration: DesignToken.animationDurationFast,
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                height: 6,
+                width: isActive ? 18 : 6,
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? DesignToken.white.withValues(alpha: 0.95)
+                      : DesignToken.white.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              );
+            }),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 124,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            scrollDirection: Axis.horizontal,
+            itemCount: _categories.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final category = _categories[index];
+              return _ProductCategoryCard(
+                category: category,
+                surfaceColor: surfaceColor,
+                textColor: titleColor,
+                onTap: () => context.push(
+                  '/products?category=${Uri.encodeComponent(category.title)}',
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Home Top App Bar ─────────────────────────────────────────────────────
+  PreferredSizeWidget _buildHomeAppBar(BuildContext context, ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
+
+    // Match bottom tab bar background:
+    // - Light mode: pure white bar
+    // - Dark mode: deep navy background
+    final Color barColor =
+        isDark ? DesignToken.navyBackground : DesignToken.white;
+
+    final Color headerTextColor =
+        isDark ? DesignToken.white : DesignToken.textDark;
+    final Color headerSubTextColor = isDark
+        ? DesignToken.white.withValues(alpha: 0.85)
+        : DesignToken.textDark.withValues(alpha: 0.70);
+
+    final overlayStyle = SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness:
+          isDark ? Brightness.light : Brightness.dark, // Android
+      statusBarBrightness:
+          isDark ? Brightness.dark : Brightness.light, // iOS
+    );
+
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(64),
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: overlayStyle,
+        child: Container(
+          // Outer gradient border to mirror the bottom tab bar accent
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: DesignToken.primaryGradient,
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+          ),
+          child: Container(
+            margin: const EdgeInsets.all(1.0),
             decoration: BoxDecoration(
-              shape: BoxShape.circle,
+              color: barColor,
               boxShadow: [
                 BoxShadow(
-                  color: DesignToken.secondary.withOpacity(
-                    _glowAnimation.value,
+                  color: Colors.black.withValues(
+                    alpha: isDark ? 0.35 : 0.06,
                   ),
-                  blurRadius: 20,
-                  spreadRadius: 2,
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
-            child: FloatingActionButton.extended(
-              onPressed: () {
-                if (!_isProfileComplete()) {
-                  _showCompleteProfileDialog(context);
-                } else {
-                  GoRouter.of(context).push('/add-bill');
-                }
-              },
-              backgroundColor: DesignToken.secondary,
-              elevation: 6,
-              icon: const Icon(Icons.add_circle, color: Colors.white, size: 28),
-              label: Text(
-                AppLocalizations.of(context)!.addPoints,
-                style: AppTextStyles.nunitoBold.copyWith(
-                  fontSize: 16,
-                  color: Colors.white,
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DesignToken.paddingLG,
+                  vertical: 10,
+                ),
+                child: Row(
+                  children: [
+                    // ── Side menu button ───────────────────────────────────
+                    Builder(
+                      builder: (context) => InkWell(
+                        borderRadius: BorderRadius.circular(999),
+                        onTap: () => Scaffold.of(context).openDrawer(),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: headerTextColor.withValues(alpha: 0.10),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Icon(
+                            Icons.menu_rounded,
+                            color: headerTextColor,
+                            size: 22,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: DesignToken.widthMD),
+                    // ── Logo (square with rounded corners) ────────────────
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: headerTextColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: headerTextColor.withValues(alpha: 0.35),
+                          width: 1.5,
+                        ),
+                      ),
+                      padding: const EdgeInsets.all(6),
+                      child: Image.asset(
+                        'assets/images/balaji_point_logo.png',
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Icon(
+                          Icons.storefront_rounded,
+                          color: headerTextColor,
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: DesignToken.widthMD),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Balaji Points',
+                            style: AppTextStyles.nunitoBold.copyWith(
+                              color: headerTextColor,
+                              fontSize: DesignToken.fontSizeLG,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                          const SizedBox(height: 1),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.location_on_rounded,
+                                color: headerSubTextColor,
+                                size: 11,
+                              ),
+                              const SizedBox(width: 2),
+                              Expanded(
+                                child: Text(
+                                  'Shree Balaji Plywood and Hardware - E road',
+                                  style: AppTextStyles.nunitoRegular.copyWith(
+                                    color: headerSubTextColor,
+                                    fontSize: 11,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    // ── Cart button with live item-count badge ──────────────
+                    GestureDetector(
+                      onTap: () => context.push('/cart'),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: headerTextColor.withValues(alpha: 0.16),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: headerTextColor.withValues(alpha: 0.35),
+                                width: 1,
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.shopping_cart_outlined,
+                              color: headerTextColor,
+                              size: 22,
+                            ),
+                          ),
+                          if (_cartItemCount > 0)
+                            Positioned(
+                              top: -6,
+                              right: -6,
+                              child: Container(
+                                constraints: const BoxConstraints(
+                                  minWidth: 18,
+                                  minHeight: 18,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 1,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: DesignToken.error,
+                                  borderRadius: BorderRadius.circular(9),
+                                  border: Border.all(
+                                    color: DesignToken.white,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Text(
+                                  _cartItemCount > 99
+                                      ? '99+'
+                                      : '$_cartItemCount',
+                                  style: const TextStyle(
+                                    color: DesignToken.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    height: 1,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          );
-        },
+          ),
+        ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+    );
+  }
+
+  Widget _buildHomeHeroCard(BuildContext context) {
+    final now = DateTime.now();
+    final hour = now.hour;
+    final isDayTime = hour >= 6 && hour < 18;
+    final greeting = hour < 12
+        ? 'Good Morning'
+        : (hour < 17 ? 'Good Afternoon' : 'Good Evening');
+
+    final profileImage = _getUserProfileImage();
+    final hasValidImage =
+        profileImage != null &&
+        (profileImage.startsWith('http://') ||
+            profileImage.startsWith('https://'));
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: DesignToken.paddingLG),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: <Color>[DesignToken.primary, DesignToken.secondary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: DesignToken.borderRadiusXL,
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: DesignToken.primary.withValues(alpha: 0.30),
+            blurRadius: DesignToken.elevationXL,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DesignToken.paddingLG,
+          vertical: DesignToken.paddingMD,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        '$greeting,',
+                        style: AppTextStyles.nunitoRegular.copyWith(
+                          fontSize: DesignToken.fontSizeMD,
+                          color:
+                              DesignToken.white.withValues(alpha: 0.80),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _getUserDisplayName(),
+                        style: AppTextStyles.nunitoBold.copyWith(
+                          fontSize: DesignToken.fontSizeLG,
+                          color: DesignToken.white,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                _SunMoonBadge(
+                  isDayTime: isDayTime,
+                  pressed: _greetingIconPressed,
+                  onPressedChanged: (v) =>
+                      setState(() => _greetingIconPressed = v),
+                ),
+              ],
+            ),
+            const SizedBox(height: DesignToken.heightMD),
+            Divider(
+              color: DesignToken.white.withValues(alpha: 0.20),
+              height: 1,
+            ),
+            const SizedBox(height: DesignToken.heightMD),
+            Row(
+              children: <Widget>[
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: DesignToken.white.withValues(alpha: 0.8),
+                      width: 2,
+                    ),
+                  ),
+                  child: CircleAvatar(
+                    radius: 22,
+                    backgroundColor:
+                        DesignToken.white.withValues(alpha: 0.25),
+                    backgroundImage:
+                        hasValidImage ? NetworkImage(profileImage) : null,
+                    child: !hasValidImage
+                        ? const Icon(
+                            Icons.person,
+                            size: 26,
+                            color: DesignToken.white,
+                          )
+                        : null,
+                  ),
+                ),
+                const SizedBox(width: DesignToken.widthMD),
+                Expanded(
+                  child: Row(
+                    children: <Widget>[
+                      Icon(
+                        Icons.star_rounded,
+                        color: DesignToken.amberShade300,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${_getUserTier()} Tier',
+                        style: AppTextStyles.nunitoMedium.copyWith(
+                          color:
+                              DesignToken.white.withValues(alpha: 0.90),
+                          fontSize: DesignToken.fontSizeSM,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DesignToken.paddingMD,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: DesignToken.white.withValues(alpha: 0.20),
+                    borderRadius: DesignToken.borderRadiusMD,
+                    border: Border.all(
+                      color: DesignToken.white.withValues(alpha: 0.30),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      AnimatedBuilder(
+                        animation: _glowAnimation,
+                        builder: (_, __) => Transform.rotate(
+                          angle: _glowAnimation.value * 2 * pi,
+                          child: Icon(
+                            Icons.monetization_on,
+                            color: DesignToken.amberShade300,
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        _getUserPoints() >= 1000
+                            ? '${(_getUserPoints() / 1000).toStringAsFixed(1)}K'
+                            : '${_getUserPoints()}',
+                        style: AppTextStyles.nunitoBold.copyWith(
+                          color: DesignToken.white,
+                          fontSize: DesignToken.fontSizeLG,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _SunMoonBadge({
+    required bool isDayTime,
+    required bool pressed,
+    required ValueChanged<bool> onPressedChanged,
+  }) {
+    final icon = isDayTime ? Icons.wb_sunny_outlined : Icons.nightlight_round;
+
+    return GestureDetector(
+      onTapDown: (_) => onPressedChanged(true),
+      onTapUp: (_) => onPressedChanged(false),
+      onTapCancel: () => onPressedChanged(false),
+      child: AnimatedScale(
+        duration: DesignToken.animationDurationFast,
+        scale: pressed ? 0.9 : 1.0,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: isDayTime
+                  ? [DesignToken.amberShade300, DesignToken.amberShade500]
+                  : [DesignToken.blueShade600, DesignToken.purpleShade600],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: DesignToken.black.withValues(alpha: 0.15),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Icon(icon, color: DesignToken.white, size: 28),
+        ),
+      ),
     );
   }
 
@@ -1242,12 +1510,12 @@ class _HomePageState extends State<HomePage>
             width: 70,
             height: 70,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: DesignToken.white,
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.amber.shade400, width: 3),
+              border: Border.all(color: DesignToken.amberShade400, width: 3),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.amber.withOpacity(0.4),
+                  color: DesignToken.amber.withValues(alpha: 0.4),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -1269,7 +1537,7 @@ class _HomePageState extends State<HomePage>
                   style: const TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey,
+                    color: DesignToken.grey500,
                   ),
                 ),
               ],
@@ -1304,7 +1572,7 @@ class _HomePageState extends State<HomePage>
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    const Icon(Icons.stars, color: Colors.amber, size: 18),
+                    const Icon(Icons.stars, color: DesignToken.amber, size: 18),
                     const SizedBox(width: 6),
                     Text(
                       '$_currentUserPoints Points',
@@ -1324,12 +1592,12 @@ class _HomePageState extends State<HomePage>
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: DesignToken.white.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.emoji_events,
-              color: Colors.amber,
+              color: DesignToken.amber,
               size: 28,
             ),
           ),
@@ -1357,10 +1625,11 @@ class _HomePageState extends State<HomePage>
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            final theme = Theme.of(context);
             return Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: theme.colorScheme.surface,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: DesignToken.secondary.withValues(alpha: 0.2),
@@ -1368,7 +1637,7 @@ class _HomePageState extends State<HomePage>
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
+                    color: DesignToken.black.withValues(alpha: 0.05),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -1409,7 +1678,7 @@ class _HomePageState extends State<HomePage>
                           AppLocalizations.of(context)!.noWinnerYetToday,
                           style: AppTextStyles.nunitoRegular.copyWith(
                             fontSize: 14,
-                            color: Colors.grey.shade600,
+                            color: DesignToken.grey600,
                           ),
                         ),
                       ],
@@ -1417,10 +1686,10 @@ class _HomePageState extends State<HomePage>
                   ),
 
                   // Info Icon
-                  Icon(
+                  const Icon(
                     Icons.info_outline,
                     size: 24,
-                    color: Colors.grey.shade400,
+                    color: DesignToken.grey400,
                   ),
                 ],
               ),
@@ -1449,20 +1718,21 @@ class _HomePageState extends State<HomePage>
                 });
               }
 
+              final theme = Theme.of(context);
               return Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: theme.colorScheme.surface,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: isCurrentUserWinner
-                        ? Colors.amber.shade300
+                        ? DesignToken.amberShade300
                         : DesignToken.secondary.withValues(alpha: 0.3),
                     width: 2,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
+                      color: DesignToken.black.withValues(alpha: 0.08),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -1475,7 +1745,7 @@ class _HomePageState extends State<HomePage>
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: isCurrentUserWinner
-                            ? Colors.amber.shade50
+                            ? DesignToken.amberShade50
                             : DesignToken.secondary.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
@@ -1483,7 +1753,7 @@ class _HomePageState extends State<HomePage>
                         Icons.emoji_events,
                         size: 28,
                         color: isCurrentUserWinner
-                            ? Colors.amber.shade700
+                            ? DesignToken.amberShade700
                             : DesignToken.secondary,
                       ),
                     ),
@@ -1497,7 +1767,7 @@ class _HomePageState extends State<HomePage>
                         shape: BoxShape.circle,
                         border: Border.all(
                           color: isCurrentUserWinner
-                              ? Colors.amber.shade300
+                              ? DesignToken.amberShade300
                               : DesignToken.secondary.withValues(alpha: 0.3),
                           width: 2,
                         ),
@@ -1549,7 +1819,7 @@ class _HomePageState extends State<HomePage>
                             style: AppTextStyles.nunitoBold.copyWith(
                               fontSize: 14,
                               color: isCurrentUserWinner
-                                  ? Colors.amber.shade800
+                                  ? DesignToken.amberShade800
                                   : DesignToken.secondary,
                             ),
                           ),
@@ -1574,10 +1844,10 @@ class _HomePageState extends State<HomePage>
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.amber.shade50,
+                        color: DesignToken.amberShade50,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: Colors.amber.shade200,
+                          color: DesignToken.amberShade200,
                           width: 1,
                         ),
                       ),
@@ -1587,14 +1857,14 @@ class _HomePageState extends State<HomePage>
                           Icon(
                             Icons.monetization_on,
                             size: 16,
-                            color: Colors.amber.shade700,
+                            color: DesignToken.amberShade700,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             '$prizePoints',
                             style: AppTextStyles.nunitoBold.copyWith(
                               fontSize: 14,
-                              color: Colors.amber.shade900,
+                              color: DesignToken.amberShade900,
                             ),
                           ),
                         ],
@@ -1610,100 +1880,124 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  // Drawer (kept same as your UI)
-  Widget _buildDrawer(BuildContext context) {
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          DrawerHeader(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [DesignToken.primary, DesignToken.secondary],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+}
+
+class _HomeProductCategory {
+  final String title;
+  final IconData icon;
+  final Color background;
+  final String imageAsset;
+
+  const _HomeProductCategory({
+    required this.title,
+    required this.icon,
+    required this.background,
+    required this.imageAsset,
+  });
+}
+
+class _ProductHeroCardData {
+  final String title;
+  final String subtitle;
+  final String imageAsset;
+  final IconData icon;
+
+  const _ProductHeroCardData({
+    required this.title,
+    required this.subtitle,
+    required this.imageAsset,
+    required this.icon,
+  });
+}
+
+class _ProductCategoryCard extends StatelessWidget {
+  final _HomeProductCategory category;
+  final Color surfaceColor;
+  final Color textColor;
+  final VoidCallback onTap;
+
+  const _ProductCategoryCard({
+    required this.category,
+    required this.surfaceColor,
+    required this.textColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 140,
+        decoration: BoxDecoration(
+          color: category.background,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: DesignToken.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          children: [
+            // Furniture photo background
+            Positioned.fill(
+              child: Image.asset(
+                category.imageAsset,
+                fit: BoxFit.cover,
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Colors.white,
-                  backgroundImage: _isValidImageUrl(_getUserProfileImage())
-                      ? NetworkImage(_getUserProfileImage()!)
-                      : null,
-                  child: !_isValidImageUrl(_getUserProfileImage())
-                      ? const Icon(
-                          Icons.person,
-                          size: 40,
-                          color: DesignToken.secondary,
-                        )
-                      : null,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  _getUserDisplayName(),
-                  style: const TextStyle(
-                    color: DesignToken.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+            // Dark gradient at bottom for readable text
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.10),
+                      Colors.black.withValues(alpha: 0.55),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '${_getUserTier()} Tier • ${_getUserPoints()} Points',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
-                    fontSize: 14,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: surfaceColor.withValues(alpha: 0.9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      category.icon,
+                      color: DesignToken.primary,
+                      size: 18,
+                    ),
                   ),
-                ),
-              ],
+                  const Spacer(),
+                  Text(
+                    category.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.nunitoSemiBold.copyWith(
+                      color: DesignToken.white,
+                      fontSize: DesignToken.fontSizeMD,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.home, color: DesignToken.primary),
-            title: Text(AppLocalizations.of(context)!.home),
-            onTap: () => Navigator.pop(context),
-          ),
-          ListTile(
-            leading: const Icon(
-              Icons.monetization_on,
-              color: DesignToken.primary,
-            ),
-            title: Text(AppLocalizations.of(context)!.myPoints),
-            onTap: () => Navigator.pop(context),
-          ),
-          ListTile(
-            leading: const Icon(
-              Icons.card_giftcard,
-              color: DesignToken.primary,
-            ),
-            title: Text(AppLocalizations.of(context)!.redeemRewards),
-            onTap: () => Navigator.pop(context),
-          ),
-          ListTile(
-            leading: const Icon(Icons.history, color: DesignToken.primary),
-            title: Text(AppLocalizations.of(context)!.transactionHistory),
-            onTap: () => Navigator.pop(context),
-          ),
-          ListTile(
-            leading: const Icon(Icons.leaderboard, color: DesignToken.primary),
-            title: Text(AppLocalizations.of(context)!.leaderboard),
-            onTap: () => Navigator.pop(context),
-          ),
-          ListTile(
-            leading: const Icon(Icons.settings, color: DesignToken.primary),
-            title: Text(AppLocalizations.of(context)!.settings),
-            onTap: () => Navigator.pop(context),
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.help_outline, color: DesignToken.primary),
-            title: Text(AppLocalizations.of(context)!.helpSupport),
-            onTap: () => Navigator.pop(context),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

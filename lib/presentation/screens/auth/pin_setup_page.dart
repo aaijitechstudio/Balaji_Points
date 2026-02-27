@@ -213,7 +213,7 @@ class _PINSetupPageState extends State<PINSetupPage>
       child: Scaffold(
         backgroundColor: DesignToken.woodenBackground,
         appBar: AppBar(
-          backgroundColor: Colors.transparent,
+          backgroundColor: DesignToken.transparent,
           elevation: 0,
           leading: BackButton(
             color: DesignToken.primary,

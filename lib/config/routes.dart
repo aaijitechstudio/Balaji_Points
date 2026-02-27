@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:balaji_points/presentation/screens/dashboard/dashboard_page.dart';
+import 'package:balaji_points/presentation/screens/home/home_page.dart';
 import 'package:balaji_points/presentation/screens/profile/edit_profile_page.dart';
 import 'package:balaji_points/presentation/screens/profile/profile_page.dart';
 import 'package:balaji_points/presentation/screens/splash/splash_page.dart';
@@ -18,12 +19,18 @@ import 'package:balaji_points/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:balaji_points/injection/dependency_injection.dart';
 
 import 'package:balaji_points/presentation/screens/spin/daily_spin_page.dart';
+import 'package:balaji_points/presentation/screens/wallet/wallet_page.dart';
 import 'package:balaji_points/presentation/screens/admin/admin_home_page.dart';
 import 'package:balaji_points/presentation/screens/admin/admin_add_bill_page.dart';
 import 'package:balaji_points/presentation/screens/admin/diagnostic_page.dart';
 import 'package:balaji_points/presentation/screens/bills/add_bill_page.dart';
 import 'package:balaji_points/presentation/screens/settings/notification_settings_page.dart';
 import 'package:balaji_points/presentation/screens/notifications/notifications_page.dart';
+import 'package:balaji_points/presentation/screens/products/product_list_page.dart';
+import 'package:balaji_points/presentation/screens/cart/cart_page.dart';
+import 'package:balaji_points/presentation/screens/products/product_detail_page.dart';
+import 'package:balaji_points/presentation/screens/orders/orders_page.dart';
+import 'package:balaji_points/presentation/screens/orders/order_detail_page.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -100,8 +107,77 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
 
-      GoRoute(path: '/', builder: (context, _) => const DashboardPage()),
-      GoRoute(path: '/profile', builder: (context, _) => const ProfilePage()),
+      // Carpenter shell with persistent bottom tab bar
+      ShellRoute(
+        builder: (context, state, child) => DashboardPage(child: child),
+        routes: [
+          GoRoute(
+            path: '/',
+            name: 'home',
+            builder: (context, state) => const HomePage(),
+          ),
+          GoRoute(
+            path: '/wallet',
+            name: 'wallet',
+            builder: (context, state) => const WalletPage(),
+          ),
+          GoRoute(
+            path: '/notifications',
+            name: 'notifications',
+            builder: (context, state) => const NotificationsPage(),
+          ),
+          GoRoute(
+            path: '/profile',
+            name: 'profile',
+            builder: (context, state) =>
+                const ProfilePage(showBottomNav: false),
+          ),
+          GoRoute(
+            path: '/add-bill',
+            name: 'add-bill',
+            builder: (context, state) => const AddBillPage(),
+          ),
+          GoRoute(
+            path: '/notification-settings',
+            name: 'notification-settings',
+            builder: (context, state) => const NotificationSettingsPage(),
+          ),
+          GoRoute(
+            path: '/products',
+            name: 'products',
+            builder: (context, state) {
+              final category = state.uri.queryParameters['category'];
+              return ProductListPage(initialCategory: category);
+            },
+          ),
+          GoRoute(
+            path: '/cart',
+            name: 'cart',
+            builder: (context, state) => const CartPage(),
+          ),
+          GoRoute(
+            path: '/product-detail/:id',
+            name: 'product-detail',
+            builder: (context, state) {
+              final id = state.pathParameters['id']!;
+              return ProductDetailPage(productId: id);
+            },
+          ),
+          GoRoute(
+            path: '/orders',
+            name: 'orders',
+            builder: (context, state) => const OrdersPage(),
+          ),
+          GoRoute(
+            path: '/order-detail/:id',
+            name: 'order-detail',
+            builder: (context, state) {
+              final id = state.pathParameters['id']!;
+              return OrderDetailPage(orderId: id);
+            },
+          ),
+        ],
+      ),
       GoRoute(
         path: '/edit-profile',
         builder: (context, state) {
@@ -109,13 +185,22 @@ final routerProvider = Provider<GoRouter>((ref) {
           return EditProfilePage(isFirstTime: isFirstTime);
         },
       ),
-      GoRoute(path: '/daily-spin', builder: (context, _) => const DailySpinPage()),
-      GoRoute(path: '/admin', builder: (context, _) => const AdminHomePage()),
-      GoRoute(path: '/admin/add-bill', builder: (context, _) => const AdminAddBillPage()),
-      GoRoute(path: '/admin/diagnostic', builder: (context, _) => const DiagnosticPage()),
-      GoRoute(path: '/add-bill', builder: (context, _) => const AddBillPage()),
-      GoRoute(path: '/notification-settings', builder: (context, _) => const NotificationSettingsPage()),
-      GoRoute(path: '/notifications', builder: (context, _) => const NotificationsPage()),
+      GoRoute(
+        path: '/daily-spin',
+        builder: (context, _) => const DailySpinPage(),
+      ),
+      GoRoute(
+        path: '/admin',
+        builder: (context, _) => const AdminHomePage(),
+      ),
+      GoRoute(
+        path: '/admin/add-bill',
+        builder: (context, _) => const AdminAddBillPage(),
+      ),
+      GoRoute(
+        path: '/admin/diagnostic',
+        builder: (context, _) => const DiagnosticPage(),
+      ),
     ],
   );
 });

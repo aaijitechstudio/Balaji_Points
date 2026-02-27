@@ -1,0 +1,1085 @@
+import 'dart:io';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+
+import '../../../core/theme/design_token.dart';
+import '../../../config/theme.dart' hide AppColors;
+import '../../../services/product_service.dart';
+
+class ProductsManagement extends StatefulWidget {
+  const ProductsManagement({super.key});
+
+  @override
+  State<ProductsManagement> createState() => _ProductsManagementState();
+}
+
+class _ProductsManagementState extends State<ProductsManagement> {
+  final ProductService _productService = ProductService();
+
+  static const List<String> _mainCategories = [
+    'Laminates',
+    'Veneers',
+    'Acrylic',
+    'Plywood',
+    'MDF',
+    'Doors',
+    'Wardrobe',
+    'Hardware',
+    'Others',
+  ];
+
+  static const List<String> _subCategories = [
+    'Bedroom',
+    'Kitchen',
+    'Living Room',
+    'Wardrobe',
+    'Bathroom',
+    'Office',
+    'TV Unit',
+    'Wall Panel',
+    'Display Unit',
+  ];
+
+  void _showCreateProductDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const _CreateEditProductDialog(),
+    );
+  }
+
+  void _showEditProductDialog(String productId, Map<String, dynamic> product) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => _CreateEditProductDialog(
+        productId: productId,
+        product: product,
+      ),
+    );
+  }
+
+  Future<void> _deleteProduct(String productId, String? imageUrl) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Delete product',
+          style: AppTextStyles.nunitoBold,
+        ),
+        content: const Text(
+          'Are you sure you want to delete this product?\nThis action cannot be undone.',
+          style: AppTextStyles.nunitoRegular,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: DesignToken.error,
+              foregroundColor: DesignToken.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete == true) {
+      final success = await _productService.deleteProduct(productId, imageUrl);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            success ? 'Product deleted successfully' : 'Failed to delete product',
+          ),
+          backgroundColor: success ? Colors.green : DesignToken.error,
+        ),
+      );
+    }
+  }
+
+  void _viewProductImage(String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      padding: const EdgeInsets.all(20),
+                      color: Colors.white,
+                      child: const Text('Failed to load image'),
+                    );
+                  },
+                ),
+              ),
+            ),
+            Positioned(
+              top: 40,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: DesignToken.woodenBackground,
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('products')
+            .orderBy('createdAt', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'Error loading products:\n${snapshot.error}',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.nunitoRegular.copyWith(
+                    fontSize: 14,
+                    color: DesignToken.error,
+                  ),
+                ),
+              ),
+            );
+          }
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(color: DesignToken.primary),
+            );
+          }
+
+          final products = snapshot.data?.docs ?? [];
+
+          if (products.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.inventory_2_outlined,
+                    size: 80,
+                    color: Colors.grey[300],
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'No products added yet',
+                    style: AppTextStyles.nunitoBold.copyWith(
+                      fontSize: 20,
+                      color: DesignToken.textDark,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tap on "Add product" to create your first product.',
+                    style: AppTextStyles.nunitoRegular.copyWith(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: products.length,
+            itemBuilder: (context, index) {
+              final doc = products[index];
+              final data = doc.data() as Map<String, dynamic>;
+
+              final productId = doc.id;
+              final name = (data['name'] ?? '') as String;
+              final mainCategory =
+                  (data['mainCategory'] ?? data['category'] ?? '') as String;
+              final subCategory = (data['subCategory'] ?? '') as String;
+              final size = (data['size'] ?? '') as String;
+              final thickness = (data['thickness'] ?? '') as String;
+              final quality = (data['quality'] ?? '') as String;
+              final imageUrl = (data['imageUrl'] ?? '') as String;
+              final isActive = (data['isActive'] ?? true) as bool;
+
+              return Card(
+                margin: const EdgeInsets.only(bottom: 16),
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (imageUrl.isNotEmpty)
+                      GestureDetector(
+                        onTap: () => _viewProductImage(imageUrl),
+                        child: ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(16),
+                          ),
+                          child: Image.network(
+                            imageUrl,
+                            height: 180,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                height: 180,
+                                color: Colors.grey[200],
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.broken_image,
+                                    size: 50,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  name.isNotEmpty ? name : 'Unnamed product',
+                                  style: AppTextStyles.nunitoBold.copyWith(
+                                    fontSize: 18,
+                                    color: DesignToken.textDark,
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isActive
+                                      ? Colors.green[100]
+                                      : Colors.grey[200],
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  isActive ? 'Active' : 'Hidden',
+                                  style: AppTextStyles.nunitoSemiBold.copyWith(
+                                    fontSize: 11,
+                                    color: isActive
+                                        ? Colors.green[900]
+                                        : Colors.grey[700],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          if (mainCategory.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: DesignToken.primary.withValues(
+                                  alpha: 0.08,
+                                ),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.category_outlined,
+                                    size: 16,
+                                    color: DesignToken.primary,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    subCategory.isNotEmpty
+                                        ? '$mainCategory • $subCategory'
+                                        : mainCategory,
+                                    style:
+                                        AppTextStyles.nunitoSemiBold.copyWith(
+                                      fontSize: 12,
+                                      color: DesignToken.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 6,
+                            children: [
+                              if (size.isNotEmpty)
+                                _ProductInfoChip(
+                                  label: 'Size',
+                                  value: size,
+                                  icon: Icons.straighten,
+                                ),
+                              if (thickness.isNotEmpty)
+                                _ProductInfoChip(
+                                  label: 'Thickness',
+                                  value: thickness,
+                                  icon: Icons.line_weight,
+                                ),
+                              if (quality.isNotEmpty)
+                                _ProductInfoChip(
+                                  label: 'Quality',
+                                  value: quality,
+                                  icon: Icons.verified,
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () => _showEditProductDialog(
+                                    productId,
+                                    data,
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: DesignToken.primary,
+                                    side: const BorderSide(
+                                      color: DesignToken.primary,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  icon: const Icon(Icons.edit, size: 18),
+                                  label: const Text('Edit'),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () =>
+                                      _deleteProduct(productId, imageUrl),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: DesignToken.error,
+                                    side: BorderSide(
+                                      color: Colors.red[300]!,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  icon: const Icon(Icons.delete, size: 18),
+                                  label: const Text('Delete'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showCreateProductDialog,
+        backgroundColor: DesignToken.secondary,
+        icon: const Icon(Icons.add),
+        label: const Text(
+          'Add product',
+          style: AppTextStyles.nunitoBold,
+        ),
+      ),
+    );
+  }
+}
+
+class _ProductInfoChip extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+
+  const _ProductInfoChip({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: Colors.grey[700]),
+          const SizedBox(width: 4),
+          Text(
+            '$label:',
+            style: AppTextStyles.nunitoSemiBold.copyWith(
+              fontSize: 12,
+              color: Colors.grey[800],
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            value,
+            style: AppTextStyles.nunitoRegular.copyWith(
+              fontSize: 12,
+              color: Colors.grey[800],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CreateEditProductDialog extends StatefulWidget {
+  final String? productId;
+  final Map<String, dynamic>? product;
+
+  const _CreateEditProductDialog({this.productId, this.product});
+
+  bool get isEditMode => productId != null && product != null;
+
+  @override
+  State<_CreateEditProductDialog> createState() =>
+      _CreateEditProductDialogState();
+}
+
+class _CreateEditProductDialogState extends State<_CreateEditProductDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _priceController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _sizeController = TextEditingController();
+  final _thicknessController = TextEditingController();
+  final _qualityController = TextEditingController();
+
+  final ProductService _productService = ProductService();
+
+  final List<File> _newImageFiles = [];
+  List<String> _existingImageUrls = [];
+  String _selectedMainCategory = _ProductsManagementState._mainCategories.first;
+  String _selectedSubCategory = '';
+  bool _isActive = true;
+  bool _isSaving = false;
+  bool _isUploadingImage = false;
+
+  bool get _isEditMode => widget.isEditMode;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isEditMode) {
+      final product = widget.product!;
+      _nameController.text = (product['name'] ?? '') as String;
+      final priceNum = (product['price'] ?? 0) as num;
+      _priceController.text =
+          priceNum == 0 ? '' : priceNum.toStringAsFixed(0);
+      _descriptionController.text =
+          (product['description'] ?? '') as String;
+      _sizeController.text = (product['size'] ?? '') as String;
+      _thicknessController.text = (product['thickness'] ?? '') as String;
+      _qualityController.text = (product['quality'] ?? '') as String;
+      final rawList = product['imageUrls'];
+      if (rawList is List) {
+        _existingImageUrls = rawList
+            .whereType<String>()
+            .where((url) => url.isNotEmpty)
+            .toList();
+      }
+      if (_existingImageUrls.isEmpty) {
+        final single = (product['imageUrl'] ?? '') as String?;
+        if (single != null && single.isNotEmpty) {
+          _existingImageUrls = [single];
+        }
+      }
+      _selectedMainCategory =
+          (product['mainCategory'] ?? product['category'] ??
+                  _selectedMainCategory) as String;
+      _selectedSubCategory =
+          (product['subCategory'] ?? _selectedSubCategory) as String;
+      _isActive = (product['isActive'] ?? true) as bool;
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _priceController.dispose();
+    _descriptionController.dispose();
+    _sizeController.dispose();
+    _thicknessController.dispose();
+    _qualityController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final picker = ImagePicker();
+      final images = await picker.pickMultiImage(
+        maxWidth: 1600,
+        maxHeight: 1600,
+        imageQuality: 85,
+      );
+      if (images.isNotEmpty) {
+        setState(() {
+          _newImageFiles.addAll(images.map((x) => File(x.path)));
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to pick image: $e'),
+          backgroundColor: DesignToken.error,
+        ),
+      );
+    }
+  }
+
+  Future<void> _saveProduct() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      final name = _nameController.text.trim();
+      final priceText = _priceController.text.trim();
+      final description = _descriptionController.text.trim();
+      final size = _sizeController.text.trim();
+      final thickness = _thicknessController.text.trim();
+      final quality = _qualityController.text.trim();
+
+      if (priceText.isEmpty) {
+        throw Exception('Please enter product price');
+      }
+      final parsedPrice = double.tryParse(priceText);
+      if (parsedPrice == null || parsedPrice <= 0) {
+        throw Exception('Please enter a valid price');
+      }
+
+      if (!_isEditMode &&
+          _newImageFiles.isEmpty &&
+          _existingImageUrls.isEmpty) {
+        throw Exception('Please upload at least one product image');
+      }
+
+      // Upload any newly added images
+      final allImageUrls = <String>[
+        ..._existingImageUrls,
+      ];
+
+      if (_newImageFiles.isNotEmpty) {
+        setState(() {
+          _isUploadingImage = true;
+        });
+
+        for (final file in _newImageFiles) {
+          final uploadedUrl =
+              await _productService.uploadProductImage(file);
+          if (uploadedUrl != null && uploadedUrl.isNotEmpty) {
+            allImageUrls.add(uploadedUrl);
+          }
+        }
+
+        setState(() {
+          _isUploadingImage = false;
+        });
+      }
+
+      bool success;
+      if (_isEditMode) {
+        success = await _productService.updateProduct(
+          productId: widget.productId!,
+          name: name,
+          mainCategory: _selectedMainCategory,
+          subCategory:
+              _selectedSubCategory.isEmpty ? null : _selectedSubCategory,
+          price: parsedPrice,
+          description: description.isEmpty ? null : description,
+          size: size.isEmpty ? null : size,
+          thickness: thickness.isEmpty ? null : thickness,
+          quality: quality.isEmpty ? null : quality,
+          imageUrls: allImageUrls,
+          isActive: _isActive,
+          oldImageUrl:
+              _existingImageUrls.isNotEmpty ? _existingImageUrls.first : null,
+        );
+      } else {
+        success = await _productService.createProduct(
+          name: name,
+          mainCategory: _selectedMainCategory,
+          subCategory:
+              _selectedSubCategory.isEmpty ? null : _selectedSubCategory,
+          price: parsedPrice,
+          description: description.isEmpty ? null : description,
+          size: size.isEmpty ? null : size,
+          thickness: thickness.isEmpty ? null : thickness,
+          quality: quality.isEmpty ? null : quality,
+          imageUrls: allImageUrls,
+          isActive: _isActive,
+        );
+      }
+
+      if (!mounted) return;
+
+      if (success) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _isEditMode
+                  ? 'Product updated successfully'
+                  : 'Product created successfully',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        throw Exception('Failed to save product');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: DesignToken.error,
+        ),
+      );
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isSaving = false;
+        _isUploadingImage = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final title = _isEditMode ? 'Edit product' : 'Add new product';
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 720),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [DesignToken.primary, DesignToken.secondary],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.inventory_2, color: Colors.white, size: 26),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: AppTextStyles.nunitoBold.copyWith(
+                        fontSize: 20,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed:
+                        _isSaving || _isUploadingImage ? null : () => Navigator
+                            .of(context)
+                            .pop(),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GestureDetector(
+                        onTap: _pickImage,
+                        child: Container(
+                          height: 170,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: Colors.grey[300]!),
+                          ),
+                          child: Builder(
+                            builder: (context) {
+                              if (_newImageFiles.isNotEmpty) {
+                                return ClipRRect(
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: Image.file(
+                                    _newImageFiles.first,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                  ),
+                                );
+                              }
+                              if (_existingImageUrls.isNotEmpty) {
+                                return ClipRRect(
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: Image.network(
+                                    _existingImageUrls.first,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                  ),
+                                );
+                              }
+                              return Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.add_photo_alternate,
+                                    size: 48,
+                                    color: Colors.grey[400],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Tap to upload product images',
+                                    style: AppTextStyles.nunitoMedium.copyWith(
+                                      fontSize: 14,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      if (_existingImageUrls.length + _newImageFiles.length > 1)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            'Total photos: ${_existingImageUrls.length + _newImageFiles.length}',
+                            style: AppTextStyles.nunitoRegular.copyWith(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 20),
+                      TextFormField(
+                        controller: _nameController,
+                        style: AppTextStyles.nunitoRegular.copyWith(
+                          fontSize: 16,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: 'Product name',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: DesignToken.primary,
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Enter product name';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _priceController,
+                        keyboardType:
+                            const TextInputType.numberWithOptions(decimal: true),
+                        style: AppTextStyles.nunitoRegular.copyWith(
+                          fontSize: 16,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: 'Price for carpenter (₹)',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _descriptionController,
+                        maxLines: 3,
+                        style: AppTextStyles.nunitoRegular.copyWith(
+                          fontSize: 16,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: 'Description (optional)',
+                          hintText: 'Short description visible in details',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        value: _ProductsManagementState._mainCategories
+                                .contains(_selectedMainCategory)
+                            ? _selectedMainCategory
+                            : _ProductsManagementState._mainCategories.first,
+                        items: _ProductsManagementState._mainCategories
+                            .map(
+                              (c) => DropdownMenuItem<String>(
+                                value: c,
+                                child: Text(c),
+                              ),
+                            )
+                            .toList(),
+                        decoration: InputDecoration(
+                          labelText: 'Main category (e.g. Laminates)',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setState(() {
+                            _selectedMainCategory = value;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: _selectedSubCategory.isEmpty
+                            ? null
+                            : _selectedSubCategory,
+                        items: [
+                          const DropdownMenuItem<String>(
+                            value: '',
+                            child: Text('All applications'),
+                          ),
+                          ..._ProductsManagementState._subCategories.map(
+                            (c) => DropdownMenuItem<String>(
+                              value: c,
+                              child: Text(c),
+                            ),
+                          ),
+                        ],
+                        decoration: InputDecoration(
+                          labelText: 'Application / space (optional)',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedSubCategory = value ?? '';
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _sizeController,
+                        style: AppTextStyles.nunitoRegular.copyWith(
+                          fontSize: 16,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: 'Size (optional)',
+                          hintText: 'e.g. 8ft x 4ft',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _thicknessController,
+                        style: AppTextStyles.nunitoRegular.copyWith(
+                          fontSize: 16,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: 'Thickness (optional)',
+                          hintText: 'e.g. 19mm, 0.8mm',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _qualityController,
+                        style: AppTextStyles.nunitoRegular.copyWith(
+                          fontSize: 16,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: 'Quality / Grade (optional)',
+                          hintText: 'e.g. Premium, BWR, BWP',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.visibility,
+                              color: DesignToken.primary,
+                            ),
+                            const SizedBox(width: 12),
+                            const Expanded(
+                              child: Text(
+                                'Show product to carpenters',
+                                style: AppTextStyles.nunitoMedium,
+                              ),
+                            ),
+                            Switch(
+                              value: _isActive,
+                              onChanged: (value) {
+                                setState(() {
+                                  _isActive = value;
+                                });
+                              },
+                              activeTrackColor: DesignToken.secondary,
+                              activeColor: Colors.white,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      if (_isUploadingImage)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    DesignToken.primary,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Uploading image...',
+                                style: AppTextStyles.nunitoMedium.copyWith(
+                                  fontSize: 14,
+                                  color: DesignToken.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: (_isSaving || _isUploadingImage)
+                              ? null
+                              : _saveProduct,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: DesignToken.secondary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: _isSaving
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : Text(
+                                  _isEditMode ? 'Update product' : 'Save product',
+                                  style: AppTextStyles.nunitoBold.copyWith(
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

@@ -540,7 +540,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
+                                  color: DesignToken.black
+                                      .withValues(alpha: 0.05),
                                   blurRadius: 10,
                                   offset: const Offset(0, 2),
                                 ),
@@ -559,7 +560,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                 ),
                                 hintText: 'Enter your first name',
                                 hintStyle: AppTextStyles.nunitoRegular.copyWith(
-                                  color: Colors.grey[400],
+                                  color: DesignToken.grey400,
                                 ),
                                 prefixIcon: Icon(
                                   Icons.person_outline,
@@ -597,7 +598,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
+                                  color: DesignToken.black
+                                      .withValues(alpha: 0.05),
                                   blurRadius: 10,
                                   offset: const Offset(0, 2),
                                 ),
@@ -616,7 +618,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                 ),
                                 hintText: 'Enter your last name',
                                 hintStyle: AppTextStyles.nunitoRegular.copyWith(
-                                  color: Colors.grey[400],
+                                  color: DesignToken.grey400,
                                 ),
                                 prefixIcon: Icon(
                                   Icons.person_outline,
@@ -703,7 +705,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                         strokeWidth: 2,
                                         valueColor:
                                             AlwaysStoppedAnimation<Color>(
-                                              Colors.white,
+                                              DesignToken.white,
                                             ),
                                       ),
                                     )
@@ -795,24 +797,25 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   }
 
   Widget _buildScaffold(BuildContext context) {
+    final theme = Theme.of(context);
     // Don't show bottom nav when it's first time profile completion
     if (widget.isFirstTime) {
       return Scaffold(
-        backgroundColor: DesignToken.primary,
+        backgroundColor: theme.scaffoldBackgroundColor,
         body: _buildContent(),
       );
     }
 
     // Show bottom navigation for edit profile
     return Scaffold(
-      backgroundColor: DesignToken.primary,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: _buildContent(),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 2, // Profile tab selected
         onTap: _onBottomNavTapped,
         selectedItemColor: DesignToken.secondary,
-        unselectedItemColor: Colors.white,
-        backgroundColor: DesignToken.primary,
+        unselectedItemColor: Theme.of(context).colorScheme.onSurface,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),

@@ -345,7 +345,7 @@ class _ResetPINPageState extends State<ResetPINPage>
       child: Scaffold(
         backgroundColor: DesignToken.woodenBackground,
         appBar: AppBar(
-          backgroundColor: Colors.transparent,
+          backgroundColor: DesignToken.transparent,
           elevation: 0,
           title: Text(l10n.resetPinTitle),
           leading: BackButton(
@@ -558,8 +558,9 @@ class _ResetPINPageState extends State<ResetPINPage>
                                             .copyWith(fontSize: 14),
                                       ),
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.transparent,
-                                        shadowColor: Colors.transparent,
+                                        backgroundColor:
+                                            DesignToken.transparent,
+                                        shadowColor: DesignToken.transparent,
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 16,
                                           vertical: 10,
@@ -1008,8 +1009,9 @@ class _ResetPINPageState extends State<ResetPINPage>
                                               ),
                                             ]
                                           : [
-                                              Colors.grey,
-                                              Colors.grey.withOpacity(0.8),
+                                              DesignToken.grey500,
+                                              DesignToken.grey500
+                                                  .withValues(alpha: 0.8),
                                             ],
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
@@ -1017,11 +1019,10 @@ class _ResetPINPageState extends State<ResetPINPage>
                                     borderRadius: BorderRadius.circular(16),
                                     boxShadow: [
                                       BoxShadow(
-                                        color:
-                                            (_isLoggedIn
-                                                    ? DesignToken.secondary
-                                                    : Colors.grey)
-                                                .withOpacity(0.4),
+                                        color: (_isLoggedIn
+                                                ? DesignToken.secondary
+                                                : DesignToken.grey500)
+                                            .withValues(alpha: 0.4),
                                         blurRadius: 12,
                                         offset: const Offset(0, 6),
                                       ),
@@ -1032,8 +1033,9 @@ class _ResetPINPageState extends State<ResetPINPage>
                                         ? null
                                         : _saveNewPin,
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.transparent,
-                                      shadowColor: Colors.transparent,
+                                      backgroundColor:
+                                          DesignToken.transparent,
+                                      shadowColor: DesignToken.transparent,
                                       padding: const EdgeInsets.symmetric(
                                         vertical: 18,
                                       ),

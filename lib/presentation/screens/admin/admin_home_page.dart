@@ -10,9 +10,11 @@ import 'package:balaji_points/core/mixins/double_tap_exit_mixin.dart';
 import 'package:balaji_points/services/fcm_service.dart';
 import '../../widgets/admin/pending_bills_list.dart';
 import '../../widgets/admin/offers_management.dart';
+import '../../widgets/admin/products_management.dart';
 import '../../widgets/admin/users_list.dart';
 import '../../widgets/admin/daily_spin_management.dart';
 import '../../widgets/admin/bill_history_list.dart';
+import '../../widgets/admin/orders_management.dart';
 
 class AdminHomePage extends ConsumerStatefulWidget {
   const AdminHomePage({super.key});
@@ -28,7 +30,7 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 7, vsync: this);
   }
 
   /// Get filtered notifications stream based on user role
@@ -276,6 +278,8 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
                           Tab(text: 'History', height: 36),
                           Tab(text: 'Offers', height: 36),
                           Tab(text: 'Users', height: 36),
+                          Tab(text: 'Products', height: 36),
+                          Tab(text: 'Orders', height: 36),
                           Tab(text: 'Spin', height: 36),
                         ],
                       ),
@@ -298,6 +302,8 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
                       BillHistoryList(),
                       OffersManagement(),
                       UsersList(),
+                      ProductsManagement(),
+                      OrdersManagement(),
                       DailySpinManagement(),
                     ],
                   ),

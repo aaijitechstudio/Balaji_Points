@@ -390,20 +390,6 @@ class _AddBillPageState extends State<AddBillPage> {
     }
   }
 
-  void _onBottomNavTapped(int index) {
-    switch (index) {
-      case 0:
-        context.go('/');
-        break;
-      case 1:
-        context.go('/');
-        break;
-      case 2:
-        context.go('/profile');
-        break;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -440,36 +426,39 @@ class _AddBillPageState extends State<AddBillPage> {
             appBar: AppBar(
               backgroundColor: DesignToken.primary,
               elevation: 0,
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back, color: DesignToken.white),
-                onPressed: () => context.pop(),
-              ),
+              automaticallyImplyLeading: false,
               title: Text(
                 l10n?.addBill ?? 'Add Bill',
                 style: AppTextStyles.nunitoBold.copyWith(
                   color: DesignToken.white,
-                  fontSize: 20,
+                  fontSize: 18,
                 ),
               ),
+              centerTitle: true,
             ),
             body: Column(
               children: [
                 // Scrollable Form Content
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
+                    padding: const EdgeInsets.fromLTRB(
+                      24,
+                      24,
+                      24,
+                      120,
+                    ),
                     child: Form(
                       key: _formKey,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 12),
 
                           // Bill Image Section
                           Text(
                             l10n?.billImage ?? 'Bill Image',
                             style: AppTextStyles.nunitoSemiBold.copyWith(
-                              fontSize: 16,
+                              fontSize: 14,
                               color: DesignToken.primary,
                             ),
                           ),
@@ -478,7 +467,7 @@ class _AddBillPageState extends State<AddBillPage> {
                           GestureDetector(
                             onTap: _showImageSourceDialog,
                             child: Container(
-                              height: 200,
+                              height: 180,
                               decoration: BoxDecoration(
                                 color: DesignToken.white,
                                 borderRadius: BorderRadius.circular(16),
@@ -522,13 +511,13 @@ class _AddBillPageState extends State<AddBillPage> {
                             ),
                           ),
 
-                          const SizedBox(height: 32),
+                          const SizedBox(height: 24),
 
                           // Amount Field (moved to top)
                           Text(
                             l10n?.billAmount ?? 'Bill Amount (₹)',
                             style: AppTextStyles.nunitoSemiBold.copyWith(
-                              fontSize: 16,
+                              fontSize: 14,
                               color: DesignToken.primary,
                             ),
                           ),
@@ -539,7 +528,7 @@ class _AddBillPageState extends State<AddBillPage> {
                             keyboardType: TextInputType.number,
                             style: AppTextStyles.nunitoRegular.copyWith(
                               color: DesignToken.textDark,
-                              fontSize: 18,
+                              fontSize: 16,
                             ),
                             decoration: InputDecoration(
                               filled: true,
@@ -907,29 +896,6 @@ class _AddBillPageState extends State<AddBillPage> {
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            bottomNavigationBar: BottomNavigationBar(
-              currentIndex:
-                  1, // Earn tab selected (bills are related to earning)
-              onTap: _onBottomNavTapped,
-              selectedItemColor: DesignToken.secondary,
-              unselectedItemColor: DesignToken.white,
-              backgroundColor: DesignToken.primary,
-              type: BottomNavigationBarType.fixed,
-              items: [
-                BottomNavigationBarItem(
-                  icon: const Icon(Icons.home),
-                  label: l10n?.home ?? "Home",
-                ),
-                BottomNavigationBarItem(
-                  icon: const Icon(Icons.monetization_on_outlined),
-                  label: l10n?.earn ?? "Earn",
-                ),
-                BottomNavigationBarItem(
-                  icon: const Icon(Icons.person_outline),
-                  label: l10n?.profile ?? "Profile",
                 ),
               ],
             ),

@@ -49,8 +49,9 @@ class _WalletPageState extends State<WalletPage> {
     // Use phone number from session (PIN-based auth)
     final userId = _userId ?? 'loading';
 
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: DesignToken.primary,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Column(
         children: [
           // Standard Navigation Bar - Material Design kToolbarHeight (56dp)
@@ -59,10 +60,10 @@ class _WalletPageState extends State<WalletPage> {
             showLogo: false,
             showProfileButton: false,
           ),
-          // Content with wooden background
+          // Content area
           Expanded(
             child: Container(
-              color: DesignToken.woodenBackground,
+              color: theme.colorScheme.surface,
               child: RefreshIndicator(
                 key: ValueKey(_refreshKey),
                 onRefresh: _handleRefresh,
@@ -70,7 +71,12 @@ class _WalletPageState extends State<WalletPage> {
                 backgroundColor: DesignToken.white,
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.fromLTRB(
+                    20,
+                    20,
+                    20,
+                    120,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -112,7 +118,7 @@ class _WalletPageState extends State<WalletPage> {
                           gradient: LinearGradient(
                             colors: [
                               DesignToken.blue600,
-                              Colors.purple.shade500,
+                              DesignToken.purpleShade500,
                               DesignToken.secondary,
                             ],
                             begin: Alignment.topLeft,
@@ -251,7 +257,7 @@ class _WalletPageState extends State<WalletPage> {
                       'Total Points',
                       style: AppTextStyles.nunitoRegular.copyWith(
                         fontSize: 14,
-                        color: Colors.white.withOpacity(0.9),
+                        color: DesignToken.white.withValues(alpha: 0.9),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -259,7 +265,7 @@ class _WalletPageState extends State<WalletPage> {
                       '',
                       style: AppTextStyles.nunitoBold.copyWith(
                         fontSize: 36,
-                        color: Colors.white,
+                        color: DesignToken.white,
                       ),
                     ),
                   ],
@@ -270,14 +276,14 @@ class _WalletPageState extends State<WalletPage> {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: DesignToken.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     'Silver',
                     style: AppTextStyles.nunitoSemiBold.copyWith(
                       fontSize: 14,
-                      color: Colors.white,
+                      color: DesignToken.white,
                     ),
                   ),
                 ),
@@ -287,7 +293,7 @@ class _WalletPageState extends State<WalletPage> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
+                color: DesignToken.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -295,7 +301,7 @@ class _WalletPageState extends State<WalletPage> {
                 children: [
                   Icon(
                     Icons.info_outline,
-                    color: Colors.white.withOpacity(0.9),
+                    color: DesignToken.white.withValues(alpha: 0.9),
                     size: 18,
                   ),
                   const SizedBox(width: 8),
@@ -352,7 +358,7 @@ class _WalletPageState extends State<WalletPage> {
                         l10n.totalPoints,
                         style: AppTextStyles.nunitoRegular.copyWith(
                           fontSize: 14,
-                          color: Colors.white.withOpacity(0.9),
+                          color: DesignToken.white.withValues(alpha: 0.9),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -360,7 +366,7 @@ class _WalletPageState extends State<WalletPage> {
                         '$totalPoints',
                         style: AppTextStyles.nunitoBold.copyWith(
                           fontSize: 36,
-                          color: Colors.white,
+                          color: DesignToken.white,
                         ),
                       ),
                     ],
@@ -370,15 +376,15 @@ class _WalletPageState extends State<WalletPage> {
                       horizontal: 16,
                       vertical: 8,
                     ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
+                  decoration: BoxDecoration(
+                    color: DesignToken.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                     child: Text(
                       tier,
                       style: AppTextStyles.nunitoSemiBold.copyWith(
                         fontSize: 14,
-                        color: Colors.white,
+                        color: DesignToken.white,
                       ),
                     ),
                   ),
@@ -398,14 +404,15 @@ class _WalletPageState extends State<WalletPage> {
     required Widget value,
     required Color color,
   }) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: DesignToken.black.withValues(alpha: 0.08),
             blurRadius: 15,
             spreadRadius: 1,
             offset: const Offset(0, 4),
@@ -507,13 +514,13 @@ class _WalletPageState extends State<WalletPage> {
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'approved':
-        return Colors.green;
+        return DesignToken.success;
       case 'pending':
-        return Colors.orange;
+        return DesignToken.orange;
       case 'rejected':
-        return Colors.red;
+        return DesignToken.error;
       default:
-        return Colors.grey;
+        return DesignToken.grey500;
     }
   }
 
@@ -584,10 +591,11 @@ class _WalletPageState extends State<WalletPage> {
           final storeName = bill['storeName'] as String;
           final date = bill['date'] as DateTime;
 
+          final theme = Theme.of(context);
           return Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
                 color: DesignToken.primary.withOpacity(0.1),
@@ -595,7 +603,7 @@ class _WalletPageState extends State<WalletPage> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
+                  color: DesignToken.black.withValues(alpha: 0.06),
                   blurRadius: 12,
                   spreadRadius: 0.5,
                   offset: const Offset(0, 3),
@@ -709,21 +717,26 @@ class _WalletPageState extends State<WalletPage> {
 
         if (snapshot.hasError) {
           debugPrint('WalletPage: ❌ ERROR loading bills: ${snapshot.error}');
+          final theme = Theme.of(context);
           return Container(
             padding: const EdgeInsets.all(40),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
               children: [
-                const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                const Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: DesignToken.error,
+                ),
                 const SizedBox(height: 16),
                 Text(
                   'Error loading bills',
                   style: AppTextStyles.nunitoSemiBold.copyWith(
                     fontSize: 16,
-                    color: Colors.red,
+                    color: DesignToken.error,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -751,10 +764,11 @@ class _WalletPageState extends State<WalletPage> {
 
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           debugPrint('WalletPage: No bills found for user $userId');
+          final theme = Theme.of(context);
           return Container(
             padding: const EdgeInsets.all(40),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
@@ -806,10 +820,11 @@ class _WalletPageState extends State<WalletPage> {
               '  Bill[$index]: amount=$amount, status=$status, carpenterId=${bill['carpenterId']}, createdAt=$createdAt',
             );
 
+            final theme = Theme.of(context);
             return Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: theme.colorScheme.surface,
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
                   color: DesignToken.primary.withOpacity(0.1),
@@ -817,7 +832,7 @@ class _WalletPageState extends State<WalletPage> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
+                    color: DesignToken.black.withValues(alpha: 0.06),
                     blurRadius: 12,
                     spreadRadius: 0.5,
                     offset: const Offset(0, 3),

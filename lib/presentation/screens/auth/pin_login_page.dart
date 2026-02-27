@@ -78,7 +78,10 @@ class _PINLoginPageState extends State<PINLoginPage>
     if (userData == null) {
       final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.invalidPin), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text(l10n.invalidPin),
+          backgroundColor: DesignToken.error,
+        ),
       );
       return;
     }
@@ -529,19 +532,19 @@ class CelebrationPainter extends CustomPainter {
   Color _getColorForType(FloatingType type) {
     switch (type) {
       case FloatingType.coin:
-        return Colors.amber;
+        return DesignToken.amber;
       case FloatingType.star:
         return DesignToken.secondary;
       case FloatingType.sparkle:
         return DesignToken.primary;
       case FloatingType.points:
-        return Colors.green;
+        return DesignToken.success;
     }
   }
 
   void _drawCoin(Canvas canvas, Paint paint) {
     canvas.drawCircle(Offset.zero, 8, paint);
-    paint.color = Colors.white.withOpacity(0.6);
+    paint.color = DesignToken.white.withValues(alpha: 0.6);
     canvas.drawCircle(Offset(-3, -3), 2, paint);
   }
 
@@ -588,7 +591,7 @@ class CelebrationPainter extends CustomPainter {
     );
     canvas.drawPath(path, paint);
 
-    paint.color = Colors.white.withOpacity(0.8);
+    paint.color = DesignToken.white.withValues(alpha: 0.8);
     canvas.drawCircle(Offset(-4, 0), 2, paint);
     canvas.drawCircle(Offset(4, 0), 2, paint);
   }

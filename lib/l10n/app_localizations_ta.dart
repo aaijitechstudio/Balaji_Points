@@ -392,6 +392,9 @@ class AppLocalizationsTa extends AppLocalizations {
   String get darkMode => 'டார்க் மோட்';
 
   @override
+  String get notifications => 'அறிவிப்புகள்';
+
+  @override
   String get logout => 'வெளியேறு';
 
   @override
