@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:balaji_points/core/constants/app_constants.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/l10n/app_localizations.dart';
@@ -27,6 +32,10 @@ class _BillHistoryListState extends State<BillHistoryList> {
   String _carpenterNameFilter = '';
   String _selectedStatus = 'approved'; // approved, rejected, all
   bool _showFilters = false;
+
+  /// Latest filtered bills (by status + date) for PDF export.
+  List<QueryDocumentSnapshot> _billsForExport = [];
+  bool _isExporting = false;
 
   @override
   void dispose() {
@@ -230,6 +239,260 @@ class _BillHistoryListState extends State<BillHistoryList> {
     return _startDate != null || _endDate != null || _carpenterNameFilter.isNotEmpty;
   }
 
+  /// Export current filtered bills to PDF (Excel-style sheet with main title).
+  Future<void> _exportBillsToPdf() async {
+    if (_isExporting || _billsForExport.isEmpty) {
+      if (_billsForExport.isEmpty && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No bills to export. Apply filters or wait for data.'),
+            backgroundColor: DesignToken.warning,
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() => _isExporting = true);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Preparing PDF...')),
+      );
+    }
+
+    try {
+      // Build rows: resolve carpenter names and apply carpenter name filter
+      final rows = <Map<String, dynamic>>[];
+      for (final doc in _billsForExport) {
+        final bill = doc.data() as Map<String, dynamic>;
+        final carpenterId = bill['carpenterId'] ?? '';
+        final carpenterData = await _fetchCarpenterData(carpenterId);
+        String carpenterName = '—';
+        if (carpenterData != null) {
+          final first = carpenterData['firstName'] ?? '';
+          final last = carpenterData['lastName'] ?? '';
+          carpenterName = ('$first $last').trim();
+          if (carpenterName.isEmpty) carpenterName = '—';
+        }
+        if (_carpenterNameFilter.isNotEmpty &&
+            !carpenterName.toLowerCase().contains(_carpenterNameFilter)) {
+          continue;
+        }
+        final billId = doc.id;
+        final amount = (bill['amount'] ?? 0) as num;
+        final amountDouble = amount.toDouble();
+        final points = (bill['pointsEarned'] ?? (amountDouble / 1000).floor()) as num;
+        final status = (bill['status'] ?? '') as String;
+        final phone = (bill['carpenterPhone'] ?? '') as String;
+        final billDate = bill['billDate'] as Timestamp?;
+        final approvedAt = bill['approvedAt'] as Timestamp?;
+        final createdAt = bill['createdAt'] as Timestamp?;
+        final dateToShow = billDate?.toDate() ?? approvedAt?.toDate() ?? createdAt?.toDate();
+        final dateStr = dateToShow != null
+            ? DateFormat('dd-MMM-yyyy').format(dateToShow)
+            : '—';
+        rows.add({
+          'sno': rows.length + 1,
+          'billId': billId,
+          'date': dateStr,
+          'carpenterName': carpenterName,
+          'phone': phone,
+          'amount': amountDouble,
+          'points': points.toInt(),
+          'status': status == 'approved' ? 'Approved' : 'Rejected',
+        });
+      }
+
+      if (rows.isEmpty) {
+        if (mounted) {
+          setState(() => _isExporting = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No bills match current filters for export.'),
+              backgroundColor: DesignToken.warning,
+            ),
+          );
+        }
+        return;
+      }
+
+      final pdf = pw.Document();
+      pw.MemoryImage? logoImage;
+      try {
+        final logoData = await rootBundle.load(AppConstants.logoPath);
+        logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
+      } catch (_) {}
+
+      final periodStr = (_startDate != null || _endDate != null)
+          ? 'Period: ${_startDate != null ? DateFormat('dd MMM yyyy').format(_startDate!) : '—'} to ${_endDate != null ? DateFormat('dd MMM yyyy').format(_endDate!) : '—'}'
+          : 'All time';
+      final generatedStr = 'Generated on ${DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now())}';
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(24),
+          header: (context) => pw.SizedBox.shrink(),
+          footer: (context) => pw.Padding(
+            padding: const pw.EdgeInsets.only(top: 8),
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.center,
+              children: [
+                pw.Text(
+                  'Bill History Report • ${context.pageNumber} of ${context.pagesCount}',
+                  style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
+                ),
+              ],
+            ),
+          ),
+          build: (context) => [
+            // Main title and branding
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                if (logoImage != null)
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.only(right: 12),
+                    child: pw.Image(logoImage, width: 44, height: 44),
+                  ),
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(
+                        'Bill History Report',
+                        style: pw.TextStyle(
+                          fontSize: 22,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
+                      pw.SizedBox(height: 4),
+                      pw.Text(
+                        AppConstants.appName,
+                        style: pw.TextStyle(
+                          fontSize: 14,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
+                      pw.SizedBox(height: 2),
+                      pw.Text(
+                        AppConstants.shopAddressShort,
+                        style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+                      ),
+                      pw.SizedBox(height: 8),
+                      pw.Text(
+                        periodStr,
+                        style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+                      ),
+                      pw.Text(
+                        generatedStr,
+                        style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 20),
+            pw.Divider(thickness: 1, color: PdfColors.grey400),
+            pw.SizedBox(height: 12),
+            // Excel-style table
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.7),
+              columnWidths: {
+                0: const pw.FlexColumnWidth(0.8),
+                1: const pw.FlexColumnWidth(2.2),
+                2: const pw.FlexColumnWidth(1.4),
+                3: const pw.FlexColumnWidth(2.5),
+                4: const pw.FlexColumnWidth(1.5),
+                5: const pw.FlexColumnWidth(1.3),
+                6: const pw.FlexColumnWidth(1.2),
+                7: const pw.FlexColumnWidth(1.2),
+              },
+              children: [
+                // Header row
+                pw.TableRow(
+                  decoration: const pw.BoxDecoration(
+                    color: PdfColors.grey300,
+                  ),
+                  children: [
+                    _pdfCell('S.No', bold: true),
+                    _pdfCell('Bill ID', bold: true),
+                    _pdfCell('Date', bold: true),
+                    _pdfCell('Carpenter Name', bold: true),
+                    _pdfCell('Phone', bold: true),
+                    _pdfCell('Amount (₹)', bold: true),
+                    _pdfCell('Points', bold: true),
+                    _pdfCell('Status', bold: true),
+                  ],
+                ),
+                ...rows.map((r) => pw.TableRow(
+                      children: [
+                        _pdfCell('${r['sno']}'),
+                        _pdfCell('${r['billId']}', small: true),
+                        _pdfCell('${r['date']}'),
+                        _pdfCell('${r['carpenterName']}'),
+                        _pdfCell('${r['phone']}'),
+                        _pdfCell('₹${(r['amount'] as double).toStringAsFixed(0)}'),
+                        _pdfCell('${r['points']}'),
+                        _pdfCell('${r['status']}'),
+                      ],
+                    )),
+              ],
+            ),
+            pw.SizedBox(height: 16),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.end,
+              children: [
+                pw.Text(
+                  'Total bills: ${rows.length}',
+                  style: pw.TextStyle(
+                    fontSize: 11,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+
+      final bytes = await pdf.save();
+      if (mounted) {
+        await Printing.sharePdf(
+          bytes: bytes,
+          filename: 'bill_history_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.pdf',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: DesignToken.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
+  }
+
+  pw.Widget _pdfCell(String text, {bool bold = false, bool small = false}) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          fontSize: small ? 8 : 10,
+          fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
+        ),
+        maxLines: 2,
+        overflow: pw.TextOverflow.clip,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -270,6 +533,41 @@ class _BillHistoryListState extends State<BillHistoryList> {
                     ),
                   ),
                   const SizedBox(width: 8),
+                  // Export to PDF
+                  Container(
+                    decoration: BoxDecoration(
+                      color: (_billsForExport.isEmpty || _isExporting)
+                          ? Colors.grey.withValues(alpha: 0.1)
+                          : DesignToken.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: IconButton(
+                      icon: _isExporting
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: DesignToken.primary,
+                              ),
+                            )
+                          : Icon(
+                              Icons.picture_as_pdf,
+                              color: _billsForExport.isEmpty
+                                  ? Colors.grey[600]
+                                  : DesignToken.primary,
+                              size: 22,
+                            ),
+                      onPressed: _isExporting ? null : _exportBillsToPdf,
+                      padding: const EdgeInsets.all(8),
+                      constraints: const BoxConstraints(
+                        minWidth: 36,
+                        minHeight: 36,
+                      ),
+                      tooltip: 'Export all bills to PDF',
+                    ),
+                  ),
+                  const SizedBox(width: 6),
                   // Filter toggle button
                   Container(
                     decoration: BoxDecoration(
@@ -489,6 +787,7 @@ class _BillHistoryListState extends State<BillHistoryList> {
 
               var bills = snap.data!.docs;
               bills = _filterBills(bills);
+              _billsForExport = bills;
 
               if (bills.isEmpty) {
                 return Center(

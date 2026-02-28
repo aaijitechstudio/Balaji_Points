@@ -8,7 +8,6 @@ import 'package:go_router/go_router.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/services/session_service.dart';
-import 'package:balaji_points/presentation/widgets/home_nav_bar.dart';
 import 'dart:async';
 
 class NotificationsPage extends StatefulWidget {
@@ -574,8 +573,15 @@ class _NotificationsPageState extends State<NotificationsPage> {
       return Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
-          automaticallyImplyLeading: false,
+          backgroundColor: Colors.white,
+          foregroundColor: DesignToken.textDark,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
           title: const Text('Notifications'),
+          centerTitle: true,
         ),
         body: const Center(child: Text('Unable to load notifications')),
       );
@@ -583,60 +589,42 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: Column(
-        children: [
-          HomeNavBar(
-            title: 'Notifications',
-            showProfileButton: false,
-            showLogo: false,
-            showBackButton: false,
-            actions: [
-              // Delete All Button
-              StreamBuilder<List<QueryDocumentSnapshot>>(
-                stream: _mergedNotificationsStream,
-                builder: (context, snapshot) {
-                  final hasNotifications =
-                      snapshot.hasData && snapshot.data!.isNotEmpty;
-
-                  if (!hasNotifications) {
-                    return const SizedBox(width: 44);
-                  }
-
-                  return IconButton(
-                    icon: Stack(
-                      children: [
-                        const Icon(
-                          Icons.delete_outline,
-                          color: DesignToken.white,
-                          size: 24,
-                        ),
-                        if (hasNotifications)
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(2),
-                              decoration: const BoxDecoration(
-                                color: DesignToken.error,
-                                shape: BoxShape.circle,
-                              ),
-                              constraints: const BoxConstraints(
-                                minWidth: 8,
-                                minHeight: 8,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    onPressed: _deleteAllNotifications,
-                    tooltip: 'Delete All',
-                  );
-                },
-              ),
-            ],
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        foregroundColor: DesignToken.textDark,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text('Notifications'),
+        centerTitle: true,
+        actions: [
+          StreamBuilder<List<QueryDocumentSnapshot>>(
+            stream: _mergedNotificationsStream,
+            builder: (context, snapshot) {
+              final hasNotifications =
+                  snapshot.hasData && snapshot.data!.isNotEmpty;
+              if (!hasNotifications) {
+                return const SizedBox.shrink();
+              }
+              return IconButton(
+                icon: const Icon(Icons.delete_outline, size: 24),
+                onPressed: _deleteAllNotifications,
+                tooltip: 'Delete All',
+              );
+            },
           ),
-          Expanded(
-            child: Container(
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(
+            height: 1,
+            color: Colors.black.withValues(alpha: 0.08),
+          ),
+        ),
+      ),
+      body: Container(
               color: theme.colorScheme.surface,
               child: SafeArea(
                 top: false,
@@ -974,11 +962,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
                           );
                         },
                       ),
-              ),
             ),
           ),
-        ],
-      ),
     );
   }
 

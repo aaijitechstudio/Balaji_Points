@@ -269,53 +269,57 @@ class _OrdersManagementState extends State<OrdersManagement> {
               ),
             ],
           ),
-          child: Row(
-            children: [
-              const Text(
-                'Orders',
-                style: AppTextStyles.nunitoSemiBold,
-              ),
-              const SizedBox(width: 12),
-              ChoiceChip(
-                label: const Text('All'),
-                selected: _selectedStatusFilter == 'all',
-                onSelected: (_) {
-                  setState(() => _selectedStatusFilter = 'all');
-                },
-              ),
-              const SizedBox(width: 6),
-              ChoiceChip(
-                label: const Text('Pending'),
-                selected: _selectedStatusFilter == 'pending',
-                onSelected: (_) {
-                  setState(() => _selectedStatusFilter = 'pending');
-                },
-              ),
-              const SizedBox(width: 6),
-              ChoiceChip(
-                label: const Text('Processing'),
-                selected: _selectedStatusFilter == 'processing',
-                onSelected: (_) {
-                  setState(() => _selectedStatusFilter = 'processing');
-                },
-              ),
-              const SizedBox(width: 6),
-              ChoiceChip(
-                label: const Text('Completed'),
-                selected: _selectedStatusFilter == 'completed',
-                onSelected: (_) {
-                  setState(() => _selectedStatusFilter = 'completed');
-                },
-              ),
-              const SizedBox(width: 6),
-              ChoiceChip(
-                label: const Text('Cancelled'),
-                selected: _selectedStatusFilter == 'cancelled',
-                onSelected: (_) {
-                  setState(() => _selectedStatusFilter = 'cancelled');
-                },
-              ),
-            ],
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Orders',
+                  style: AppTextStyles.nunitoSemiBold,
+                ),
+                const SizedBox(width: 12),
+                ChoiceChip(
+                  label: const Text('All'),
+                  selected: _selectedStatusFilter == 'all',
+                  onSelected: (_) {
+                    setState(() => _selectedStatusFilter = 'all');
+                  },
+                ),
+                const SizedBox(width: 6),
+                ChoiceChip(
+                  label: const Text('Pending'),
+                  selected: _selectedStatusFilter == 'pending',
+                  onSelected: (_) {
+                    setState(() => _selectedStatusFilter = 'pending');
+                  },
+                ),
+                const SizedBox(width: 6),
+                ChoiceChip(
+                  label: const Text('Processing'),
+                  selected: _selectedStatusFilter == 'processing',
+                  onSelected: (_) {
+                    setState(() => _selectedStatusFilter = 'processing');
+                  },
+                ),
+                const SizedBox(width: 6),
+                ChoiceChip(
+                  label: const Text('Completed'),
+                  selected: _selectedStatusFilter == 'completed',
+                  onSelected: (_) {
+                    setState(() => _selectedStatusFilter = 'completed');
+                  },
+                ),
+                const SizedBox(width: 6),
+                ChoiceChip(
+                  label: const Text('Cancelled'),
+                  selected: _selectedStatusFilter == 'cancelled',
+                  onSelected: (_) {
+                    setState(() => _selectedStatusFilter = 'cancelled');
+                  },
+                ),
+              ],
+            ),
           ),
         ),
         Expanded(
@@ -407,9 +411,12 @@ class _OrdersManagementState extends State<OrdersManagement> {
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
                                   'Order $orderId',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style:
                                       AppTextStyles.nunitoSemiBold.copyWith(
                                     fontSize: 15,
@@ -419,6 +426,8 @@ class _OrdersManagementState extends State<OrdersManagement> {
                                 const SizedBox(height: 2),
                                 Text(
                                   dateStr,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style:
                                       AppTextStyles.nunitoRegular.copyWith(
                                     fontSize: 12,
@@ -435,6 +444,8 @@ class _OrdersManagementState extends State<OrdersManagement> {
                                       if (carpenterPhone.isNotEmpty)
                                         carpenterPhone,
                                     ].join(' • '),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style:
                                         AppTextStyles.nunitoRegular.copyWith(
                                       fontSize: 12,
@@ -454,10 +465,13 @@ class _OrdersManagementState extends State<OrdersManagement> {
                               ],
                             ),
                           ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              DropdownButton<String>(
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                DropdownButton<String>(
                                 value: status,
                                 borderRadius: BorderRadius.circular(12),
                                 items: const [
@@ -505,6 +519,7 @@ class _OrdersManagementState extends State<OrdersManagement> {
                               ),
                             ],
                           ),
+                        ),
                         ],
                       ),
                     ),

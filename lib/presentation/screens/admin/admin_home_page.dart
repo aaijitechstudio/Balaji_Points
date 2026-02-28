@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:balaji_points/core/constants/app_constants.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/core/mixins/double_tap_exit_mixin.dart';
 import 'package:balaji_points/services/fcm_service.dart';
+import '../../widgets/admin/admin_dashboard.dart';
 import '../../widgets/admin/pending_bills_list.dart';
 import '../../widgets/admin/offers_management.dart';
 import '../../widgets/admin/products_management.dart';
@@ -24,13 +26,22 @@ class AdminHomePage extends ConsumerStatefulWidget {
 }
 
 class _AdminHomePageState extends ConsumerState<AdminHomePage>
-    with SingleTickerProviderStateMixin, DoubleTapExitMixin {
-  late TabController _tabController;
+    with DoubleTapExitMixin {
+  bool _showDashboard = true;
+  String? _selectedSection;
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 7, vsync: this);
+  void _openSection(String section) {
+    setState(() {
+      _showDashboard = false;
+      _selectedSection = section;
+    });
+  }
+
+  void _backToDashboard() {
+    setState(() {
+      _showDashboard = true;
+      _selectedSection = null;
+    });
   }
 
   /// Get filtered notifications stream based on user role
@@ -41,12 +52,6 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
         .where('type', whereIn: ['newPendingBill', 'newUserRegistered'])
         .orderBy('sentAt', descending: true)
         .snapshots();
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   Future<void> _handleLogout() async {
@@ -119,8 +124,6 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
     return PopScope(
       canPop: false,
       onPopInvoked: (didPop) async {
@@ -136,183 +139,192 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
         }
       },
       child: Scaffold(
-        backgroundColor: DesignToken.primary,
-        body: Column(
-          children: [
-            // Compact iOS-style Header
-            SafeArea(
-              bottom: false,
-              child: Container(
-                color: DesignToken.primary,
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                child: Column(
-                  children: [
-                    // Top row with title and actions
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                l10n.adminPanel,
-                                style: AppTextStyles.nunitoBold.copyWith(
-                                  fontSize: 24,
-                                  color: Colors.white,
-                                  height: 1.2,
-                                ),
-                              ),
-                              Text(
-                                l10n.adminSubtitle,
-                                style: AppTextStyles.nunitoRegular.copyWith(
-                                  fontSize: 13,
-                                  color: Colors.white.withValues(alpha: 0.8),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Compact action buttons
-                        StreamBuilder<QuerySnapshot>(
-                          stream: _getFilteredNotificationsStream(),
-                          builder: (context, snapshot) {
-                            int notificationCount = 0;
-                            if (snapshot.hasData) {
-                              notificationCount = snapshot.data!.docs.length;
-                            }
-
-                            return Stack(
-                              children: [
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.notifications_outlined,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                  onPressed: () => context.push('/notifications'),
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(
-                                    minWidth: 40,
-                                    minHeight: 40,
-                                  ),
-                                ),
-                                if (notificationCount > 0)
-                                  Positioned(
-                                    right: 6,
-                                    top: 6,
-                                    child: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: const BoxDecoration(
-                                        color: Colors.red,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      constraints: const BoxConstraints(
-                                        minWidth: 16,
-                                        minHeight: 16,
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          notificationCount > 99 ? '99+' : '$notificationCount',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            );
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.logout, color: Colors.white, size: 24),
-                          onPressed: _handleLogout,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 40,
-                            minHeight: 40,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    // iOS-style Segmented Control Tabs
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          foregroundColor: DesignToken.textDark,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          titleSpacing: _showDashboard ? 0 : null,
+          leading: _showDashboard
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
+                  onPressed: _backToDashboard,
+                ),
+          title: _showDashboard
+              ? Padding(
+                  padding: const EdgeInsets.only(left: 14),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      ClipRRect(
                         borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: TabBar(
-                        controller: _tabController,
-                        indicator: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 1),
+                        child: Image.asset(
+                          AppConstants.logoPath,
+                          width: 36,
+                          height: 36,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: DesignToken.primary.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                          ],
+                            child: const Icon(
+                              Icons.forest,
+                              color: DesignToken.primary,
+                              size: 22,
+                            ),
+                          ),
                         ),
-                        indicatorSize: TabBarIndicatorSize.tab,
-                        dividerColor: Colors.transparent,
-                        labelColor: DesignToken.primary,
-                        unselectedLabelColor: Colors.white.withValues(alpha: 0.7),
-                        labelStyle: AppTextStyles.nunitoBold.copyWith(
-                          fontSize: 13,
-                          letterSpacing: 0.3,
-                        ),
-                        unselectedLabelStyle: AppTextStyles.nunitoMedium.copyWith(
-                          fontSize: 12,
-                          letterSpacing: 0.2,
-                        ),
-                        labelPadding: EdgeInsets.zero,
-                        isScrollable: false,
-                        tabs: const [
-                          Tab(text: 'Pending', height: 36),
-                          Tab(text: 'History', height: 36),
-                          Tab(text: 'Offers', height: 36),
-                          Tab(text: 'Users', height: 36),
-                          Tab(text: 'Products', height: 36),
-                          Tab(text: 'Orders', height: 36),
-                          Tab(text: 'Spin', height: 36),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Balaji Points - Admin Panel',
+                            style: AppTextStyles.nunitoBold.copyWith(
+                              fontSize: 17,
+                              color: DesignToken.textDark,
+                              letterSpacing: 0.3,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            AppConstants.shopAddressShort,
+                            style: AppTextStyles.nunitoRegular.copyWith(
+                              fontSize: 11,
+                              color: DesignToken.textDark.withValues(alpha: 0.65),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Tab Content with maximum space
-            Expanded(
-              child: Container(
-                color: DesignToken.woodenBackground,
-                child: SafeArea(
-                  top: false,
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: const [
-                      PendingBillsList(),
-                      BillHistoryList(),
-                      OffersManagement(),
-                      UsersList(),
-                      ProductsManagement(),
-                      OrdersManagement(),
-                      DailySpinManagement(),
                     ],
                   ),
+                )
+              : Text(
+                  _sectionTitle(_selectedSection!),
+                  style: AppTextStyles.nunitoBold.copyWith(
+                    fontSize: 18,
+                    color: DesignToken.textDark,
+                  ),
                 ),
-              ),
+          centerTitle: !_showDashboard,
+          actions: [
+            StreamBuilder<QuerySnapshot>(
+              stream: _getFilteredNotificationsStream(),
+              builder: (context, snapshot) {
+                int notificationCount = snapshot.data?.docs.length ?? 0;
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.notifications_outlined, size: 24),
+                      onPressed: () => context.push('/notifications'),
+                    ),
+                    if (notificationCount > 0)
+                      Positioned(
+                        right: 8,
+                        top: 8,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          child: Center(
+                            child: Text(
+                              notificationCount > 99 ? '99+' : '$notificationCount',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.logout, size: 24),
+              onPressed: _handleLogout,
             ),
           ],
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(1),
+            child: Container(
+              height: 1,
+              color: Colors.black.withValues(alpha: 0.08),
+            ),
+          ),
+        ),
+        body: Container(
+          color: DesignToken.woodenBackground,
+          child: _showDashboard
+              ? AdminDashboard(onOpenSection: _openSection)
+              : _buildSectionContent(_selectedSection!),
         ),
       ),
     );
   }
+
+  String _sectionTitle(String section) {
+    switch (section) {
+      case 'pending':
+        return 'Pending Bills';
+      case 'history':
+        return 'Bill History';
+      case 'offers':
+        return 'Offers';
+      case 'users':
+        return 'Users';
+      case 'products':
+        return 'Products';
+      case 'orders':
+        return 'Orders';
+      case 'spin':
+        return 'Spin';
+      default:
+        return 'Admin';
+    }
+  }
+
+  Widget _buildSectionContent(String section) {
+    switch (section) {
+      case 'pending':
+        return const PendingBillsList();
+      case 'history':
+        return const BillHistoryList();
+      case 'offers':
+        return const OffersManagement();
+      case 'users':
+        return const UsersList();
+      case 'products':
+        return const ProductsManagement();
+      case 'orders':
+        return const OrdersManagement();
+      case 'spin':
+        return const DailySpinManagement();
+      default:
+        return const SizedBox.shrink();
+    }
+  }
 }
+

@@ -140,14 +140,18 @@ class _CartPageState extends State<CartPage> {
     if (_loadingUser) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Cart'),
+          backgroundColor: Colors.white,
+          foregroundColor: DesignToken.textDark,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
+            onPressed: () => context.pop(),
+          ),
+          title: const Text('Your Cart'),
           centerTitle: true,
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(1),
-            child: Container(
-              height: 1,
-              color: borderColor,
-            ),
+            child: Container(height: 1, color: borderColor),
           ),
         ),
         body: const Center(
@@ -159,14 +163,18 @@ class _CartPageState extends State<CartPage> {
     if (_userId == null) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Cart'),
+          backgroundColor: Colors.white,
+          foregroundColor: DesignToken.textDark,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
+            onPressed: () => context.pop(),
+          ),
+          title: const Text('Your Cart'),
           centerTitle: true,
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(1),
-            child: Container(
-              height: 1,
-              color: borderColor,
-            ),
+            child: Container(height: 1, color: borderColor),
           ),
         ),
         body: const Center(
@@ -178,8 +186,11 @@ class _CartPageState extends State<CartPage> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        foregroundColor: DesignToken.textDark,
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
           onPressed: () => context.pop(),
         ),
         title: const Text('Your Cart'),

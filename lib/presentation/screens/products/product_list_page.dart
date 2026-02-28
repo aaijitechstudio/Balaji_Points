@@ -25,13 +25,15 @@ class ProductListPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        foregroundColor: DesignToken.textDark,
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
           onPressed: () => context.pop(),
         ),
         title: const Text('Products'),
         centerTitle: true,
-        elevation: 0,
         actions: [
           FutureBuilder<String?>(
             future: sessionService.getUserId(),

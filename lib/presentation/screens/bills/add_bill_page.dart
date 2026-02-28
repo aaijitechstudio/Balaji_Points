@@ -424,13 +424,17 @@ class _AddBillPageState extends State<AddBillPage> {
           return Scaffold(
             backgroundColor: DesignToken.woodenBackground,
             appBar: AppBar(
-              backgroundColor: DesignToken.primary,
+              backgroundColor: Colors.white,
+              foregroundColor: DesignToken.textDark,
               elevation: 0,
-              automaticallyImplyLeading: false,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
+                onPressed: () => context.pop(),
+              ),
               title: Text(
                 l10n?.addBill ?? 'Add Bill',
                 style: AppTextStyles.nunitoBold.copyWith(
-                  color: DesignToken.white,
+                  color: DesignToken.textDark,
                   fontSize: 18,
                 ),
               ),

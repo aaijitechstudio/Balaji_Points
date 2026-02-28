@@ -45,14 +45,18 @@ class _OrdersPageState extends State<OrdersPage> {
     if (_loadingUser) {
       return Scaffold(
         appBar: AppBar(
+          backgroundColor: Colors.white,
+          foregroundColor: DesignToken.textDark,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
+            onPressed: () => context.pop(),
+          ),
           title: const Text('My Orders'),
           centerTitle: true,
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(1),
-            child: Container(
-              height: 1,
-              color: borderColor,
-            ),
+            child: Container(height: 1, color: borderColor),
           ),
         ),
         body: const Center(
@@ -64,14 +68,18 @@ class _OrdersPageState extends State<OrdersPage> {
     if (_userId == null) {
       return Scaffold(
         appBar: AppBar(
+          backgroundColor: Colors.white,
+          foregroundColor: DesignToken.textDark,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
+            onPressed: () => context.pop(),
+          ),
           title: const Text('My Orders'),
           centerTitle: true,
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(1),
-            child: Container(
-              height: 1,
-              color: borderColor,
-            ),
+            child: Container(height: 1, color: borderColor),
           ),
         ),
         body: const Center(
@@ -83,8 +91,11 @@ class _OrdersPageState extends State<OrdersPage> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        foregroundColor: DesignToken.textDark,
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
           onPressed: () => context.pop(),
         ),
         title: const Text('My Orders'),
