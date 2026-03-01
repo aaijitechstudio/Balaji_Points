@@ -10,222 +10,160 @@ service cloud.firestore {
     // Admin operations are validated at the app level using SessionService.
     // These rules provide data validation and basic security.
 
+    // Products (admin panel)
+    match /products/{productId} {
+      allow read, write: if true; // DEV ONLY
+    }
+
+    // Carts (per-user cart items)
+    match /carts/{userId}/items/{itemId} {
+      allow read, write: if true; // DEV ONLY
+    }
+
+    // Orders (created when carpenter places order)
+    match /orders/{orderId} {
+      allow read, write: if true; // DEV ONLY
+    }
+
     // ============================================
     // USERS COLLECTION
     // ============================================
     match /users/{userId} {
       // Allow anyone to read user documents
-      // Needed for PIN-based auth to verify phone numbers and check user existence
-      // PIN hashes are stored, not plain PINs, so this is safe
       allow read: if true;
 
       // Allow creating new user documents (registration)
-      // Validation: Ensure required fields are present
-      // Note: Some fields like firstName, lastName may be empty strings initially
       allow create: if request.resource.data.phone != null
                     && request.resource.data.role != null
                     && request.resource.data.totalPoints != null
                     && request.resource.data.tier != null;
 
-      // Allow users to update their own document
-      // Security: Prevent users from changing their phone number (unique identifier)
-      // This ensures users can only update their own data, not take over other accounts
-      allow update: if request.resource.data.phone == resource.data.phone
-                    && request.resource.data.phone != null;
+      // Allow users to update their own document (doc path = userId; phone in request must match)
+      // Fixes edit profile: use path segment userId instead of resource.data.phone (avoids type mismatch)
+      allow update: if request.resource.data.phone != null
+                    && request.resource.data.phone == userId;
 
-      // Allow users to update notification preferences
-      // Users can update only the notificationPreferences field
-      allow update: if request.resource.data.phone == resource.data.phone
+      // Allow users to update notification preferences only
+      allow update: if request.resource.data.phone == userId
                     && request.resource.data.keys().hasAll(['notificationPreferences'])
                     && request.resource.data.notificationPreferences is map;
 
       // Allow admin updates (validated at app level)
-      // Admin operations include: updating points, tier, profile info
-      // App validates admin status before making these requests
       allow update: if request.resource.data.phone != null
                     && request.resource.data.keys().hasAll(['phone']);
 
-      // Allow admin to delete users (validated at app level)
-      allow delete: if true; // App-level validation ensures only admins can delete
+      allow delete: if true;
     }
 
     // ============================================
     // USER POINTS COLLECTION
     // ============================================
     match /user_points/{pointsId} {
-      // Anyone can read points (for leaderboards, user profiles, etc.)
       allow read: if true;
-
-      // Allow creating user_points during registration
-      // Validation: Ensure userId matches the document ID
       allow create: if request.resource.data.userId == pointsId
                     && request.resource.data.keys().hasAll(['userId', 'totalPoints', 'tier']);
-
-      // Allow admin to update/delete points (validated at app level)
-      // Admin operations: updating points after bill approval, tier changes
-      // For updates, userId must already exist in document and match pointsId
       allow update: if resource.data.userId == pointsId;
-
-      allow delete: if true; // App-level validation ensures only admins can delete
+      allow delete: if true;
     }
 
     // ============================================
     // POINTS HISTORY COLLECTION
     // ============================================
     match /points_history/{historyId} {
-      // Anyone can read history (for transparency and user viewing)
-      // App-level filtering ensures users see appropriate data
       allow read: if true;
-
-      // Allow creating history records (for bill approvals, offer redemptions)
-      // Validation: Ensure required fields are present
       allow create: if request.resource.data.userId != null
                     && request.resource.data.points != null
                     && request.resource.data.reason != null;
-
-      // Allow admin to update/delete history (validated at app level)
-      allow update, delete: if true; // App-level validation ensures only admins can modify
+      allow update, delete: if true;
     }
 
     // ============================================
     // BILLS COLLECTION
     // ============================================
     match /bills/{billId} {
-      // Allow anyone to read bills
-      // Security: App-level filtering ensures users only see their own bills
       allow read: if true;
-
-      // Allow creating bills (carpenters submit bills)
-      // Validation: Ensure required fields are present
       allow create: if request.resource.data.carpenterId != null
                     && request.resource.data.carpenterPhone != null
                     && request.resource.data.amount != null
                     && request.resource.data.status == 'pending';
-
-      // Allow admin to update bills (approve/reject/withdraw)
-      // Validation: Ensure immutable fields (carpenterId, amount) are not changed
-      // Allow adding new fields for approval (status, pointsEarned, approvedBy, etc.)
       allow update: if resource.data.carpenterId == request.resource.data.carpenterId
                     && resource.data.amount == request.resource.data.amount
                     && (request.resource.data.status == 'approved'
                          || request.resource.data.status == 'rejected'
                          || request.resource.data.status == 'pending'
                          || request.resource.data.status == 'withdrawn');
-
-      // Allow admin to delete bills (validated at app level)
-      allow delete: if true; // App-level validation ensures only admins can delete
+      allow delete: if true;
     }
 
     // ============================================
     // OFFERS COLLECTION
     // ============================================
     match /offers/{offerId} {
-      // Anyone can read offers (for display to carpenters)
       allow read: if true;
-
-      // Allow admin to create offers (validated at app level)
-      // Validation: Ensure required fields are present
       allow create: if request.resource.data.title != null
                     && request.resource.data.description != null
                     && request.resource.data.points != null
                     && request.resource.data.isActive != null;
-
-      // Allow admin to update offers (validated at app level)
-      // Validation: Ensure core fields remain consistent
       allow update: if request.resource.data.title != null
                     && request.resource.data.description != null
                     && request.resource.data.points != null
                     && request.resource.data.isActive != null;
-
-      // Allow admin to delete offers (validated at app level)
-      allow delete: if true; // App-level validation ensures only admins can delete
+      allow delete: if true;
     }
 
     // ============================================
     // OFFER REDEMPTIONS COLLECTION
     // ============================================
     match /offer_redemptions/{redemptionId} {
-      // Allow reading redemptions (for user history, admin reports)
       allow read: if true;
-
-      // Allow creating redemption records (when carpenter redeems offer)
-      // Validation: Ensure required fields are present
       allow create: if request.resource.data.offerId != null
                     && request.resource.data.carpenterId != null
                     && request.resource.data.pointsUsed != null
                     && request.resource.data.status != null;
-
-      // Allow admin to update/delete redemptions (validated at app level)
-      allow update, delete: if true; // App-level validation ensures only admins can modify
+      allow update, delete: if true;
     }
 
     // ============================================
     // DAILY SPINS COLLECTION
     // ============================================
     match /daily_spins/{spinId} {
-      // Allow anyone to read spins
-      // Security: App-level filtering ensures users only see their own spins
       allow read: if true;
-
-      // Allow creating spin records (carpenters can spin)
-      // Validation: Ensure userId field is present
       allow create: if request.resource.data.userId != null
                     && request.resource.data.timestamp != null;
-
-      // Allow admin to update/delete spins (validated at app level)
-      allow update, delete: if true; // App-level validation ensures only admins can modify
+      allow update, delete: if true;
     }
 
     // ============================================
     // DAILY PRIZE WINNERS COLLECTION
     // ============================================
     match /daily_prize_winners/{winnerId} {
-      // Anyone can read winners (for display on home screen, leaderboards)
       allow read: if true;
-
-      // Allow admin to create winner records (from daily spin)
-      // Validation: Ensure required fields are present
       allow create: if request.resource.data.carpenterId != null
                     && request.resource.data.carpenterName != null
                     && request.resource.data.date != null
                     && request.resource.data.timestamp != null;
-
-      // Allow admin to update/delete winners (validated at app level)
       allow update: if request.resource.data.carpenterId != null
                     && request.resource.data.date != null;
-
-      allow delete: if true; // App-level validation ensures only admins can delete
+      allow delete: if true;
     }
 
     // ============================================
     // DAILY WINNERS COLLECTION (for easy lookup)
     // ============================================
     match /daily_winners/{date} {
-      // Anyone can read daily winners
       allow read: if true;
-
-      // Allow admin to create/update daily winner (one per day)
-      // Validation: Ensure required fields are present
       allow write: if request.resource.data.carpenterId != null
                    && request.resource.data.carpenterName != null
                    && request.resource.data.date != null
                    && request.resource.data.timestamp != null;
-
-      // Allow admin to delete (validated at app level)
-      allow delete: if true; // App-level validation ensures only admins can delete
+      allow delete: if true;
     }
 
     // ============================================
     // COUNTERS COLLECTION (for auto-incrementing IDs)
     // ============================================
     match /counters/{counterId} {
-      // Allow reading counters
       allow read: if true;
-
-      // Allow writing for user registration and other operations
-      // This is needed for auto-incrementing user display IDs
-      // Validation: Ensure counter value is a number
-      // Supports both 'count' and 'lastId' field names
       allow write: if (request.resource.data.count != null
                        && request.resource.data.count is int)
                    || (request.resource.data.lastId != null
@@ -236,55 +174,24 @@ service cloud.firestore {
     // PENDING USERS COLLECTION
     // ============================================
     match /pending_users/{phone} {
-      // Allow reading pending users (for admin verification)
       allow read: if true;
-
-      // Allow creating pending user documents (registration)
-      // Validation: Ensure required fields are present
       allow create: if request.resource.data.phone != null
                     && request.resource.data.phone == phone
                     && request.resource.data.role != null;
-
-      // Allow admin to update pending users (for approval/rejection)
-      // App-level validation ensures only admins can update
       allow update: if request.resource.data.phone == phone;
-
-      // Allow admin to delete pending users (validated at app level)
-      allow delete: if true; // App-level validation ensures only admins can delete
-    }
-
-    // ============================================
-    // OFFER REDEMPTIONS COLLECTION
-    // ============================================
-    match /offer_redemptions/{redemptionId} {
-      // Allow reading redemptions
-      allow read: if true;
-
-      // Allow creating redemption records
-      // Validation: Ensure required fields are present
-      allow create: if request.resource.data.offerId != null
-                    && request.resource.data.carpenterId != null
-                    && request.resource.data.pointsUsed != null;
-
-      // Allow admin to update/delete redemptions (validated at app level)
-      allow update, delete: if true; // App-level validation ensures only admins can modify
+      allow delete: if true;
     }
 
     // ============================================
     // NOTIFICATION QUEUE COLLECTION
     // ============================================
     match /notification_queue/{notificationId} {
-      // Allow creating notification queue entries (for Cloud Functions to process)
       allow create: if request.resource.data.userId != null
                     && request.resource.data.fcmToken != null
                     && request.resource.data.type != null
                     && request.resource.data.title != null
                     && request.resource.data.body != null;
-
-      // Allow reading for debugging/admin purposes
       allow read: if true;
-
-      // Allow Cloud Functions to update status
       allow update: if request.resource.data.status != null;
     }
 
@@ -292,25 +199,11 @@ service cloud.firestore {
     // NOTIFICATION LOGS COLLECTION
     // ============================================
     match /notification_logs/{logId} {
-      // Allow creating notification logs (for analytics)
       allow create: if request.resource.data.type != null
                     && request.resource.data.title != null
                     && request.resource.data.body != null;
-
-      // Allow reading individual documents and collection queries
-      // This allows users to query their own notifications
       allow get: if true;
       allow list: if true;
-
-      // Allow users to delete notifications
-      // Users can delete:
-      // 1. Their own notifications (userId exists)
-      // 2. Broadcast notifications (isBroadcast == true) - these are visible to all users
-      // Since this is PIN-based auth, we allow delete if:
-      // - The notification has a userId field (user-specific notification)
-      // - OR the notification is a broadcast (isBroadcast == true)
-      // The app handles security by only showing relevant notifications to users
-      // Note: Using 'hasAll' and 'get' to safely check for field existence
       allow delete: if ('userId' in resource.data && resource.data.userId != null)
                    || ('isBroadcast' in resource.data && resource.data.isBroadcast == true);
     }
@@ -318,7 +211,6 @@ service cloud.firestore {
     // ============================================
     // DEFAULT DENY RULE
     // ============================================
-    // Deny all other collections by default
     match /{document=**} {
       allow read, write: if false;
     }

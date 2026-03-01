@@ -8,6 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:confetti/confetti.dart';
 import 'dart:math';
 
+import 'package:balaji_points/core/profile_refresh_notifier.dart';
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/presentation/widgets/home_nav_bar.dart';
 import 'package:balaji_points/presentation/widgets/user_profile_card.dart';
@@ -534,6 +535,15 @@ class _HomePageState extends State<HomePage>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // When profile was updated (e.g. image) and user returns to Home, refresh user data
+    if (ProfileRefreshNotifier.consumeProfileUpdated()) {
+      _loadUserData();
+    }
+  }
+
+  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _loadUserData();
@@ -659,14 +669,38 @@ class _HomePageState extends State<HomePage>
       // Force refresh by getting fresh data directly from Firestore
       final userId = await _sessionService.getUserId();
       if (userId != null) {
-        // Get fresh data directly from Firestore for immediate update
+        // Force server read so profile image and name are up to date (avoid cache returning null)
         final userDoc = await FirebaseFirestore.instance
             .collection('users')
             .doc(userId)
-            .get();
+            .get(const GetOptions(source: Source.server));
 
         if (userDoc.exists) {
-          final data = userDoc.data();
+          Map<String, dynamic>? data = userDoc.data();
+          if (data != null) {
+            // Merge session profile when Firestore has null so display is never stale
+            final sessionFirst = await _sessionService.getFirstName();
+            final sessionLast = await _sessionService.getLastName();
+            final sessionImage = await _sessionService.getProfileImage();
+            if ((sessionFirst != null && sessionFirst.isNotEmpty) &&
+                (data['firstName'] as String? ?? '').isEmpty) {
+              data = Map<String, dynamic>.from(data)..['firstName'] = sessionFirst;
+            }
+            if ((sessionLast != null && sessionLast.isNotEmpty) &&
+                (data['lastName'] as String? ?? '').isEmpty) {
+              data = Map<String, dynamic>.from(data)..['lastName'] = sessionLast;
+            }
+            if ((sessionImage != null && sessionImage.isNotEmpty) &&
+                (data['profileImage'] as String? ?? '').isEmpty) {
+              data = Map<String, dynamic>.from(data)..['profileImage'] = sessionImage;
+            }
+            // Keep session in sync with server for next time
+            await _sessionService.updateProfile(
+              firstName: data['firstName'] as String?,
+              lastName: data['lastName'] as String?,
+              profileImage: data['profileImage'] as String?,
+            );
+          }
           if (mounted) {
             setState(() {
               _currentUserData = data;
@@ -685,9 +719,16 @@ class _HomePageState extends State<HomePage>
         }
       }
 
-      // Fallback to service method
+      // Fallback to service method (uses same doc ID + session merge)
       final data = await _user_service_getCurrentUserDataSafe();
       final fallbackUserId = await _sessionService.getUserId();
+      if (data != null) {
+        await _sessionService.updateProfile(
+          firstName: data['firstName'] as String?,
+          lastName: data['lastName'] as String?,
+          profileImage: data['profileImage'] as String?,
+        );
+      }
       if (mounted)
         setState(() {
           _currentUserData = data;
@@ -698,9 +739,15 @@ class _HomePageState extends State<HomePage>
         });
     } catch (e) {
       debugPrint('Error loading current user data: $e');
-      // Fallback to service method on error
       try {
         final data = await _user_service_getCurrentUserDataSafe();
+        if (data != null) {
+          await _sessionService.updateProfile(
+            firstName: data['firstName'] as String?,
+            lastName: data['lastName'] as String?,
+            profileImage: data['profileImage'] as String?,
+          );
+        }
         final errorFallbackUserId = await _sessionService.getUserId();
         if (mounted)
           setState(() {

@@ -91,6 +91,7 @@ class _PINLoginPageState extends State<PINLoginPage>
         role: userData['role'] as String? ?? 'carpenter',
         firstName: userData['firstName'] as String?,
         lastName: userData['lastName'] as String?,
+        profileImage: userData['profileImage'] as String?,
       );
     }
 

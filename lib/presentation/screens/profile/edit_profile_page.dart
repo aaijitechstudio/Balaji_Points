@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:balaji_points/core/profile_refresh_notifier.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/services/user_service.dart';
@@ -43,33 +44,47 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   Future<void> _loadUserData() async {
     try {
       debugPrint('EditProfilePage: Loading user data from server...');
-      // Force refresh from server to get latest data
       final userData = await _userService.getCurrentUserData(
         forceRefresh: true,
       );
-      if (userData != null && mounted) {
+      if (!mounted) return;
+      String firstName = userData?['firstName'] as String? ?? '';
+      String lastName = userData?['lastName'] as String? ?? '';
+      String? profileImage = userData?['profileImage'] as String?;
+      // Fallback to session so saved name/image always pre-fill next time
+      if (firstName.isEmpty) {
+        firstName = await _sessionService.getFirstName() ?? '';
+      }
+      if (lastName.isEmpty) {
+        lastName = await _sessionService.getLastName() ?? '';
+      }
+      if (profileImage == null || profileImage.isEmpty) {
+        profileImage = await _sessionService.getProfileImage();
+      }
+      setState(() {
+        _firstNameController.text = firstName;
+        _lastNameController.text = lastName;
+        _existingImageUrl = profileImage;
+        _isLoading = false;
+      });
+      debugPrint('EditProfilePage: User data loaded (pre-filled)');
+      debugPrint('  firstName: $firstName');
+      debugPrint('  lastName: $lastName');
+      debugPrint('  profileImage: ${profileImage ?? "none"}');
+    } catch (e) {
+      debugPrint('EditProfilePage: Error loading user data: $e');
+      if (mounted) {
+        // Still try session fallback so fields are pre-filled
+        final firstName = await _sessionService.getFirstName() ?? '';
+        final lastName = await _sessionService.getLastName() ?? '';
+        final profileImage = await _sessionService.getProfileImage();
         setState(() {
-          _firstNameController.text = userData['firstName'] as String? ?? '';
-          _lastNameController.text = userData['lastName'] as String? ?? '';
-          _existingImageUrl = userData['profileImage'] as String?;
-          _isLoading = false;
-        });
-        // Debug: Log loaded data
-        debugPrint('EditProfilePage: User data loaded successfully');
-        debugPrint('  firstName: ${userData['firstName']}');
-        debugPrint('  lastName: ${userData['lastName']}');
-        debugPrint('  profileImage: ${userData['profileImage']}');
-      } else {
-        debugPrint('EditProfilePage: No user data available');
-        setState(() {
+          _firstNameController.text = firstName;
+          _lastNameController.text = lastName;
+          _existingImageUrl = profileImage;
           _isLoading = false;
         });
       }
-    } catch (e) {
-      debugPrint('EditProfilePage: Error loading user data: $e');
-      setState(() {
-        _isLoading = false;
-      });
     }
   }
 
@@ -110,9 +125,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     });
 
     try {
-      // Get phone number from session (used as user ID in PIN-based auth)
+      // User doc ID (PIN auth uses phone as doc id; use userId for consistency)
+      final userId = await _sessionService.getUserId();
       final phoneNumber = await _sessionService.getPhoneNumber();
-      if (phoneNumber == null) {
+      if (userId == null || phoneNumber == null) {
         throw Exception('No user logged in');
       }
 
@@ -188,12 +204,12 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
       // Update user data in Firestore (use set with merge to create if not exists)
       // ✅ DATA SAFETY FIX: Use sanitized values and preserve existing critical data
+      // Phone must be string and match document path for Firestore rules
       final updateData = {
         'firstName': sanitizedFirstName,
         'lastName': sanitizedLastName,
         'updatedAt': FieldValue.serverTimestamp(),
-        // Ensure phone field exists (used as unique identifier)
-        'phone': phoneNumber,
+        'phone': phoneNumber.toString(),
       };
 
       // Add profile image URL if available
@@ -216,7 +232,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       // ✅ DATA SAFETY FIX: Get current data as backup before update
       final userRef = FirebaseFirestore.instance
           .collection('users')
-          .doc(phoneNumber);
+          .doc(userId);
       final currentDataSnapshot = await userRef.get();
       final currentData = currentDataSnapshot.data();
 
@@ -256,10 +272,11 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
       debugPrint('EditProfilePage: ✅ Data verification passed!');
 
-      // Update session with new profile data
+      // Update session so Home/Profile show new name and image instantly
       await _sessionService.updateProfile(
         firstName: sanitizedFirstName,
         lastName: sanitizedLastName.isNotEmpty ? sanitizedLastName : null,
+        profileImage: profileImageUrl,
       );
 
       // ✅ DATA SAFETY FIX: Delete old image only after successful Firestore save
@@ -308,11 +325,11 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             context.go('/');
           }
         } else {
-          // Edit mode - safely navigate back
+          // Edit mode - mark profile updated so Home/Profile refresh image instantly
+          ProfileRefreshNotifier.markProfileUpdated();
           if (context.canPop()) {
-            context.pop();
+            context.pop(true);
           } else {
-            // Fallback to home if can't pop
             context.go('/');
           }
         }

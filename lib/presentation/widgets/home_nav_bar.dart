@@ -201,6 +201,7 @@ class HomeNavBar extends StatelessWidget {
           child: userImageUrl != null && userImageUrl!.isNotEmpty
               ? Image.network(
                   userImageUrl!,
+                  key: ValueKey<String>(userImageUrl!),
                   fit: BoxFit.cover,
                   loadingBuilder: (context, child, loadingProgress) {
                     if (loadingProgress == null) return child;

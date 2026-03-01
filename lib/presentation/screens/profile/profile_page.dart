@@ -85,13 +85,19 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
       final data = await _userService.getCurrentUserData(
         forceRefresh: forceRefresh,
       );
+      if (data != null) {
+        await _sessionService.updateProfile(
+          firstName: data['firstName'] as String?,
+          lastName: data['lastName'] as String?,
+          profileImage: data['profileImage'] as String?,
+        );
+      }
       if (mounted) {
         setState(() {
           _userData = data;
           _isLoading = false;
         });
-        // Debug: Log loaded data
-        debugPrint('ProfilePage: User data loaded successfully');
+        debugPrint('ProfilePage: User data loaded');
         debugPrint('  firstName: ${data?['firstName']}');
         debugPrint('  lastName: ${data?['lastName']}');
         debugPrint('  profileImage: ${data?['profileImage']}');
@@ -283,6 +289,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                                           ? Image.network(
                                               _userData!['profileImage']
                                                   as String,
+                                              key: ValueKey<String>(
+                                                _userData!['profileImage'] as String,
+                                              ),
                                               fit: BoxFit.cover,
                                               loadingBuilder: (context, child, loadingProgress) {
                                                 if (loadingProgress == null)
