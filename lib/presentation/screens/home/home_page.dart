@@ -334,49 +334,20 @@ class _HomePageState extends State<HomePage>
   // ------------------ Current user data ------------------
   Future<void> _loadUserData() async {
     try {
-      // Force refresh by getting fresh data directly from Firestore
-      final userId = await _sessionService.getUserId();
-      if (userId != null) {
-        // Get fresh data directly from Firestore for immediate update
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userId)
-            .get();
-
-        if (userDoc.exists) {
-          final data = userDoc.data();
-          if (mounted) {
-            setState(() {
-              _currentUserData = data;
-              _currentUserPoints = (data?['totalPoints'] ?? 0) as int;
-              _isCarpenter = (data?['role'] ?? '') == 'carpenter';
-              _userRole = (data?['role'] ?? '') as String?;
-              _currentUserId = userId;
-            });
-            _subscribeCartCount(userId);
-            debugPrint(
-              'User data refreshed: totalPoints=${_currentUserPoints}, profileImage=${data?['profileImage']}, isCarpenter=$_isCarpenter',
-            );
-          }
-          return;
-        } else {
-          debugPrint('User document does not exist for uid: $userId');
-        }
-      }
-
-      // Fallback to service method
+      // Prefer unified UserService so Home/Profile use same source of truth
       final data = await _user_service_getCurrentUserDataSafe();
-      final fallbackUserId = await _sessionService.getUserId();
+      final userId = await _sessionService.getUserId();
+
       if (mounted) {
         setState(() {
           _currentUserData = data;
           _currentUserPoints = (data?['totalPoints'] ?? 0) as int;
           _isCarpenter = (data?['role'] ?? '') == 'carpenter';
           _userRole = (data?['role'] ?? '') as String?;
-          _currentUserId = fallbackUserId;
+          _currentUserId = userId;
         });
-        if (fallbackUserId != null) {
-          _subscribeCartCount(fallbackUserId);
+        if (userId != null) {
+          _subscribeCartCount(userId);
         }
       }
     } catch (e) {

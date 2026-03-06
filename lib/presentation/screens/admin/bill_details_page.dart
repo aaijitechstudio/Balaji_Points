@@ -140,11 +140,11 @@ class _BillDetailsPageState extends State<BillDetailsPage> {
 
   Future<void> _approveBill() async {
     final l10n = AppLocalizations.of(context)!;
-    final amount = _billData!['amount'].toString();
+    final amountText = _billData!['amount'].toString();
     final phone = _billData!['carpenterPhone'] ?? '';
     final confirmed = await _showConfirmDialog(
       title: l10n.approveBill,
-      message: l10n.approveBillConfirmation(amount, phone),
+      message: l10n.approveBillConfirmation(amountText, phone),
       confirmText: l10n.approve,
       confirmColor: Colors.green,
     );
@@ -155,7 +155,21 @@ class _BillDetailsPageState extends State<BillDetailsPage> {
 
     try {
       final carpenterId = _billData!['carpenterId'] as String;
-      final amount = _billData!['amount'] as double;
+      final rawAmount = _billData!['amount'];
+      final amount = rawAmount is num
+          ? rawAmount.toDouble()
+          : double.tryParse(rawAmount.toString()) ?? 0.0;
+
+      if (amount <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invalid bill amount'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() => _isProcessing = false);
+        return;
+      }
 
       final success = await _billService.approveBill(
         widget.billId,

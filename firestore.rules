@@ -19,34 +19,96 @@ service cloud.firestore {
       // PIN hashes are stored, not plain PINs, so this is safe
       allow read: if true;
 
-      // Allow creating new user documents (registration)
-      // Validation: Ensure required fields are present
-      // Note: Some fields like firstName, lastName may be empty strings initially
+      // Allow creating new user documents
+      // Two cases:
+      // 1) Full registration document (admin/verification flow) with role/points/tier
+      // 2) Minimal self-profile doc where doc ID == phone (for legacy users that only exist by phone)
       allow create: if request.resource.data.phone != null
-                    && request.resource.data.role != null
-                    && request.resource.data.totalPoints != null
-                    && request.resource.data.tier != null;
+                    && (
+                      (
+                        request.resource.data.role != null
+                        && request.resource.data.totalPoints != null
+                        && request.resource.data.tier != null
+                      )
+                      || request.resource.data.phone == userId
+                    );
 
-      // Allow users to update their own document
-      // Security: Prevent users from changing their phone number (unique identifier)
-      // This ensures users can only update their own data, not take over other accounts
-      allow update: if request.resource.data.phone == resource.data.phone
-                    && request.resource.data.phone != null;
+      // Allow users to update their own document (profile).
+      // Supports both:
+      // - NEW docs: document ID == phone number
+      // - LEGACY docs: document ID is a UID but phone is stored in resource.data.phone
+      allow update: if request.resource.data.phone != null
+                    && (
+                      // New strategy: doc ID is the phone
+                      request.resource.data.phone == userId
+                      // Legacy strategy: doc ID is UID, phone stored in document data
+                      || (resource.data.phone != null
+                          && request.resource.data.phone == resource.data.phone)
+                    );
 
-      // Allow users to update notification preferences
-      // Users can update only the notificationPreferences field
-      allow update: if request.resource.data.phone == resource.data.phone
+      // Allow users to update notification preferences only
+      allow update: if request.resource.data.phone != null
+                    && (
+                      request.resource.data.phone == userId
+                      || (resource.data.phone != null
+                          && request.resource.data.phone == resource.data.phone)
+                    )
                     && request.resource.data.keys().hasAll(['notificationPreferences'])
                     && request.resource.data.notificationPreferences is map;
 
-      // Allow admin updates (validated at app level)
-      // Admin operations include: updating points, tier, profile info
-      // App validates admin status before making these requests
+      // Allow admin updates (validated at app level).
+      // Admin operations include: updating points, tier, profile info.
+      // App validates admin status before making these requests.
+      // Here we just require that a phone field is present.
       allow update: if request.resource.data.phone != null
                     && request.resource.data.keys().hasAll(['phone']);
 
       // Allow admin to delete users (validated at app level)
       allow delete: if true; // App-level validation ensures only admins can delete
+    }
+
+    // ============================================
+    // PRODUCTS COLLECTION
+    // ============================================
+    match /products/{productId} {
+      // All users (carpenters + admin) can read products
+      allow read: if true;
+
+      // Admin-only writes – validated at app level (PIN/session role)
+      // Here we just enforce some basic field presence.
+      allow create, update: if request.resource.data.name != null
+                            && request.resource.data.price != null
+                            && request.resource.data.mainCategory != null;
+
+      // Admin can delete products (app-level admin check)
+      allow delete: if true;
+    }
+
+    // ============================================
+    // CARTS COLLECTION (per-user items subcollection)
+    // ============================================
+    match /carts/{userId}/items/{itemId} {
+      // Carpenters can read/write their own cart items.
+      // We don't have request.auth, so we trust the app to only use
+      // the logged-in user's phone/userId as the {userId} path segment.
+      allow read, write: if true;
+    }
+
+    // ============================================
+    // ORDERS COLLECTION
+    // ============================================
+    match /orders/{orderId} {
+      // Carpenters and admin can read orders
+      allow read: if true;
+
+      // Carpenters create orders when placing from cart
+      allow create: if request.resource.data.userId != null
+                    && request.resource.data.items != null
+                    && request.resource.data.totalAmount != null
+                    && request.resource.data.status != null;
+
+      // Admin updates status (approved/rejected/etc.) – app enforces admin
+      allow update, delete: if true;
     }
 
     // ============================================

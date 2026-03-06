@@ -39,7 +39,7 @@ class _OffersCarouselState extends State<OffersCarousel> {
             },
             itemCount: widget.offers.length,
             itemBuilder: (context, index) {
-              return _buildOfferCard(widget.offers[index]);
+              return _buildOfferCard(context, widget.offers[index]);
             },
           ),
         ),
@@ -56,16 +56,11 @@ class _OffersCarouselState extends State<OffersCarousel> {
     );
   }
 
-  Widget _buildOfferCard(OfferItem offer) {
+  Widget _buildOfferCard(BuildContext context, OfferItem offer) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        gradient: LinearGradient(
-          colors: [Colors.purple.shade600, Colors.purple.shade400],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
         boxShadow: [
           BoxShadow(
             color: Colors.purple.withOpacity(0.3),
@@ -76,8 +71,52 @@ class _OffersCarouselState extends State<OffersCarousel> {
       ),
       child: Stack(
         children: [
-          // Decorative pattern
+          // Offer image from admin (full card background)
+          if (offer.imageUrl != null && offer.imageUrl!.isNotEmpty)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.network(
+                offer.imageUrl!,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: Colors.purple.shade400,
+                  );
+                },
+              ),
+            )
+          else
+            // Fallback gradient when no image configured
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: LinearGradient(
+                  colors: [Colors.purple.shade600, Colors.purple.shade400],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ),
+          // Decorative pattern overlay
           Positioned.fill(child: CustomPaint(painter: _OfferPatternPainter())),
+          // Dark overlay to keep text readable on top of image
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.35),
+                    Colors.black.withOpacity(0.55),
+                  ],
+                ),
+              ),
+            ),
+          ),
           // Content
           Padding(
             padding: const EdgeInsets.all(20),
@@ -105,21 +144,60 @@ class _OffersCarouselState extends State<OffersCarousel> {
                   ),
                 const SizedBox(height: 16),
                 if (offer.actionText.isNotEmpty)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      offer.actionText,
-                      style: TextStyle(
-                        color: Colors.purple.shade700,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
+                  InkWell(
+                    onTap: () {
+                      if (offer.imageUrl != null &&
+                          offer.imageUrl!.isNotEmpty) {
+                        showDialog(
+                          context: context,
+                          builder: (context) {
+                            return Dialog(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: Image.network(
+                                  offer.imageUrl!,
+                                  fit: BoxFit.contain,
+                                  errorBuilder:
+                                      (context, error, stackTrace) {
+                                    return Container(
+                                      color: Colors.grey[200],
+                                      height: 220,
+                                      child: const Center(
+                                        child: Icon(
+                                          Icons.broken_image,
+                                          size: 40,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        offer.actionText,
+                        style: TextStyle(
+                          color: Colors.purple.shade700,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),

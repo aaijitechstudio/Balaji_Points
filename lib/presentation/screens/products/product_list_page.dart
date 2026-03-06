@@ -30,7 +30,14 @@ class ProductListPage extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            // If there's a route to pop, pop it; otherwise go home.
+            if (Navigator.of(context).canPop()) {
+              context.pop();
+            } else {
+              context.go('/');
+            }
+          },
         ),
         title: const Text('Products'),
         centerTitle: true,
@@ -104,20 +111,11 @@ class ProductListPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    'No products available yet',
+                    'No Product Added',
                     style: AppTextStyles.nunitoBold.copyWith(
                       fontSize: 20,
                       color: DesignToken.textDark,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Ask admin to add products from admin panel.',
-                    style: AppTextStyles.nunitoRegular.copyWith(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
-                    textAlign: TextAlign.center,
                   ),
                 ],
               ),

@@ -176,14 +176,15 @@ final routerProvider = Provider<GoRouter>((ref) {
               return OrderDetailPage(orderId: id);
             },
           ),
+          GoRoute(
+            path: '/edit-profile',
+            builder: (context, state) {
+              final isFirstTime =
+                  state.uri.queryParameters['firstTime'] == 'true';
+              return EditProfilePage(isFirstTime: isFirstTime);
+            },
+          ),
         ],
-      ),
-      GoRoute(
-        path: '/edit-profile',
-        builder: (context, state) {
-          final isFirstTime = state.uri.queryParameters['firstTime'] == 'true';
-          return EditProfilePage(isFirstTime: isFirstTime);
-        },
       ),
       GoRoute(
         path: '/daily-spin',
