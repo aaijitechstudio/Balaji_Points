@@ -126,7 +126,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get poweredBy => 'Powered by';
 
   @override
-  String get companyName => 'Shree Balaji Plywood & Hardware';
+  String get companyName => 'Sri Balaji Plywood & Hardware';
 
   @override
   String get enterPinPageTitle => 'Enter your 4-digit PIN';

@@ -274,7 +274,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 40),
                         child: Text(
-                          '${l10n?.poweredBy ?? 'Powered by'}\n${l10n?.companyName ?? 'Shree Balaji Plywood & Hardware'}',
+                          '${l10n?.poweredBy ?? 'Powered by'}\n${l10n?.companyName ?? 'Shri Balaji Plywood & Hardware'}',
                           textAlign: TextAlign.center,
                           style: AppTextStyles.nunitoRegular.copyWith(
                             fontSize: 14,

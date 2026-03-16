@@ -331,7 +331,7 @@ abstract class AppLocalizations {
   /// No description provided for @companyName.
   ///
   /// In en, this message translates to:
-  /// **'Shree Balaji Plywood & Hardware'**
+  /// **'Sri Balaji Plywood & Hardware'**
   String get companyName;
 
   /// No description provided for @enterPinPageTitle.

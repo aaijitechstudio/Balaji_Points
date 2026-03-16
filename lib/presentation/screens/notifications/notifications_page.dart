@@ -1,6 +1,7 @@
 // lib/presentation/screens/notifications/notifications_page.dart
 // Notifications screen for carpenters to view and manage their notifications
 
+import 'package:balaji_points/presentation/widgets/home_nav_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -569,62 +570,70 @@ class _NotificationsPageState extends State<NotificationsPage> {
       );
     }
 
+    final bool isAdmin = (_userRole == 'admin');
+
     if (_userId == null) {
       return Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          foregroundColor: DesignToken.textDark,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          title: const Text('Notifications'),
-          centerTitle: true,
+        body: Column(
+          children: [
+            const HomeNavBar(
+              title: 'Notifications',
+              showLogo: false,
+              showProfileButton: false,
+            ),
+            const Expanded(
+              child: Center(child: Text('Unable to load notifications')),
+            ),
+          ],
         ),
-        body: const Center(child: Text('Unable to load notifications')),
       );
     }
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: DesignToken.textDark,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text('Notifications'),
-        centerTitle: true,
-        actions: [
-          StreamBuilder<List<QueryDocumentSnapshot>>(
-            stream: _mergedNotificationsStream,
-            builder: (context, snapshot) {
-              final hasNotifications =
-                  snapshot.hasData && snapshot.data!.isNotEmpty;
-              if (!hasNotifications) {
-                return const SizedBox.shrink();
-              }
-              return IconButton(
-                icon: const Icon(Icons.delete_outline, size: 24),
-                onPressed: _deleteAllNotifications,
-                tooltip: 'Delete All',
-              );
-            },
+      body: Column(
+        children: [
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              HomeNavBar(
+                title: 'Notifications',
+                showLogo: false,
+                showProfileButton: false,
+                showBackButton: isAdmin,
+                actions: [
+                  StreamBuilder<List<QueryDocumentSnapshot>>(
+                    stream: _mergedNotificationsStream,
+                    builder: (context, snapshot) {
+                      final hasNotifications =
+                          snapshot.hasData && snapshot.data!.isNotEmpty;
+                      if (!hasNotifications) {
+                        return const SizedBox.shrink();
+                      }
+                      return IconButton(
+                        icon: const Icon(Icons.delete_outline, size: 22),
+                        onPressed: _deleteAllNotifications,
+                        tooltip: 'Delete All',
+                      );
+                    },
+                  ),
+                ],
+              ),
+              Container(
+                height: 1,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: DesignToken.primaryGradient,
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(
-            height: 1,
-            color: Colors.black.withValues(alpha: 0.08),
-          ),
-        ),
-      ),
-      body: Container(
+          Expanded(
+            child: Container(
               color: theme.colorScheme.surface,
               child: SafeArea(
                 top: false,
@@ -962,9 +971,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
                           );
                         },
                       ),
+                ),
+              ),
             ),
-          ),
-    );
+          ],
+        ),
+      );
   }
 
   /// Handle notification tap - navigate based on notification type and role
