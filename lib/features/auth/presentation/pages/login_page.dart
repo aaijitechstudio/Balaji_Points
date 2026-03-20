@@ -20,10 +20,7 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage>
-    with TickerProviderStateMixin {
-  late AnimationController _animationController;
-  late List<FloatingElement> _floatingElements;
+class _LoginPageState extends State<LoginPage> {
 
   final _phoneController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
@@ -31,33 +28,10 @@ class _LoginPageState extends State<LoginPage>
   @override
   void initState() {
     super.initState();
-
-    final random = math.Random(42);
-    _floatingElements = List.generate(
-      12,
-      (index) => FloatingElement(
-        x: random.nextDouble(),
-        y: random.nextDouble(),
-        speed: 0.3 + random.nextDouble() * 0.4,
-        type: index % 4 == 0
-            ? FloatingType.coin
-            : (index % 4 == 1
-                  ? FloatingType.star
-                  : (index % 4 == 2
-                        ? FloatingType.sparkle
-                        : FloatingType.points)),
-      ),
-    );
-
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 20),
-    )..repeat();
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
     _phoneController.dispose();
     super.dispose();
   }
@@ -121,33 +95,22 @@ class _LoginPageState extends State<LoginPage>
           final isChecking = state is CheckingUserState;
 
           return Scaffold(
-            backgroundColor: DesignToken.woodenBackground,
+            backgroundColor: Colors.transparent,
             body: Column(
               children: [
-                SafeArea(bottom: false, child: Container()),
-
                 Expanded(
                   child: Stack(
                     children: [
-                      // Animated Background Elements
-                      IgnorePointer(
-                        child: RepaintBoundary(
-                          child: ListenableBuilder(
-                            listenable: _animationController,
-                            builder: (context, child) {
-                              return CustomPaint(
-                                size: Size.infinite,
-                                painter: CelebrationPainter(
-                                  animationValue: _animationController.value,
-                                  elements: _floatingElements,
-                                ),
-                              );
-                            },
-                          ),
+                      Positioned.fill(
+                        child: Image.asset(
+                          'assets/images/background_image.png',
+                          fit: BoxFit.cover,
                         ),
                       ),
 
-                      SingleChildScrollView(
+                      SafeArea(
+                        bottom: false,
+                        child: SingleChildScrollView(
                         padding: EdgeInsets.only(
                           bottom: bottomInset + DesignToken.spacingXL,
                         ),
@@ -231,7 +194,7 @@ class _LoginPageState extends State<LoginPage>
                                   l10n.enterPhoneNumber,
                                   style: AppTextStyles.nunitoRegular.copyWith(
                                     fontSize: DesignToken.fontSizeLG,
-                                    color: DesignToken.textDark.withOpacity(0.9),
+                                    color: DesignToken.textDark,
                                   ),
                                 ),
 
@@ -375,14 +338,17 @@ class _LoginPageState extends State<LoginPage>
                                                 ),
                                               ),
                                               child: isChecking
-                                                  ? const SizedBox(
-                                                      width: 24,
-                                                      height: 24,
-                                                      child:
-                                                          CircularProgressIndicator(
-                                                            color:
-                                                                DesignToken.white,
-                                                            strokeWidth: 2.5,
+                                                  ? Text(
+                                                      l10n.continueWithPin,
+                                                      style: AppTextStyles
+                                                          .nunitoBold
+                                                          .copyWith(
+                                                            fontSize:
+                                                                DesignToken
+                                                                    .fontSizeXL,
+                                                            color: DesignToken.white
+                                                                .withOpacity(0.7),
+                                                            letterSpacing: 0.5,
                                                           ),
                                                     )
                                                   : Text(
@@ -408,7 +374,15 @@ class _LoginPageState extends State<LoginPage>
                                 Text(
                                   "${l10n.poweredBy} ${l10n.companyName}",
                                   style: DesignToken.labelMedium.copyWith(
-                                    color: DesignToken.secondary,
+                                    color: DesignToken.primary,
+                                    fontWeight: FontWeight.w700,
+                                    shadows: [
+                                      Shadow(
+                                        color: DesignToken.white,
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
                                   ),
                                 ),
                                 SizedBox(height: DesignToken.height3XL),
@@ -416,6 +390,7 @@ class _LoginPageState extends State<LoginPage>
                             ),
                           ),
                         ),
+                      ),
                       ),
                     ],
                   ),

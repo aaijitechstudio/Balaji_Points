@@ -44,7 +44,8 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) async {
       // Prevent admin from entering carpenter notifications route.
       if (state.uri.path == '/notifications') {
-        final role = await SessionService().getUserRole();
+        final role =
+            (await SessionService().getUserRole())?.trim().toLowerCase();
         if (role == 'admin') return '/admin/notifications';
       }
 
@@ -80,7 +81,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () async {
-                final role = await SessionService().getUserRole();
+                final role =
+                    (await SessionService().getUserRole())?.trim().toLowerCase();
                 if (!context.mounted) return;
                 if (role == 'admin') {
                   context.go('/admin');

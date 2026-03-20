@@ -21,14 +21,11 @@ class PINSetupPage extends StatefulWidget {
 }
 
 class _PINSetupPageState extends State<PINSetupPage>
-    with SingleTickerProviderStateMixin {
+    {
   final _phoneController = TextEditingController();
   final _pinController = TextEditingController();
   final _confirmPinController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-
-  late AnimationController _animationController;
-  late List<FloatingElement> _floatingElements;
 
   bool _isSaving = false;
 
@@ -42,25 +39,10 @@ class _PINSetupPageState extends State<PINSetupPage>
     if (widget.phoneNumber != null && widget.phoneNumber!.isNotEmpty) {
       _phoneController.text = widget.phoneNumber!;
     }
-
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 8),
-    )..repeat();
-
-    _floatingElements = List.generate(25, (index) {
-      return FloatingElement(
-        x: math.Random().nextDouble(),
-        y: math.Random().nextDouble(),
-        speed: 0.2 + math.Random().nextDouble() * 0.8,
-        type: FloatingType.values[index % FloatingType.values.length],
-      );
-    });
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
     _phoneController.dispose();
     _pinController.dispose();
     _confirmPinController.dispose();
@@ -211,7 +193,7 @@ class _PINSetupPageState extends State<PINSetupPage>
         }
       },
       child: Scaffold(
-        backgroundColor: DesignToken.woodenBackground,
+        backgroundColor: Colors.transparent,
         appBar: AppBar(
           backgroundColor: DesignToken.transparent,
           elevation: 0,
@@ -222,21 +204,10 @@ class _PINSetupPageState extends State<PINSetupPage>
         ),
         body: Stack(
           children: [
-            // Animated Background Elements
-            IgnorePointer(
-              child: RepaintBoundary(
-                child: ListenableBuilder(
-                  listenable: _animationController,
-                  builder: (context, child) {
-                    return CustomPaint(
-                      size: Size.infinite,
-                      painter: CelebrationPainter(
-                        animationValue: _animationController.value,
-                        elements: _floatingElements,
-                      ),
-                    );
-                  },
-                ),
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/background_image.png',
+                fit: BoxFit.cover,
               ),
             ),
 

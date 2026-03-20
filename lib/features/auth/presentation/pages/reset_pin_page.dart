@@ -25,15 +25,12 @@ class ResetPINPage extends StatefulWidget {
 }
 
 class _ResetPINPageState extends State<ResetPINPage>
-    with SingleTickerProviderStateMixin {
+{
   final _phoneController = TextEditingController();
   final _pinController = TextEditingController();
   final _confirmPinController = TextEditingController();
   final _currentPinController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-
-  late AnimationController _animationController;
-  late List<FloatingElement> _floatingElements;
 
   final _sessionService = SessionService();
 
@@ -49,20 +46,6 @@ class _ResetPINPageState extends State<ResetPINPage>
     if (widget.phoneNumber != null && widget.phoneNumber!.isNotEmpty) {
       _phoneController.text = widget.phoneNumber!;
     }
-
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 8),
-    )..repeat();
-
-    _floatingElements = List.generate(25, (index) {
-      return FloatingElement(
-        x: math.Random().nextDouble(),
-        y: math.Random().nextDouble(),
-        speed: 0.2 + math.Random().nextDouble() * 0.8,
-        type: FloatingType.values[index % FloatingType.values.length],
-      );
-    });
   }
 
   Future<void> _checkLoginStatus() async {
@@ -87,7 +70,6 @@ class _ResetPINPageState extends State<ResetPINPage>
 
   @override
   void dispose() {
-    _animationController.dispose();
     _phoneController.dispose();
     _pinController.dispose();
     _confirmPinController.dispose();
@@ -191,6 +173,7 @@ class _ResetPINPageState extends State<ResetPINPage>
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final topInset = MediaQuery.of(context).padding.top;
     final l10n = AppLocalizations.of(context)!;
 
     return PopScope(
@@ -246,7 +229,8 @@ class _ResetPINPageState extends State<ResetPINPage>
           final isSaving = state is ResetPinLoadingState;
 
           return Scaffold(
-            backgroundColor: DesignToken.woodenBackground,
+            backgroundColor: Colors.transparent,
+            extendBodyBehindAppBar: true,
             appBar: AppBar(
               backgroundColor: DesignToken.transparent,
               elevation: DesignToken.elevationNone,
@@ -263,22 +247,12 @@ class _ResetPINPageState extends State<ResetPINPage>
               ),
             ),
             body: Stack(
+              fit: StackFit.expand,
               children: [
-                // Animated Background Elements
-                IgnorePointer(
-                  child: RepaintBoundary(
-                    child: ListenableBuilder(
-                      listenable: _animationController,
-                      builder: (context, child) {
-                        return CustomPaint(
-                          size: Size.infinite,
-                          painter: CelebrationPainter(
-                            animationValue: _animationController.value,
-                            elements: _floatingElements,
-                          ),
-                        );
-                      },
-                    ),
+                Positioned.fill(
+                  child: Image.asset(
+                    'assets/images/background_image.png',
+                    fit: BoxFit.cover,
                   ),
                 ),
 
@@ -286,7 +260,7 @@ class _ResetPINPageState extends State<ResetPINPage>
                 SingleChildScrollView(
                   padding: EdgeInsets.fromLTRB(
                     DesignToken.spacing2XL,
-                    DesignToken.spacingSM,
+                    topInset + kToolbarHeight + DesignToken.spacingSM,
                     DesignToken.spacing2XL,
                     bottomInset + DesignToken.spacingXL,
                   ),
@@ -294,7 +268,7 @@ class _ResetPINPageState extends State<ResetPINPage>
                     key: _formKey,
                     child: Column(
                       children: [
-                        SizedBox(height: DesignToken.heightXS),
+                        SizedBox(height: DesignToken.heightSM),
 
                         Text(
                           l10n.resetPinSubtitle,
@@ -777,30 +751,20 @@ class _ResetPINPageState extends State<ResetPINPage>
                                     child: Container(
                                       decoration: BoxDecoration(
                                         gradient: LinearGradient(
-                                          colors: _isLoggedIn
-                                              ? [
-                                                  DesignToken.secondary,
-                                                  DesignToken.secondary.withOpacity(0.8),
-                                                ]
-                                              : [
-                                                  DesignToken.grey500,
-                                                  DesignToken.grey500.withOpacity(0.8),
-                                                ],
+                                          colors: [
+                                            DesignToken.secondary,
+                                            DesignToken.secondary.withOpacity(0.8),
+                                          ],
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
                                         ),
                                         borderRadius: DesignToken.borderRadiusLG,
                                         boxShadow: DesignToken.shadowMD.map((shadow) => shadow.copyWith(
-                                          color: (_isLoggedIn
-                                                  ? DesignToken.secondary
-                                                  : DesignToken.grey500)
-                                              .withOpacity(0.4),
+                                          color: DesignToken.secondary.withOpacity(0.4),
                                         )).toList(),
                                       ),
                                       child: ElevatedButton(
-                                        onPressed: (isSaving || !_isLoggedIn)
-                                            ? null
-                                            : _saveNewPin,
+                                        onPressed: isSaving ? null : _saveNewPin,
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: DesignToken.transparent,
                                           shadowColor: DesignToken.transparent,

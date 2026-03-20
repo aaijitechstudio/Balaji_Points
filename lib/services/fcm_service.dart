@@ -214,6 +214,9 @@ class FCMService {
   /// Logout cleanup - removes FCM token from Firestore and FCM
   Future<void> deleteToken() async {
     try {
+      // Prevent any pending navigation that could fire after logout.
+      _pendingNavigation = false;
+
       // Get current user document IDs before clearing session
       final Set<String> targetDocIds = {};
 

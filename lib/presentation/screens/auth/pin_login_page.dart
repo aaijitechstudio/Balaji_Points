@@ -22,12 +22,9 @@ class PINLoginPage extends StatefulWidget {
 }
 
 class _PINLoginPageState extends State<PINLoginPage>
-    with SingleTickerProviderStateMixin {
+    {
   final _pinController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-
-  late AnimationController _animationController;
-  late List<FloatingElement> _floatingElements;
 
   bool _isLoggingIn = false;
   bool _rememberMe = true; // Remember me is checked by default
@@ -37,27 +34,10 @@ class _PINLoginPageState extends State<PINLoginPage>
   @override
   void initState() {
     super.initState();
-
-    // Initialize animation controller
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 8),
-    )..repeat();
-
-    // Initialize floating animated elements
-    _floatingElements = List.generate(25, (index) {
-      return FloatingElement(
-        x: math.Random().nextDouble(),
-        y: math.Random().nextDouble(),
-        speed: 0.2 + math.Random().nextDouble() * 0.8,
-        type: FloatingType.values[index % FloatingType.values.length],
-      );
-    });
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
     _pinController.dispose();
     super.dispose();
   }
@@ -139,7 +119,7 @@ class _PINLoginPageState extends State<PINLoginPage>
     return PopScope(
       canPop: true, // Allow direct back navigation
       child: Scaffold(
-        backgroundColor: DesignToken.woodenBackground,
+        backgroundColor: Colors.transparent,
 
         appBar: AppBar(
           backgroundColor: DesignToken.transparent,
@@ -152,21 +132,10 @@ class _PINLoginPageState extends State<PINLoginPage>
 
         body: Stack(
           children: [
-            // Animated Background Elements
-            IgnorePointer(
-              child: RepaintBoundary(
-                child: ListenableBuilder(
-                  listenable: _animationController,
-                  builder: (context, child) {
-                    return CustomPaint(
-                      size: Size.infinite,
-                      painter: CelebrationPainter(
-                        animationValue: _animationController.value,
-                        elements: _floatingElements,
-                      ),
-                    );
-                  },
-                ),
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/background_image.png',
+                fit: BoxFit.cover,
               ),
             ),
 

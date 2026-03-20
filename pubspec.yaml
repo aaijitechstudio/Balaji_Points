@@ -99,6 +99,7 @@ flutter:
   assets:
     - assets/images/balaji_point_logo.png
     # Furniture / plywood showcase images used on home screen
+    - assets/images/background_image.png
     - "docs/furnitures_pics/22 Gorgeous Brown Kitchen Cabinet Designs.jpeg"
     - "docs/furnitures_pics/Elegant Sage Green Kitchen with Brass Accents & Marble Island.jpeg"
     - "docs/furnitures_pics/_ (6).jpeg"

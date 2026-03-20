@@ -22,14 +22,11 @@ class PINSetupPage extends StatefulWidget {
 }
 
 class _PINSetupPageState extends State<PINSetupPage>
-    with SingleTickerProviderStateMixin {
+{
   final _phoneController = TextEditingController();
   final _pinController = TextEditingController();
   final _confirmPinController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-
-  late AnimationController _animationController;
-  late List<FloatingElement> _floatingElements;
 
   @override
   void initState() {
@@ -38,25 +35,10 @@ class _PINSetupPageState extends State<PINSetupPage>
     if (widget.phoneNumber != null && widget.phoneNumber!.isNotEmpty) {
       _phoneController.text = widget.phoneNumber!;
     }
-
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 8),
-    )..repeat();
-
-    _floatingElements = List.generate(25, (index) {
-      return FloatingElement(
-        x: math.Random().nextDouble(),
-        y: math.Random().nextDouble(),
-        speed: 0.2 + math.Random().nextDouble() * 0.8,
-        type: FloatingType.values[index % FloatingType.values.length],
-      );
-    });
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
     _phoneController.dispose();
     _pinController.dispose();
     _confirmPinController.dispose();
@@ -99,6 +81,7 @@ class _PINSetupPageState extends State<PINSetupPage>
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final topInset = MediaQuery.of(context).padding.top;
     final l10n = AppLocalizations.of(context)!;
 
     return PopScope(
@@ -185,7 +168,8 @@ class _PINSetupPageState extends State<PINSetupPage>
           final isSaving = state is PinSetupLoadingState;
 
           return Scaffold(
-            backgroundColor: DesignToken.woodenBackground,
+            backgroundColor: Colors.transparent,
+            extendBodyBehindAppBar: true,
             appBar: AppBar(
               backgroundColor: DesignToken.transparent,
               elevation: DesignToken.elevationNone,
@@ -195,22 +179,12 @@ class _PINSetupPageState extends State<PINSetupPage>
               ),
             ),
             body: Stack(
+              fit: StackFit.expand,
               children: [
-                // Animated Background Elements
-                IgnorePointer(
-                  child: RepaintBoundary(
-                    child: ListenableBuilder(
-                      listenable: _animationController,
-                      builder: (context, child) {
-                        return CustomPaint(
-                          size: Size.infinite,
-                          painter: CelebrationPainter(
-                            animationValue: _animationController.value,
-                            elements: _floatingElements,
-                          ),
-                        );
-                      },
-                    ),
+                Positioned.fill(
+                  child: Image.asset(
+                    'assets/images/background_image.png',
+                    fit: BoxFit.cover,
                   ),
                 ),
 
@@ -218,7 +192,7 @@ class _PINSetupPageState extends State<PINSetupPage>
                 SingleChildScrollView(
                   padding: EdgeInsets.fromLTRB(
                     DesignToken.spacing2XL,
-                    DesignToken.spacingSM,
+                    topInset + kToolbarHeight + DesignToken.spacingSM,
                     DesignToken.spacing2XL,
                     bottomInset + DesignToken.spacingXL,
                   ),

@@ -9,6 +9,7 @@ import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/core/mixins/double_tap_exit_mixin.dart';
 import 'package:balaji_points/services/fcm_service.dart';
+import 'package:balaji_points/services/session_service.dart';
 import '../../widgets/admin/admin_dashboard.dart';
 import '../../widgets/admin/pending_bills_list.dart';
 import '../../widgets/admin/offers_management.dart';
@@ -100,6 +101,9 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
 
         // Sign out from Firebase
         await FirebaseAuth.instance.signOut();
+
+        // Clear secure session so splash redirects correctly by role.
+        await SessionService().clearSession();
 
         if (mounted) {
           context.go('/login');
