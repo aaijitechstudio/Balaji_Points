@@ -23,6 +23,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     _SectionCard(id: 'history', label: 'Bill History', icon: Icons.history, color: Color(0xFFE3F2FD)),         // blue
     _SectionCard(id: 'offers', label: 'Offers', icon: Icons.local_offer, color: Color(0xFFFFF3E0)),            // orange
     _SectionCard(id: 'users', label: 'Users', icon: Icons.people, color: Color(0xFFF3E5F5)),                  // purple
+    _SectionCard(id: 'notifications', label: 'Notifications', icon: Icons.notifications, color: Color(0xFFFFEBEE)), // red/pink
     _SectionCard(id: 'products', label: 'Products', icon: Icons.inventory_2, color: Color(0xFFE0F7FA)),       // cyan
     _SectionCard(id: 'orders', label: 'Orders', icon: Icons.shopping_bag, color: Color(0xFFFFEBEE)),          // red/pink
     _SectionCard(id: 'spin', label: 'Spin', icon: Icons.casino, color: Color(0xFFFFF8E1)),                    // amber
@@ -65,23 +66,67 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       .snapshots(),
                   builder: (context, ordersSnap) {
                     final pendingOrdersCount = ordersSnap.data?.docs.length ?? 0;
-                    return GridView.count(
-                      padding: EdgeInsets.zero,
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 1.0,
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: _sections.map((s) {
-                        int? count;
-                        if (s.id == 'pending') count = pendingBillsCount;
-                        if (s.id == 'orders') count = pendingOrdersCount;
-                        return _SectionTile(
-                          section: s,
-                          count: count,
-                          onTap: () => widget.onOpenSection(s.id),
+                    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                      key: ValueKey<int>(_refreshKey),
+                      stream: FirebaseFirestore.instance
+                          .collection('users')
+                          .snapshots(),
+                      builder: (context, usersSnap) {
+                        final usersDocs = usersSnap.data?.docs ?? const [];
+                        // Total users = all docs in `users`
+                        final totalUsersCount = usersDocs.length;
+                        // Carpenters = matches the same rule used in UsersList:
+                        // exclude role == 'admin', include role == 'carpenter' or missing/empty role.
+                        final carpentersCount = usersDocs.where((doc) {
+                          final data = doc.data();
+                          final role = data['role'] as String?;
+                          if (role == 'admin') return false;
+                          return role == null || role.isEmpty || role == 'carpenter';
+                        }).length;
+
+                    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                      stream: FirebaseFirestore.instance
+                          .collection('notification_logs')
+                          .where('type',
+                              whereIn: const [
+                                'newPendingBill',
+                                'newUserRegistered',
+                              ])
+                          .snapshots(),
+                      builder: (context, notifSnap) {
+                        final notificationCount =
+                            notifSnap.hasError ? 0 : notifSnap.data?.docs.length ?? 0;
+
+                        return GridView.count(
+                          padding: EdgeInsets.zero,
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 1.0,
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: _sections.map((s) {
+                            int? count;
+                            int? secondaryCount;
+                            if (s.id == 'pending') count = pendingBillsCount;
+                            if (s.id == 'orders') count = pendingOrdersCount;
+                            if (s.id == 'notifications') {
+                              count = notificationCount;
+                            }
+                            if (s.id == 'users') {
+                              count = totalUsersCount;
+                              secondaryCount = carpentersCount;
+                            }
+                            return _SectionTile(
+                              section: s,
+                              count: count,
+                              secondaryCount: secondaryCount,
+                              onTap: () => widget.onOpenSection(s.id),
+                            );
+                          }).toList(),
                         );
-                      }).toList(),
+                      },
+                    );
+                      },
                     );
                   },
                 );
@@ -112,10 +157,12 @@ class _SectionTile extends StatelessWidget {
     required this.section,
     required this.onTap,
     this.count,
+    this.secondaryCount,
   });
   final _SectionCard section;
   final VoidCallback onTap;
   final int? count;
+  final int? secondaryCount;
 
   @override
   Widget build(BuildContext context) {
@@ -199,12 +246,44 @@ class _SectionTile extends StatelessWidget {
                   ),
                 ),
               ),
-              if (count != null && count! > 0)
+              if (section.id == 'users' && secondaryCount != null)
                 Positioned(
                   top: 8,
                   right: 8,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: iconColor,
+                      borderRadius: BorderRadius.circular(999),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      '$secondaryCount',
+                      style: AppTextStyles.nunitoBold.copyWith(
+                        fontSize: 12,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                )
+              else if (count != null && count! > 0)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: iconColor,
                       borderRadius: BorderRadius.circular(999),

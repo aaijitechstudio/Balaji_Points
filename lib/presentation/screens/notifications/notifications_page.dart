@@ -11,8 +11,22 @@ import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/services/session_service.dart';
 import 'dart:async';
 
+enum NotificationsPageMode {
+  /// Decide behavior from the logged-in user's role.
+  auto,
+  /// Force carpenter behavior (personal + broadcast notifications).
+  carpenter,
+  /// Force admin behavior (admin-only notifications + admin back navigation).
+  admin,
+}
+
 class NotificationsPage extends StatefulWidget {
-  const NotificationsPage({super.key});
+  const NotificationsPage({
+    super.key,
+    this.mode = NotificationsPageMode.auto,
+  });
+
+  final NotificationsPageMode mode;
 
   @override
   State<NotificationsPage> createState() => _NotificationsPageState();
@@ -23,6 +37,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
   String? _userId;
   String? _userRole;
   bool _isLoading = true;
+
+  bool get _resolvedIsAdmin {
+    if (widget.mode == NotificationsPageMode.admin) return true;
+    if (widget.mode == NotificationsPageMode.carpenter) return false;
+    return _userRole == 'admin';
+  }
 
   // Stream controllers for merging queries
   Stream<List<QueryDocumentSnapshot>>? _mergedNotificationsStream;
@@ -63,7 +83,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
     // For carpenters: merge personal notifications + broadcast notifications
     // For admins: only admin-specific notifications
-    if (_userRole != 'admin') {
+    if (!_resolvedIsAdmin) {
       // CARPENTERS: Show personal + broadcast notifications
       // Need to merge two streams: personal notifications + broadcast notifications
       _createCarpenterMergedStream(userId);
@@ -74,21 +94,17 @@ class _NotificationsPageState extends State<NotificationsPage> {
     final notificationsQuery = FirebaseFirestore.instance
         .collection('notification_logs')
         .where('userId', isEqualTo: userId)
-        .orderBy('sentAt', descending: true)
         .limit(50);
 
-    debugPrint(
-      '✅ Admin Query: WHERE userId = $userId, ORDER BY sentAt DESC, LIMIT 50',
-    );
+    debugPrint('✅ Admin Query: WHERE userId = $userId, LIMIT 50');
 
     // Use broadcast stream to allow multiple listeners (StreamBuilder may rebuild)
     _streamController =
         StreamController<List<QueryDocumentSnapshot>>.broadcast();
 
     // Single stream - filter only carpenter-relevant notifications
-    _userNotificationsSubscription = notificationsQuery.snapshots().listen((
-      snapshot,
-    ) {
+    _userNotificationsSubscription = notificationsQuery.snapshots().listen(
+      (snapshot) {
       debugPrint(
         '📊 Received ${snapshot.docs.length} notifications from Firestore',
       );
@@ -118,7 +134,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
       // Filter notifications based on user role
       List<QueryDocumentSnapshot> filteredDocs = snapshot.docs;
 
-      if (_userRole == 'admin') {
+      if (_resolvedIsAdmin) {
         // Admins: show only admin-specific notifications
         filteredDocs = snapshot.docs.where((doc) {
           final data = doc.data();
@@ -168,7 +184,15 @@ class _NotificationsPageState extends State<NotificationsPage> {
       if (!_streamController!.isClosed) {
         _streamController!.add(filteredDocs);
       }
-    });
+      },
+      onError: (e) {
+        debugPrint('❌ Admin notifications stream error: $e');
+        // Don't crash the route; show empty notifications instead.
+        if (!_streamController!.isClosed) {
+          _streamController!.add(const []);
+        }
+      },
+    );
 
     _mergedNotificationsStream = _streamController!.stream;
 
@@ -414,7 +438,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
       allDocs.addAll(userSnapshot.docs);
 
       // Only admins can delete broadcast notification logs
-      if (_userRole == 'admin') {
+      if (_resolvedIsAdmin) {
         final broadcastSnapshot = await FirebaseFirestore.instance
             .collection('notification_logs')
             .where('isBroadcast', isEqualTo: true)
@@ -570,7 +594,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
       );
     }
 
-    final bool isAdmin = (_userRole == 'admin');
+    final bool isAdmin = _resolvedIsAdmin;
 
     if (_userId == null) {
       return Scaffold(
@@ -602,6 +626,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 showLogo: false,
                 showProfileButton: false,
                 showBackButton: isAdmin,
+                // Notifications route lives inside the carpenter ShellRoute.
+                // For admins, we must override back to return to Admin dashboard.
+                onBackTap: isAdmin ? () => context.go('/admin') : null,
                 actions: [
                   StreamBuilder<List<QueryDocumentSnapshot>>(
                     stream: _mergedNotificationsStream,
@@ -983,15 +1010,19 @@ class _NotificationsPageState extends State<NotificationsPage> {
   void _handleNotificationTap(Map<String, dynamic> data, String? type) {
     try {
       // Get screen route from notification data
-      final screen = data['screen'] as String?;
+      final screenRaw = data['screen'] as String?;
+      final screen = screenRaw?.trim();
+      final normalizedScreen = (screen != null && screen.isNotEmpty && screen.endsWith('/') && screen.length > 1)
+          ? screen.substring(0, screen.length - 1)
+          : screen;
 
       // If no screen specified, stay on notifications page
-      if (screen == null || screen.isEmpty) {
+      if (normalizedScreen == null || normalizedScreen.isEmpty) {
         return;
       }
 
-      // Navigate based on notification type and role
-      if (_userRole == 'admin') {
+      // Navigate based on notification type and role/mode
+      if (_resolvedIsAdmin) {
         // Admin navigation
         switch (type) {
           case 'newPendingBill':
@@ -1004,8 +1035,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
             break;
           default:
             // Use screen from data
-            if (screen == '/admin' || screen == '/notifications') {
-              context.go(screen);
+            if (normalizedScreen == '/admin') {
+              context.go('/admin');
+            } else if (normalizedScreen == '/notifications' ||
+                normalizedScreen == '/notifications/') {
+              // Admin notifications route (outside the carpenter ShellRoute)
+              context.go('/admin/notifications');
+            } else if (normalizedScreen == '/admin/notifications') {
+              context.go('/admin/notifications');
             } else {
               // For other screens, navigate to admin home
               context.go('/admin');
@@ -1037,11 +1074,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
             break;
           default:
             // Use screen from data, fallback to home
-            if (screen == '/notifications') {
+            if (normalizedScreen == '/notifications') {
               // Already on notifications page
               return;
-            } else if (screen == '/profile' || screen == '/daily-spin') {
-              context.go(screen);
+            } else if (normalizedScreen == '/profile' ||
+                normalizedScreen == '/daily-spin') {
+              context.go(normalizedScreen);
             } else {
               // Default to home
               context.go('/');

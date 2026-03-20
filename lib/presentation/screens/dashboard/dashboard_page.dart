@@ -3,6 +3,7 @@ import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:balaji_points/services/session_service.dart';
 
 // ── Layout constants ──────────────────────────────────────────────────────────
 const _kBarHeight = 64.0;
@@ -22,6 +23,25 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> with DoubleTapExitMixin {
+  final SessionService _sessionService = SessionService();
+  bool _roleLoaded = false;
+  bool _isAdmin = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRole();
+  }
+
+  Future<void> _loadRole() async {
+    final role = await _sessionService.getUserRole();
+    if (!mounted) return;
+    setState(() {
+      _roleLoaded = true;
+      _isAdmin = role == 'admin';
+    });
+  }
+
   // Center Add-Points tab never calls this — it pushes a route directly.
   void _onItemTapped(int index) {
     final router = GoRouter.of(context);
@@ -95,81 +115,84 @@ class _DashboardPageState extends State<DashboardPage> with DoubleTapExitMixin {
               bottom: false,
               child: widget.child ?? const SizedBox.shrink(),
             ),
-            // Custom bottom bar overlaid on top
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: SafeArea(
-                top: false,
-                bottom: true,
-                child: SizedBox(
-                  height: _kStackHeight,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      // ── Notched dark pill bar ───────────────────────
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        top: _kBarTop,
-                        bottom: 0,
-                        child: CustomPaint(
-                          painter: _NotchedBarPainter(
-                            barColor: barColor,
-                            shadowColor: shadowColor,
-                            topBorderColor: topBorderColor,
-                          ),
-                          child: Row(
-                            children: [
-                              _DarkNavItem(
-                                index: 0,
-                                currentIndex: currentIndex,
-                                icon: Icons.home_rounded,
-                                label: l10n.home,
-                                onTap: _onItemTapped,
-                              ),
-                              _DarkNavItem(
-                                index: 1,
-                                currentIndex: currentIndex,
-                                icon: Icons.account_balance_wallet_outlined,
-                                label: l10n.earn,
-                                onTap: _onItemTapped,
-                              ),
-                              // Space for the floating FAB
-                              const SizedBox(width: _kFabSize + 20),
-                              _DarkNavItem(
-                                index: 2,
-                                currentIndex: currentIndex,
-                                icon: Icons.notifications_outlined,
-                                label: l10n.notifications,
-                                onTap: _onItemTapped,
-                              ),
-                              _DarkNavItem(
-                                index: 3,
-                                currentIndex: currentIndex,
-                                icon: Icons.person_outline,
-                                label: l10n.profile,
-                                onTap: _onItemTapped,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      // ── Center floating Add-Points FAB ──────────────
-                      Positioned(
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        child: Center(
-                          child: _AddPointsFab(
-                            onTap: () => context.push('/add-bill'),
+            // Custom bottom bar overlaid on top.
+            // Admin role should not see carpenter bottom tabs.
+            if (_roleLoaded && !_isAdmin)
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: SafeArea(
+                  top: false,
+                  bottom: true,
+                  child: SizedBox(
+                    height: _kStackHeight,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        // ── Notched dark pill bar ───────────────────────
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          top: _kBarTop,
+                          bottom: 0,
+                          child: CustomPaint(
+                            painter: _NotchedBarPainter(
+                              barColor: barColor,
+                              shadowColor: shadowColor,
+                              topBorderColor: topBorderColor,
+                            ),
+                            child: Row(
+                              children: [
+                                _DarkNavItem(
+                                  index: 0,
+                                  currentIndex: currentIndex,
+                                  icon: Icons.home_rounded,
+                                  label: l10n.home,
+                                  onTap: _onItemTapped,
+                                ),
+                                _DarkNavItem(
+                                  index: 1,
+                                  currentIndex: currentIndex,
+                                  icon:
+                                      Icons.account_balance_wallet_outlined,
+                                  label: l10n.earn,
+                                  onTap: _onItemTapped,
+                                ),
+                                // Space for the floating FAB
+                                const SizedBox(width: _kFabSize + 20),
+                                _DarkNavItem(
+                                  index: 2,
+                                  currentIndex: currentIndex,
+                                  icon: Icons.notifications_outlined,
+                                  label: l10n.notifications,
+                                  onTap: _onItemTapped,
+                                ),
+                                _DarkNavItem(
+                                  index: 3,
+                                  currentIndex: currentIndex,
+                                  icon: Icons.person_outline,
+                                  label: l10n.profile,
+                                  onTap: _onItemTapped,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                        // ── Center floating Add-Points FAB ──────────────
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: Center(
+                            child: _AddPointsFab(
+                              onTap: () => context.push('/add-bill'),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),

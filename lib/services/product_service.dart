@@ -11,6 +11,47 @@ class ProductService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final SessionService _sessionService = SessionService();
 
+  /// Upload product catalog PDF to Firebase Storage
+  Future<String?> uploadProductCatalogPdf(File pdfFile) async {
+    try {
+      final productCatalogId = _firestore.collection('product_catalogs').doc().id;
+      final ref = _storage.ref().child('product_catalogs/$productCatalogId.pdf');
+
+      AppLogger.info(
+        'Uploading product catalog PDF: product_catalogs/$productCatalogId.pdf',
+      );
+
+      final uploadTask = await ref.putFile(
+        pdfFile,
+        SettableMetadata(
+          contentType: 'application/pdf',
+          customMetadata: {
+            'productCatalogId': productCatalogId,
+            'uploadedAt': DateTime.now().toIso8601String(),
+          },
+        ),
+      );
+
+      return await uploadTask.ref.getDownloadURL();
+    } on FirebaseException catch (e) {
+      AppLogger.error(
+        'Firebase Storage error (product catalog pdf)',
+        'Code: ${e.code}, Message: ${e.message}',
+      );
+      if (e.code == 'storage/unauthorized') {
+        throw Exception('Storage access denied. Please check Firebase Storage rules.');
+      } else if (e.code == 'storage/canceled') {
+        throw Exception('PDF upload was cancelled');
+      } else if (e.code == 'storage/unknown') {
+        throw Exception('Firebase Storage is not configured. Please enable Storage.');
+      }
+      throw Exception('Failed to upload product catalog PDF: ${e.message}');
+    } catch (e) {
+      AppLogger.error('Error uploading product catalog PDF', e);
+      throw Exception('Failed to upload product catalog PDF: $e');
+    }
+  }
+
   /// Upload product image to Firebase Storage
   Future<String?> uploadProductImage(File imageFile) async {
     try {
@@ -69,6 +110,19 @@ class ProductService {
     }
   }
 
+  Future<void> _deleteCatalogPdfIfExists(String? pdfUrl) async {
+    if (pdfUrl == null || pdfUrl.isEmpty) return;
+
+    try {
+      final ref = _storage.refFromURL(pdfUrl);
+      await ref.delete();
+      AppLogger.info('Deleted product catalog pdf: $pdfUrl');
+    } catch (e) {
+      AppLogger.error('Error deleting product catalog pdf', e);
+      // Not critical to fail the whole delete flow.
+    }
+  }
+
   /// Create a new product
   Future<bool> createProduct({
     required String name,
@@ -81,6 +135,7 @@ class ProductService {
     String? quality,
     String? imageUrl,
     List<String>? imageUrls,
+    String? catalogPdfUrl,
     bool isActive = true,
   }) async {
     try {
@@ -114,6 +169,7 @@ class ProductService {
         'imageUrl':
             (allImageUrls.isNotEmpty ? allImageUrls.first : (imageUrl ?? '')),
         'imageUrls': allImageUrls,
+        'catalogPdfUrl': catalogPdfUrl ?? '',
         'isActive': isActive,
         'createdBy': adminUserId,
         'createdByPhone': adminPhone,
@@ -148,8 +204,10 @@ class ProductService {
     String? quality,
     String? imageUrl,
     List<String>? imageUrls,
+    String? catalogPdfUrl,
     bool? isActive,
     String? oldImageUrl,
+    String? oldCatalogPdfUrl,
   }) async {
     try {
       AppLogger.info(
@@ -161,6 +219,13 @@ class ProductService {
           imageUrl.isNotEmpty &&
           imageUrl != oldImageUrl) {
         await _deleteImageIfExists(oldImageUrl);
+      }
+
+      if (catalogPdfUrl != null &&
+          oldCatalogPdfUrl != null &&
+          catalogPdfUrl.isNotEmpty &&
+          catalogPdfUrl != oldCatalogPdfUrl) {
+        await _deleteCatalogPdfIfExists(oldCatalogPdfUrl);
       }
 
       final productRef = _firestore.collection('products').doc(productId);
@@ -197,6 +262,10 @@ class ProductService {
           updateData['imageUrl'] = imageUrls.first;
         }
       }
+
+      if (catalogPdfUrl != null) {
+        updateData['catalogPdfUrl'] = catalogPdfUrl;
+      }
       if (isActive != null) {
         updateData['isActive'] = isActive;
       }
@@ -223,6 +292,13 @@ class ProductService {
       AppLogger.info('Deleting product: $productId');
 
       await _deleteImageIfExists(imageUrl);
+
+      // Best-effort: also delete catalog pdf if we can load it
+      final snap = await _firestore.collection('products').doc(productId).get();
+      final data = snap.data() as Map<String, dynamic>?;
+      final catalogPdfUrl = data?['catalogPdfUrl'] as String?;
+      await _deleteCatalogPdfIfExists(catalogPdfUrl);
+
       await _firestore.collection('products').doc(productId).delete();
 
       AppLogger.info('Product deleted successfully: $productId');

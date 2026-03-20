@@ -17,6 +17,7 @@ import '../../widgets/admin/users_list.dart';
 import '../../widgets/admin/daily_spin_management.dart';
 import '../../widgets/admin/bill_history_list.dart';
 import '../../widgets/admin/orders_management.dart';
+import 'admin_notifications_page.dart';
 
 class AdminHomePage extends ConsumerStatefulWidget {
   const AdminHomePage({super.key});
@@ -30,6 +31,11 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
   bool _showDashboard = true;
   String? _selectedSection;
 
+  static const List<String> _adminNotificationTypes = [
+    'newPendingBill',
+    'newUserRegistered',
+  ];
+
   void _openSection(String section) {
     setState(() {
       _showDashboard = false;
@@ -42,16 +48,6 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
       _showDashboard = true;
       _selectedSection = null;
     });
-  }
-
-  /// Get filtered notifications stream based on user role
-  Stream<QuerySnapshot> _getFilteredNotificationsStream() {
-    // For admins, show only admin-related notifications (new bills, new users)
-    return FirebaseFirestore.instance
-        .collection('notification_logs')
-        .where('type', whereIn: ['newPendingBill', 'newUserRegistered'])
-        .orderBy('sentAt', descending: true)
-        .snapshots();
   }
 
   Future<void> _handleLogout() async {
@@ -122,6 +118,93 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
     }
   }
 
+  Future<void> _deleteAllAdminNotifications() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete All Notifications'),
+        content: const Text(
+          'Are you sure you want to delete all admin notifications?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: DesignToken.redShade600,
+              foregroundColor: DesignToken.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    // Blocking progress.
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('notification_logs')
+          .where('type', whereIn: _adminNotificationTypes)
+          .get();
+
+      final docs = snapshot.docs;
+      if (docs.isEmpty) {
+        if (!context.mounted) return;
+        Navigator.of(context).pop(); // progress
+        return;
+      }
+
+      // Firestore batch limit is 500 writes.
+      const batchSize = 450;
+      for (int i = 0; i < docs.length; i += batchSize) {
+        final batch = FirebaseFirestore.instance.batch();
+        final chunk = docs.sublist(
+          i,
+          i + batchSize < docs.length ? i + batchSize : docs.length,
+        );
+        for (final doc in chunk) {
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
+      }
+
+      if (!context.mounted) return;
+      Navigator.of(context).pop(); // progress
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${docs.length} notification(s) deleted'),
+          backgroundColor: DesignToken.primary,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.of(context).pop(); // progress
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Delete failed: $e'),
+          backgroundColor: DesignToken.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -170,7 +253,9 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
                             width: 36,
                             height: 36,
                             decoration: BoxDecoration(
-                              color: DesignToken.primary.withValues(alpha: 0.15),
+                              color: DesignToken.primary.withValues(
+                                alpha: 0.15,
+                              ),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: const Icon(
@@ -199,10 +284,12 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            AppConstants.shopAddressShort,
+                            AppConstants.shopNameShort,
                             style: AppTextStyles.nunitoRegular.copyWith(
                               fontSize: 11,
-                              color: DesignToken.textDark.withValues(alpha: 0.65),
+                              color: DesignToken.textDark.withValues(
+                                alpha: 0.65,
+                              ),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -212,6 +299,8 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
                     ],
                   ),
                 )
+              : _selectedSection == 'users'
+              ? _usersCountTitle()
               : Text(
                   _sectionTitle(_selectedSection!),
                   style: AppTextStyles.nunitoBold.copyWith(
@@ -221,51 +310,17 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
                 ),
           centerTitle: !_showDashboard,
           actions: [
-            StreamBuilder<QuerySnapshot>(
-              stream: _getFilteredNotificationsStream(),
-              builder: (context, snapshot) {
-                int notificationCount = snapshot.data?.docs.length ?? 0;
-                return Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.notifications_outlined, size: 24),
-                      onPressed: () => context.push('/notifications'),
-                    ),
-                    if (notificationCount > 0)
-                      Positioned(
-                        right: 8,
-                        top: 8,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: 16,
-                            minHeight: 16,
-                          ),
-                          child: Center(
-                            child: Text(
-                              notificationCount > 99 ? '99+' : '$notificationCount',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                );
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.logout, size: 24),
-              onPressed: _handleLogout,
-            ),
+            if (!_showDashboard && _selectedSection == 'notifications')
+              IconButton(
+                icon: const Icon(Icons.delete_outline, size: 24),
+                onPressed: _deleteAllAdminNotifications,
+                tooltip: 'Delete All Notifications',
+              )
+            else
+              IconButton(
+                icon: const Icon(Icons.logout, size: 24),
+                onPressed: _handleLogout,
+              ),
           ],
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(1),
@@ -295,6 +350,8 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
         return 'Offers';
       case 'users':
         return 'Users';
+      case 'notifications':
+        return 'Notifications';
       case 'products':
         return 'Products';
       case 'orders':
@@ -304,6 +361,42 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
       default:
         return 'Admin';
     }
+  }
+
+  Widget _usersCountTitle() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('users').snapshots(),
+      builder: (context, snapshot) {
+        final docs = snapshot.data?.docs ?? const [];
+        // Match UsersList filtering:
+        // - Exclude admins
+        // - Include carpenters (role == 'carpenter') OR missing/empty role
+        final count = docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final role = data['role'] as String?;
+          if (role == 'admin') return false;
+          return role == null || role.isEmpty || role == 'carpenter';
+        }).length;
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Text(
+            'Users - ...',
+            style: AppTextStyles.nunitoBold.copyWith(
+              fontSize: 18,
+              color: DesignToken.textDark,
+            ),
+          );
+        }
+
+        return Text(
+          'Users - $count',
+          style: AppTextStyles.nunitoBold.copyWith(
+            fontSize: 18,
+            color: DesignToken.textDark,
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildSectionContent(String section) {
@@ -316,6 +409,8 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
         return const OffersManagement();
       case 'users':
         return const UsersList();
+      case 'notifications':
+        return const AdminNotificationsPage(embedded: true);
       case 'products':
         return const ProductsManagement();
       case 'orders':
@@ -327,4 +422,3 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
     }
   }
 }
-

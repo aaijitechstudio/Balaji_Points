@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/theme/design_token.dart';
@@ -512,6 +513,10 @@ class _CreateEditProductDialogState extends State<_CreateEditProductDialog> {
   bool _isActive = true;
   bool _isSaving = false;
   bool _isUploadingImage = false;
+  File? _newCatalogPdfFile;
+  String _existingCatalogPdfUrl = '';
+  String? _selectedCatalogPdfName;
+  bool _isUploadingCatalogPdf = false;
 
   bool get _isEditMode => widget.isEditMode;
 
@@ -548,6 +553,10 @@ class _CreateEditProductDialogState extends State<_CreateEditProductDialog> {
       _selectedSubCategory =
           (product['subCategory'] ?? _selectedSubCategory) as String;
       _isActive = (product['isActive'] ?? true) as bool;
+      final rawCatalogPdfUrl = product['catalogPdfUrl'];
+      if (rawCatalogPdfUrl is String) {
+        _existingCatalogPdfUrl = rawCatalogPdfUrl;
+      }
     }
   }
 
@@ -580,6 +589,34 @@ class _CreateEditProductDialogState extends State<_CreateEditProductDialog> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to pick image: $e'),
+          backgroundColor: DesignToken.error,
+        ),
+      );
+    }
+  }
+
+  Future<void> _pickCatalogPdf() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+      );
+
+      if (result == null || result.files.isEmpty) return;
+
+      final picked = result.files.first;
+      final path = picked.path;
+      if (path == null || path.isEmpty) return;
+
+      setState(() {
+        _newCatalogPdfFile = File(path);
+        _selectedCatalogPdfName = picked.name;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to pick PDF: $e'),
           backgroundColor: DesignToken.error,
         ),
       );
@@ -638,6 +675,18 @@ class _CreateEditProductDialogState extends State<_CreateEditProductDialog> {
         });
       }
 
+      String? finalCatalogPdfUrl = _existingCatalogPdfUrl;
+      if (_newCatalogPdfFile != null) {
+        setState(() {
+          _isUploadingCatalogPdf = true;
+        });
+        finalCatalogPdfUrl = await _productService
+            .uploadProductCatalogPdf(_newCatalogPdfFile!);
+        setState(() {
+          _isUploadingCatalogPdf = false;
+        });
+      }
+
       bool success;
       if (_isEditMode) {
         success = await _productService.updateProduct(
@@ -655,6 +704,11 @@ class _CreateEditProductDialogState extends State<_CreateEditProductDialog> {
           isActive: _isActive,
           oldImageUrl:
               _existingImageUrls.isNotEmpty ? _existingImageUrls.first : null,
+          catalogPdfUrl: finalCatalogPdfUrl != null && finalCatalogPdfUrl.isNotEmpty
+              ? finalCatalogPdfUrl
+              : null,
+          oldCatalogPdfUrl:
+              _existingCatalogPdfUrl.isNotEmpty ? _existingCatalogPdfUrl : null,
         );
       } else {
         success = await _productService.createProduct(
@@ -668,6 +722,9 @@ class _CreateEditProductDialogState extends State<_CreateEditProductDialog> {
           thickness: thickness.isEmpty ? null : thickness,
           quality: quality.isEmpty ? null : quality,
           imageUrls: allImageUrls,
+          catalogPdfUrl: finalCatalogPdfUrl != null && finalCatalogPdfUrl.isNotEmpty
+              ? finalCatalogPdfUrl
+              : null,
           isActive: _isActive,
         );
       }
@@ -702,6 +759,7 @@ class _CreateEditProductDialogState extends State<_CreateEditProductDialog> {
       setState(() {
         _isSaving = false;
         _isUploadingImage = false;
+        _isUploadingCatalogPdf = false;
       });
     }
   }
@@ -743,9 +801,9 @@ class _CreateEditProductDialogState extends State<_CreateEditProductDialog> {
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),
                     onPressed:
-                        _isSaving || _isUploadingImage ? null : () => Navigator
-                            .of(context)
-                            .pop(),
+                        (_isSaving || _isUploadingImage || _isUploadingCatalogPdf)
+                            ? null
+                            : () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
@@ -822,7 +880,115 @@ class _CreateEditProductDialogState extends State<_CreateEditProductDialog> {
                             ),
                           ),
                         ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.picture_as_pdf,
+                                  color: DesignToken.primary,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    'Catalog PDF (optional)',
+                                    style: AppTextStyles.nunitoMedium.copyWith(
+                                      fontSize: 14,
+                                      color: DesignToken.textDark,
+                                    ),
+                                  ),
+                                ),
+                                if (_existingCatalogPdfUrl.isNotEmpty &&
+                                    _newCatalogPdfFile == null)
+                                  const Icon(
+                                    Icons.check_circle,
+                                    color: Colors.green,
+                                    size: 20,
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    _selectedCatalogPdfName ??
+                                        (_existingCatalogPdfUrl.isNotEmpty
+                                            ? 'PDF attached'
+                                            : 'No PDF selected'),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTextStyles.nunitoRegular.copyWith(
+                                      fontSize: 13,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                OutlinedButton.icon(
+                                  onPressed: (_isSaving ||
+                                          _isUploadingImage ||
+                                          _isUploadingCatalogPdf)
+                                      ? null
+                                      : _pickCatalogPdf,
+                                  icon: const Icon(Icons.upload_file),
+                                  label: Text(
+                                    _selectedCatalogPdfName != null ||
+                                            _existingCatalogPdfUrl.isNotEmpty
+                                        ? 'Change'
+                                        : 'Upload',
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 10,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (_isUploadingCatalogPdf)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 10),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                          DesignToken.primary,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Text(
+                                      'Uploading PDF...',
+                                      style: AppTextStyles.nunitoMedium.copyWith(
+                                        fontSize: 13,
+                                        color: DesignToken.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                       TextFormField(
                         controller: _nameController,
                         style: AppTextStyles.nunitoRegular.copyWith(
@@ -1040,7 +1206,9 @@ class _CreateEditProductDialogState extends State<_CreateEditProductDialog> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: (_isSaving || _isUploadingImage)
+                          onPressed: (_isSaving ||
+                                  _isUploadingImage ||
+                                  _isUploadingCatalogPdf)
                               ? null
                               : _saveProduct,
                           style: ElevatedButton.styleFrom(

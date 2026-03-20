@@ -205,6 +205,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           final thickness = (data['thickness'] ?? '') as String;
           final quality = (data['quality'] ?? '') as String;
           final description = (data['description'] ?? '') as String;
+          final catalogPdfUrl = (data['catalogPdfUrl'] ?? '') as String;
           final priceNum = (data['price'] ?? 0) as num;
           final price = priceNum.toDouble();
           final imageUrlsRaw = data['imageUrls'];
@@ -389,6 +390,35 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                           style: AppTextStyles.nunitoRegular.copyWith(
                             fontSize: 14,
                             color: Colors.grey[700],
+                          ),
+                        ),
+                      ],
+                      if (catalogPdfUrl.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            final uri = Uri.parse(catalogPdfUrl);
+                            if (!await launchUrl(
+                              uri,
+                              mode: LaunchMode.externalApplication,
+                            )) {
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Unable to open catalog PDF.'),
+                                ),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.picture_as_pdf),
+                          label: const Text('View catalog PDF'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: DesignToken.primary,
+                            side: const BorderSide(color: DesignToken.primary),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                         ),
                       ],

@@ -23,9 +23,11 @@ import 'package:balaji_points/presentation/screens/wallet/wallet_page.dart';
 import 'package:balaji_points/presentation/screens/admin/admin_home_page.dart';
 import 'package:balaji_points/presentation/screens/admin/admin_add_bill_page.dart';
 import 'package:balaji_points/presentation/screens/admin/diagnostic_page.dart';
+import 'package:balaji_points/presentation/screens/admin/admin_notifications_page.dart';
 import 'package:balaji_points/presentation/screens/bills/add_bill_page.dart';
 import 'package:balaji_points/presentation/screens/settings/notification_settings_page.dart';
 import 'package:balaji_points/presentation/screens/notifications/notifications_page.dart';
+import 'package:balaji_points/services/session_service.dart';
 import 'package:balaji_points/presentation/screens/products/product_list_page.dart';
 import 'package:balaji_points/presentation/screens/cart/cart_page.dart';
 import 'package:balaji_points/presentation/screens/products/product_detail_page.dart';
@@ -40,6 +42,18 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/splash',
 
     redirect: (context, state) async {
+      // Prevent admin from entering carpenter notifications route.
+      if (state.uri.path == '/notifications') {
+        final role = await SessionService().getUserRole();
+        if (role == 'admin') return '/admin/notifications';
+      }
+
+      // Robust fallback: if anything weird is appended to the admin notifications
+      // path (extra slash/segments), normalize it back.
+      if (state.uri.path.startsWith('/admin/notifications') &&
+          state.uri.path != '/admin/notifications') {
+        return '/admin/notifications';
+      }
       return null;
     },
 
@@ -52,9 +66,28 @@ final routerProvider = Provider<GoRouter>((ref) {
             const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
             Text('Page not found: ${state.uri}'),
+            if (state.error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 12, left: 24, right: 24),
+                child: Text(
+                  'Error: ${state.error}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 12),
+                  maxLines: 5,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => context.go('/'),
+              onPressed: () async {
+                final role = await SessionService().getUserRole();
+                if (!context.mounted) return;
+                if (role == 'admin') {
+                  context.go('/admin');
+                } else {
+                  context.go('/');
+                }
+              },
               child: const Text('Go Home'),
             ),
           ],
@@ -202,6 +235,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/admin/diagnostic',
         builder: (context, _) => const DiagnosticPage(),
       ),
+      GoRoute(
+        path: '/admin/notifications',
+        builder: (context, _) => const AdminNotificationsPage(),
+      ),
+      // Note: trailing slash is normalized by the redirect.
     ],
   );
 });

@@ -111,6 +111,7 @@ class AppConstants {
   static const String sessionExpired = 'Session expired. Please login again.';
 
   // Shop / App bar display
+  static const String shopNameShort = 'Sri Balaji Plywood & Hardware';
   static const String shopAddressShort = '150 VCTV Main Road, Erode';
 
   // Assets Paths
