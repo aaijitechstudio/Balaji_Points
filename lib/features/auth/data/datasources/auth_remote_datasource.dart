@@ -81,13 +81,19 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<void> saveSession(UserModel user, bool rememberMe) async {
     if (rememberMe) {
+      final normalizedRole = user.role.trim().toLowerCase();
+
       await _sessionService.saveSession(
         phoneNumber: user.phoneNumber ?? '',
         userId: user.id,
-        role: user.role ?? 'carpenter',
+        role: normalizedRole,
         firstName: user.displayName?.split(' ').first,
         lastName: user.displayName?.split(' ').skip(1).join(' '),
       );
+    } else {
+      // If user doesn't want to remember, clear any existing persisted session
+      // (prevents stale "admin" role from redirecting splash incorrectly).
+      await _sessionService.clearSession();
     }
     
     // Save FCM token after login

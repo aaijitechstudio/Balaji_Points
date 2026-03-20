@@ -10,6 +10,7 @@ import 'package:balaji_points/services/user_service.dart';
 import 'package:balaji_points/services/session_service.dart';
 import 'package:balaji_points/core/logger.dart';
 import 'package:balaji_points/core/utils/back_button_handler.dart';
+import 'package:balaji_points/presentation/widgets/home_nav_bar.dart';
 
 class AddBillPage extends StatefulWidget {
   const AddBillPage({super.key});
@@ -390,20 +391,6 @@ class _AddBillPageState extends State<AddBillPage> {
     }
   }
 
-  void _onBottomNavTapped(int index) {
-    switch (index) {
-      case 0:
-        context.go('/');
-        break;
-      case 1:
-        context.go('/');
-        break;
-      case 2:
-        context.go('/profile');
-        break;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -435,41 +422,48 @@ class _AddBillPageState extends State<AddBillPage> {
       child: Builder(
         builder: (context) {
           final l10n = AppLocalizations.of(context);
+          final theme = Theme.of(context);
+          final isDark = theme.brightness == Brightness.dark;
+          final borderColor = isDark
+              ? Colors.white.withValues(alpha: 0.12)
+              : Colors.black.withValues(alpha: 0.08);
           return Scaffold(
-            backgroundColor: DesignToken.woodenBackground,
-            appBar: AppBar(
-              backgroundColor: DesignToken.primary,
-              elevation: 0,
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back, color: DesignToken.white),
-                onPressed: () => context.pop(),
-              ),
-              title: Text(
-                l10n?.addBill ?? 'Add Bill',
-                style: AppTextStyles.nunitoBold.copyWith(
-                  color: DesignToken.white,
-                  fontSize: 20,
-                ),
-              ),
-            ),
+            backgroundColor: theme.scaffoldBackgroundColor,
             body: Column(
               children: [
+                // Top nav bar consistent with Profile/Add Profile screens
+                HomeNavBar(
+                  title: l10n?.addBill ?? 'Add Bill',
+                  showLogo: false,
+                  showProfileButton: false,
+                  showBackButton: true,
+                ),
+                // Light divider under nav bar
+                Container(
+                  height: 1,
+                  color: borderColor,
+                ),
                 // Scrollable Form Content
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
+                    padding: EdgeInsets.fromLTRB(
+                      24,
+                      24,
+                      24,
+                      MediaQuery.of(context).padding.bottom + 160,
+                    ),
                     child: Form(
                       key: _formKey,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 12),
 
                           // Bill Image Section
                           Text(
                             l10n?.billImage ?? 'Bill Image',
                             style: AppTextStyles.nunitoSemiBold.copyWith(
-                              fontSize: 16,
+                              fontSize: 14,
                               color: DesignToken.primary,
                             ),
                           ),
@@ -478,7 +472,7 @@ class _AddBillPageState extends State<AddBillPage> {
                           GestureDetector(
                             onTap: _showImageSourceDialog,
                             child: Container(
-                              height: 200,
+                              height: 180,
                               decoration: BoxDecoration(
                                 color: DesignToken.white,
                                 borderRadius: BorderRadius.circular(16),
@@ -522,13 +516,13 @@ class _AddBillPageState extends State<AddBillPage> {
                             ),
                           ),
 
-                          const SizedBox(height: 32),
+                          const SizedBox(height: 24),
 
                           // Amount Field (moved to top)
                           Text(
                             l10n?.billAmount ?? 'Bill Amount (₹)',
                             style: AppTextStyles.nunitoSemiBold.copyWith(
-                              fontSize: 16,
+                              fontSize: 14,
                               color: DesignToken.primary,
                             ),
                           ),
@@ -539,7 +533,7 @@ class _AddBillPageState extends State<AddBillPage> {
                             keyboardType: TextInputType.number,
                             style: AppTextStyles.nunitoRegular.copyWith(
                               color: DesignToken.textDark,
-                              fontSize: 18,
+                              fontSize: 16,
                             ),
                             decoration: InputDecoration(
                               filled: true,
@@ -846,8 +840,9 @@ class _AddBillPageState extends State<AddBillPage> {
                   ),
                 ),
 
-                // Fixed Submit Button at Bottom
+                // Fixed Submit Button at Bottom - lifted above bottom tab bar
                 Container(
+                  margin: const EdgeInsets.only(bottom: 80),
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     color: DesignToken.white,
@@ -861,6 +856,7 @@ class _AddBillPageState extends State<AddBillPage> {
                   ),
                   child: SafeArea(
                     top: false,
+                    bottom: false,
                     child: SizedBox(
                       width: double.infinity,
                       child: Container(
@@ -907,29 +903,6 @@ class _AddBillPageState extends State<AddBillPage> {
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            bottomNavigationBar: BottomNavigationBar(
-              currentIndex:
-                  1, // Earn tab selected (bills are related to earning)
-              onTap: _onBottomNavTapped,
-              selectedItemColor: DesignToken.secondary,
-              unselectedItemColor: DesignToken.white,
-              backgroundColor: DesignToken.primary,
-              type: BottomNavigationBarType.fixed,
-              items: [
-                BottomNavigationBarItem(
-                  icon: const Icon(Icons.home),
-                  label: l10n?.home ?? "Home",
-                ),
-                BottomNavigationBarItem(
-                  icon: const Icon(Icons.monetization_on_outlined),
-                  label: l10n?.earn ?? "Earn",
-                ),
-                BottomNavigationBarItem(
-                  icon: const Icon(Icons.person_outline),
-                  label: l10n?.profile ?? "Profile",
                 ),
               ],
             ),

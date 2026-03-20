@@ -21,39 +21,19 @@ class PINLoginPage extends StatefulWidget {
 }
 
 class _PINLoginPageState extends State<PINLoginPage>
-    with SingleTickerProviderStateMixin {
+{
   final _pinController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-
-  late AnimationController _animationController;
-  late List<FloatingElement> _floatingElements;
 
   bool _rememberMe = true;
 
   @override
   void initState() {
     super.initState();
-
-    // Initialize animation controller
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 8),
-    )..repeat();
-
-    // Initialize floating animated elements
-    _floatingElements = List.generate(25, (index) {
-      return FloatingElement(
-        x: math.Random().nextDouble(),
-        y: math.Random().nextDouble(),
-        speed: 0.2 + math.Random().nextDouble() * 0.8,
-        type: FloatingType.values[index % FloatingType.values.length],
-      );
-    });
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
     _pinController.dispose();
     super.dispose();
   }
@@ -84,6 +64,7 @@ class _PINLoginPageState extends State<PINLoginPage>
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final topInset = MediaQuery.of(context).padding.top;
     final l10n = AppLocalizations.of(context)!;
 
     return PopScope(
@@ -112,7 +93,8 @@ class _PINLoginPageState extends State<PINLoginPage>
           final isLoggingIn = state is AuthLoadingState;
 
           return Scaffold(
-            backgroundColor: DesignToken.woodenBackground,
+            backgroundColor: Colors.transparent,
+            extendBodyBehindAppBar: true,
 
             appBar: AppBar(
               backgroundColor: DesignToken.transparent,
@@ -124,22 +106,12 @@ class _PINLoginPageState extends State<PINLoginPage>
             ),
 
             body: Stack(
+              fit: StackFit.expand,
               children: [
-                // Animated Background Elements
-                IgnorePointer(
-                  child: RepaintBoundary(
-                    child: ListenableBuilder(
-                      listenable: _animationController,
-                      builder: (context, child) {
-                        return CustomPaint(
-                          size: Size.infinite,
-                          painter: CelebrationPainter(
-                            animationValue: _animationController.value,
-                            elements: _floatingElements,
-                          ),
-                        );
-                      },
-                    ),
+                Positioned.fill(
+                  child: Image.asset(
+                    'assets/images/background_image.png',
+                    fit: BoxFit.cover,
                   ),
                 ),
 
@@ -147,7 +119,7 @@ class _PINLoginPageState extends State<PINLoginPage>
                 SingleChildScrollView(
                   padding: EdgeInsets.fromLTRB(
                     DesignToken.spacing2XL,
-                    DesignToken.spacingXL,
+                    topInset + kToolbarHeight + DesignToken.spacingSM,
                     DesignToken.spacing2XL,
                     bottomInset + DesignToken.spacingXL,
                   ),
@@ -155,7 +127,7 @@ class _PINLoginPageState extends State<PINLoginPage>
                     key: _formKey,
                     child: Column(
                       children: [
-                        SizedBox(height: DesignToken.heightXL),
+                        SizedBox(height: DesignToken.heightSM),
 
                         // Logo
                         ClipRRect(

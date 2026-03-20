@@ -102,8 +102,11 @@ class UserService {
     String verifiedBy = 'system',
   }) async {
     try {
-      await _firestore.collection('users').doc(uid).set({
-        'uid': uid,
+      // For new carpenters we want docId == phone for easier lookups
+      final docId = phone;
+
+      await _firestore.collection('users').doc(docId).set({
+        'uid': uid, // keep original uid for reference
         'firstName': firstName,
         'lastName': lastName,
         'phone': phone,
@@ -120,8 +123,8 @@ class UserService {
       });
 
       // Points initialization
-      await _firestore.collection('user_points').doc(uid).set({
-        'userId': uid,
+      await _firestore.collection('user_points').doc(docId).set({
+        'userId': docId,
         'totalPoints': 0,
         'tier': 'Bronze',
         'lastUpdated': FieldValue.serverTimestamp(),
@@ -135,7 +138,7 @@ class UserService {
         await notificationService.notifyAdminsNewUserRegistered(
           userName: userName.isNotEmpty ? userName : phone,
           userPhone: phone,
-          userId: uid,
+          userId: docId,
         );
         AppLogger.info('✅ Admin notification sent for new user registration');
       } catch (e) {

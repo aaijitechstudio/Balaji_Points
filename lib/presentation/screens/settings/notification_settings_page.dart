@@ -77,7 +77,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error loading preferences: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: DesignToken.error,
           ),
         );
       }
@@ -113,7 +113,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Notification preferences saved'),
-            backgroundColor: Colors.green,
+            backgroundColor: DesignToken.success,
             duration: Duration(seconds: 2),
           ),
         );
@@ -124,7 +124,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error saving preferences: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: DesignToken.error,
           ),
         );
       }
@@ -133,8 +133,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: DesignToken.primary,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Column(
         children: [
           // Navigation Bar
@@ -147,7 +148,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
           // Content
           Expanded(
             child: Container(
-              color: DesignToken.woodenBackground,
+              color: theme.colorScheme.surface,
               child: _isLoading
                   ? const Center(
                       child: CircularProgressIndicator(
@@ -172,7 +173,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                               subtitle:
                                   'Get notified when your bill is approved',
                               icon: Icons.check_circle,
-                              iconColor: Colors.green,
+                              iconColor: DesignToken.success,
                               value: _billApproved,
                               onChanged: (value) {
                                 setState(() => _billApproved = value);
@@ -185,7 +186,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                               subtitle:
                                   'Get notified when your bill is rejected',
                               icon: Icons.cancel,
-                              iconColor: Colors.orange,
+                              iconColor: DesignToken.orange,
                               value: _billRejected,
                               onChanged: (value) {
                                 setState(() => _billRejected = value);
@@ -198,7 +199,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                               subtitle:
                                   'Get notified when points are withdrawn',
                               icon: Icons.remove_circle,
-                              iconColor: Colors.red,
+                              iconColor: DesignToken.error,
                               value: _pointsWithdrawn,
                               onChanged: (value) {
                                 setState(() => _pointsWithdrawn = value);
@@ -213,7 +214,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                               subtitle:
                                   'Get notified when you upgrade to a new tier',
                               icon: Icons.stars,
-                              iconColor: Colors.amber,
+                              iconColor: DesignToken.amber,
                               value: _tierUpgraded,
                               onChanged: (value) {
                                 setState(() => _tierUpgraded = value);
@@ -228,7 +229,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                               subtitle:
                                   'Get notified when you win points from daily spin',
                               icon: Icons.casino,
-                              iconColor: Colors.purple,
+                              iconColor: DesignToken.purple,
                               value: _dailySpin,
                               onChanged: (value) {
                                 setState(() => _dailySpin = value);
@@ -241,7 +242,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                               subtitle:
                                   'Get notified when new offers are available',
                               icon: Icons.card_giftcard,
-                              iconColor: Colors.blue,
+                              iconColor: DesignToken.blue500,
                               value: _newOffers,
                               onChanged: (value) {
                                 setState(() => _newOffers = value);
@@ -261,14 +262,15 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   }
 
   Widget _buildMasterSwitch() {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: DesignToken.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -307,7 +309,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                       : 'All notifications are disabled',
                   style: AppTextStyles.nunitoRegular.copyWith(
                     fontSize: 14,
-                    color: Colors.grey[600],
+                    color: DesignToken.grey600,
                   ),
                 ),
               ],
@@ -320,7 +322,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
               _savePreferences();
             },
             activeTrackColor: DesignToken.primary,
-            activeColor: Colors.white,
+            activeColor: DesignToken.white,
           ),
         ],
       ),
@@ -348,14 +350,15 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     required bool value,
     required ValueChanged<bool> onChanged,
   }) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: DesignToken.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -366,7 +369,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
+              color: iconColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: iconColor, size: 22),
@@ -388,7 +391,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                   subtitle,
                   style: AppTextStyles.nunitoRegular.copyWith(
                     fontSize: 13,
-                    color: Colors.grey[600],
+                    color: DesignToken.grey600,
                   ),
                 ),
               ],
@@ -399,7 +402,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
             value: value,
             onChanged: onChanged,
             activeTrackColor: DesignToken.primary,
-            activeColor: Colors.white,
+            activeColor: DesignToken.white,
           ),
         ],
       ),

@@ -8,7 +8,7 @@ class RedeemPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF001F3F), // Navy blue background
+      backgroundColor: DesignToken.navyBackground,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -28,9 +28,11 @@ class RedeemPage extends StatelessWidget {
               Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: Colors.pink.shade50,
+                  color: DesignToken.redShade50,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.pink.shade100),
+                  border: Border.all(
+                    color: DesignToken.secondary.withValues(alpha: 0.3),
+                  ),
                 ),
                 padding: const EdgeInsets.all(20),
                 child: Row(
@@ -38,7 +40,7 @@ class RedeemPage extends StatelessWidget {
                     Icon(
                       Icons.add_task_rounded,
                       size: 40,
-                      color: Colors.pink.shade700,
+                      color: DesignToken.redShade700,
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -63,7 +65,7 @@ class RedeemPage extends StatelessWidget {
                     ),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.pinkAccent,
+                        backgroundColor: DesignToken.secondary,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -97,10 +99,14 @@ class RedeemPage extends StatelessWidget {
                           height: 48,
                           width: 48,
                           decoration: BoxDecoration(
-                            color: Colors.pink.shade100,
+                            color: DesignToken.secondary
+                                .withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.work, color: Colors.pink),
+                          child: const Icon(
+                            Icons.work,
+                            color: DesignToken.secondary,
+                          ),
                         ),
                         title: Text(
                           "Wooden Door Installation",

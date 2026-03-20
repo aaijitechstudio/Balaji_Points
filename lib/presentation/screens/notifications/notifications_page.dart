@@ -1,6 +1,7 @@
 // lib/presentation/screens/notifications/notifications_page.dart
 // Notifications screen for carpenters to view and manage their notifications
 
+import 'package:balaji_points/presentation/widgets/home_nav_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -8,11 +9,24 @@ import 'package:go_router/go_router.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/services/session_service.dart';
-import 'package:balaji_points/presentation/widgets/home_nav_bar.dart';
 import 'dart:async';
 
+enum NotificationsPageMode {
+  /// Decide behavior from the logged-in user's role.
+  auto,
+  /// Force carpenter behavior (personal + broadcast notifications).
+  carpenter,
+  /// Force admin behavior (admin-only notifications + admin back navigation).
+  admin,
+}
+
 class NotificationsPage extends StatefulWidget {
-  const NotificationsPage({super.key});
+  const NotificationsPage({
+    super.key,
+    this.mode = NotificationsPageMode.auto,
+  });
+
+  final NotificationsPageMode mode;
 
   @override
   State<NotificationsPage> createState() => _NotificationsPageState();
@@ -23,6 +37,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
   String? _userId;
   String? _userRole;
   bool _isLoading = true;
+
+  bool get _resolvedIsAdmin {
+    if (widget.mode == NotificationsPageMode.admin) return true;
+    if (widget.mode == NotificationsPageMode.carpenter) return false;
+    return _userRole == 'admin';
+  }
 
   // Stream controllers for merging queries
   Stream<List<QueryDocumentSnapshot>>? _mergedNotificationsStream;
@@ -63,7 +83,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
     // For carpenters: merge personal notifications + broadcast notifications
     // For admins: only admin-specific notifications
-    if (_userRole != 'admin') {
+    if (!_resolvedIsAdmin) {
       // CARPENTERS: Show personal + broadcast notifications
       // Need to merge two streams: personal notifications + broadcast notifications
       _createCarpenterMergedStream(userId);
@@ -74,21 +94,17 @@ class _NotificationsPageState extends State<NotificationsPage> {
     final notificationsQuery = FirebaseFirestore.instance
         .collection('notification_logs')
         .where('userId', isEqualTo: userId)
-        .orderBy('sentAt', descending: true)
         .limit(50);
 
-    debugPrint(
-      '✅ Admin Query: WHERE userId = $userId, ORDER BY sentAt DESC, LIMIT 50',
-    );
+    debugPrint('✅ Admin Query: WHERE userId = $userId, LIMIT 50');
 
     // Use broadcast stream to allow multiple listeners (StreamBuilder may rebuild)
     _streamController =
         StreamController<List<QueryDocumentSnapshot>>.broadcast();
 
     // Single stream - filter only carpenter-relevant notifications
-    _userNotificationsSubscription = notificationsQuery.snapshots().listen((
-      snapshot,
-    ) {
+    _userNotificationsSubscription = notificationsQuery.snapshots().listen(
+      (snapshot) {
       debugPrint(
         '📊 Received ${snapshot.docs.length} notifications from Firestore',
       );
@@ -118,7 +134,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
       // Filter notifications based on user role
       List<QueryDocumentSnapshot> filteredDocs = snapshot.docs;
 
-      if (_userRole == 'admin') {
+      if (_resolvedIsAdmin) {
         // Admins: show only admin-specific notifications
         filteredDocs = snapshot.docs.where((doc) {
           final data = doc.data();
@@ -168,7 +184,15 @@ class _NotificationsPageState extends State<NotificationsPage> {
       if (!_streamController!.isClosed) {
         _streamController!.add(filteredDocs);
       }
-    });
+      },
+      onError: (e) {
+        debugPrint('❌ Admin notifications stream error: $e');
+        // Don't crash the route; show empty notifications instead.
+        if (!_streamController!.isClosed) {
+          _streamController!.add(const []);
+        }
+      },
+    );
 
     _mergedNotificationsStream = _streamController!.stream;
 
@@ -325,7 +349,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error deleting notification: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: DesignToken.error,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -345,12 +369,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.1),
+                color: DesignToken.error.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.delete_outline,
-                color: Colors.red.shade700,
+                color: DesignToken.redShade700,
                 size: 24,
               ),
             ),
@@ -372,14 +396,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
             onPressed: () => Navigator.of(context).pop(false),
             child: Text(
               'Cancel',
-              style: TextStyle(color: Colors.grey[600], fontSize: 16),
+              style: TextStyle(color: DesignToken.grey600, fontSize: 16),
             ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-              foregroundColor: Colors.white,
+              backgroundColor: DesignToken.redShade600,
+              foregroundColor: DesignToken.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -414,7 +438,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
       allDocs.addAll(userSnapshot.docs);
 
       // Only admins can delete broadcast notification logs
-      if (_userRole == 'admin') {
+      if (_resolvedIsAdmin) {
         final broadcastSnapshot = await FirebaseFirestore.instance
             .collection('notification_logs')
             .where('isBroadcast', isEqualTo: true)
@@ -465,7 +489,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error deleting notifications: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: DesignToken.error,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -530,28 +554,28 @@ class _NotificationsPageState extends State<NotificationsPage> {
   Color _getNotificationColor(String? type) {
     switch (type) {
       case 'billApproved':
-        return Colors.green;
+        return DesignToken.success;
       case 'billRejected':
-        return Colors.red;
+        return DesignToken.error;
       case 'pointsWithdrawn':
-        return Colors.orange;
+        return DesignToken.orange;
       case 'tierUpgraded':
-        return Colors.purple;
+        return DesignToken.purple;
       case 'dailySpinWon':
-        return Colors.amber;
+        return DesignToken.amber;
       case 'offerRedeemed':
-        return Colors.blue;
+        return DesignToken.blue500;
       case 'newOfferAvailable':
         return DesignToken.primary;
       case 'pointsMilestone':
-        return Colors.amber.shade700;
+        return DesignToken.amberShade700;
       // Admin notification types
       case 'newPendingBill':
-        return Colors.blue.shade600;
+        return DesignToken.blueShade600;
       case 'newUserRegistered':
-        return Colors.teal;
+        return DesignToken.greenShade600;
       case 'dailySpinReminder':
-        return Colors.amber.shade600;
+        return DesignToken.amberShade500;
       default:
         return DesignToken.primary;
     }
@@ -559,90 +583,85 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: DesignToken.primary,
+        backgroundColor: theme.scaffoldBackgroundColor,
         body: const Center(
-          child: CircularProgressIndicator(color: Colors.white),
+          child: CircularProgressIndicator(),
         ),
       );
     }
 
+    final bool isAdmin = _resolvedIsAdmin;
+
     if (_userId == null) {
       return Scaffold(
-        backgroundColor: DesignToken.primary,
-        appBar: AppBar(
-          backgroundColor: DesignToken.primary,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => context.pop(),
-          ),
-          title: const Text(
-            'Notifications',
-            style: TextStyle(color: Colors.white),
-          ),
+        backgroundColor: theme.scaffoldBackgroundColor,
+        body: Column(
+          children: [
+            const HomeNavBar(
+              title: 'Notifications',
+              showLogo: false,
+              showProfileButton: false,
+            ),
+            const Expanded(
+              child: Center(child: Text('Unable to load notifications')),
+            ),
+          ],
         ),
-        body: const Center(child: Text('Unable to load notifications')),
       );
     }
 
     return Scaffold(
-      backgroundColor: DesignToken.primary,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Column(
         children: [
-          HomeNavBar(
-            title: 'Notifications',
-            showProfileButton: false,
-            showLogo: false,
-            showBackButton: true,
-            actions: [
-              // Delete All Button
-              StreamBuilder<List<QueryDocumentSnapshot>>(
-                stream: _mergedNotificationsStream,
-                builder: (context, snapshot) {
-                  final hasNotifications =
-                      snapshot.hasData && snapshot.data!.isNotEmpty;
-
-                  if (!hasNotifications) {
-                    return const SizedBox(width: 44);
-                  }
-
-                  return IconButton(
-                    icon: Stack(
-                      children: [
-                        const Icon(
-                          Icons.delete_outline,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                        if (hasNotifications)
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(2),
-                              decoration: const BoxDecoration(
-                                color: Colors.red,
-                                shape: BoxShape.circle,
-                              ),
-                              constraints: const BoxConstraints(
-                                minWidth: 8,
-                                minHeight: 8,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    onPressed: _deleteAllNotifications,
-                    tooltip: 'Delete All',
-                  );
-                },
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              HomeNavBar(
+                title: 'Notifications',
+                showLogo: false,
+                showProfileButton: false,
+                showBackButton: isAdmin,
+                // Notifications route lives inside the carpenter ShellRoute.
+                // For admins, we must override back to return to Admin dashboard.
+                onBackTap: isAdmin ? () => context.go('/admin') : null,
+                actions: [
+                  StreamBuilder<List<QueryDocumentSnapshot>>(
+                    stream: _mergedNotificationsStream,
+                    builder: (context, snapshot) {
+                      final hasNotifications =
+                          snapshot.hasData && snapshot.data!.isNotEmpty;
+                      if (!hasNotifications) {
+                        return const SizedBox.shrink();
+                      }
+                      return IconButton(
+                        icon: const Icon(Icons.delete_outline, size: 22),
+                        onPressed: _deleteAllNotifications,
+                        tooltip: 'Delete All',
+                      );
+                    },
+                  ),
+                ],
+              ),
+              Container(
+                height: 1,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: DesignToken.primaryGradient,
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                ),
               ),
             ],
           ),
           Expanded(
             child: Container(
-              color: DesignToken.woodenBackground,
+              color: theme.colorScheme.surface,
               child: SafeArea(
                 top: false,
                 child: _mergedNotificationsStream == null
@@ -665,13 +684,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                   Icon(
                                     Icons.error_outline,
                                     size: 64,
-                                    color: Colors.red.shade300,
+                                    color: DesignToken.redShade300,
                                   ),
                                   const SizedBox(height: 16),
                                   Text(
                                     'Error loading notifications',
                                     style: TextStyle(
-                                      color: Colors.grey[600],
+                                      color: DesignToken.grey600,
                                       fontSize: 16,
                                     ),
                                   ),
@@ -719,7 +738,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                     'You don\'t have any notifications yet',
                                     style: AppTextStyles.nunitoRegular.copyWith(
                                       fontSize: 16,
-                                      color: Colors.grey[600],
+                                      color: DesignToken.grey600,
                                     ),
                                   ),
                                 ],
@@ -738,7 +757,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
                             },
                             color: DesignToken.primary,
                             child: ListView.builder(
-                              padding: const EdgeInsets.all(16),
+                              padding: const EdgeInsets.fromLTRB(
+                                16,
+                                16,
+                                16,
+                                120,
+                              ),
                               itemCount: notifications.length,
                               itemBuilder: (context, index) {
                                 final doc = notifications[index];
@@ -759,14 +783,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                   background: Container(
                                     margin: const EdgeInsets.only(bottom: 12),
                                     decoration: BoxDecoration(
-                                      color: Colors.red.shade400,
+                                      color: DesignToken.redShade600,
                                       borderRadius: BorderRadius.circular(16),
                                     ),
                                     alignment: Alignment.centerRight,
                                     padding: const EdgeInsets.only(right: 24),
                                     child: const Icon(
                                       Icons.delete_rounded,
-                                      color: Colors.white,
+                                      color: DesignToken.white,
                                       size: 26,
                                     ),
                                   ),
@@ -795,7 +819,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                                 child: Text(
                                                   'Cancel',
                                                   style: TextStyle(
-                                                    color: Colors.grey[600],
+                                                    color: DesignToken.grey600,
                                                   ),
                                                 ),
                                               ),
@@ -805,8 +829,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                                 ).pop(true),
                                                 style: ElevatedButton.styleFrom(
                                                   backgroundColor:
-                                                      Colors.red.shade500,
-                                                  foregroundColor: Colors.white,
+                                                      DesignToken.redShade600,
+                                                  foregroundColor:
+                                                      DesignToken.white,
                                                   shape: RoundedRectangleBorder(
                                                     borderRadius:
                                                         BorderRadius.circular(
@@ -829,20 +854,18 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                     child: Container(
                                       margin: const EdgeInsets.only(bottom: 12),
                                       decoration: BoxDecoration(
-                                        color: Colors.white,
+                                        color: theme.colorScheme.surface,
                                         borderRadius: BorderRadius.circular(14),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.black.withValues(
-                                              alpha: 0.04,
-                                            ),
+                                            color: DesignToken.black
+                                                .withValues(alpha: 0.04),
                                             blurRadius: 10,
                                             offset: const Offset(0, 2),
                                           ),
                                           BoxShadow(
-                                            color: Colors.black.withValues(
-                                              alpha: 0.02,
-                                            ),
+                                            color: DesignToken.black
+                                                .withValues(alpha: 0.02),
                                             blurRadius: 4,
                                             offset: const Offset(0, 1),
                                           ),
@@ -975,27 +998,31 @@ class _NotificationsPageState extends State<NotificationsPage> {
                           );
                         },
                       ),
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
   }
 
   /// Handle notification tap - navigate based on notification type and role
   void _handleNotificationTap(Map<String, dynamic> data, String? type) {
     try {
       // Get screen route from notification data
-      final screen = data['screen'] as String?;
+      final screenRaw = data['screen'] as String?;
+      final screen = screenRaw?.trim();
+      final normalizedScreen = (screen != null && screen.isNotEmpty && screen.endsWith('/') && screen.length > 1)
+          ? screen.substring(0, screen.length - 1)
+          : screen;
 
       // If no screen specified, stay on notifications page
-      if (screen == null || screen.isEmpty) {
+      if (normalizedScreen == null || normalizedScreen.isEmpty) {
         return;
       }
 
-      // Navigate based on notification type and role
-      if (_userRole == 'admin') {
+      // Navigate based on notification type and role/mode
+      if (_resolvedIsAdmin) {
         // Admin navigation
         switch (type) {
           case 'newPendingBill':
@@ -1008,8 +1035,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
             break;
           default:
             // Use screen from data
-            if (screen == '/admin' || screen == '/notifications') {
-              context.go(screen);
+            if (normalizedScreen == '/admin') {
+              context.go('/admin');
+            } else if (normalizedScreen == '/notifications' ||
+                normalizedScreen == '/notifications/') {
+              // Admin notifications route (outside the carpenter ShellRoute)
+              context.go('/admin/notifications');
+            } else if (normalizedScreen == '/admin/notifications') {
+              context.go('/admin/notifications');
             } else {
               // For other screens, navigate to admin home
               context.go('/admin');
@@ -1041,11 +1074,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
             break;
           default:
             // Use screen from data, fallback to home
-            if (screen == '/notifications') {
+            if (normalizedScreen == '/notifications') {
               // Already on notifications page
               return;
-            } else if (screen == '/profile' || screen == '/daily-spin') {
-              context.go(screen);
+            } else if (normalizedScreen == '/profile' ||
+                normalizedScreen == '/daily-spin') {
+              context.go(normalizedScreen);
             } else {
               // Default to home
               context.go('/');

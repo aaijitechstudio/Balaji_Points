@@ -49,8 +49,16 @@ class _WalletPageState extends State<WalletPage> {
     // Use phone number from session (PIN-based auth)
     final userId = _userId ?? 'loading';
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    // Slightly off-white makes the UI feel cleaner than pure white.
+    final pageBackground =
+        isDark ? theme.colorScheme.surface : DesignToken.grey50;
+    // Dashboard uses a custom bottom bar (~98px stack height). Keep
+    // enough padding so content won't hide under it, but tighter than before.
+    final bottomPadding = 84.0 + MediaQuery.of(context).padding.bottom;
     return Scaffold(
-      backgroundColor: DesignToken.primary,
+      backgroundColor: pageBackground,
       body: Column(
         children: [
           // Standard Navigation Bar - Material Design kToolbarHeight (56dp)
@@ -59,10 +67,10 @@ class _WalletPageState extends State<WalletPage> {
             showLogo: false,
             showProfileButton: false,
           ),
-          // Content with wooden background
+          // Content area
           Expanded(
             child: Container(
-              color: DesignToken.woodenBackground,
+              color: pageBackground,
               child: RefreshIndicator(
                 key: ValueKey(_refreshKey),
                 onRefresh: _handleRefresh,
@@ -70,16 +78,16 @@ class _WalletPageState extends State<WalletPage> {
                 backgroundColor: DesignToken.white,
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(20),
+                  padding: EdgeInsets.fromLTRB(14, 10, 14, bottomPadding),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 4),
 
                       // Total Points Card
                       _buildTotalPointsCard(userId),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 12),
 
                       // Stats Cards Row
                       Row(
@@ -104,7 +112,7 @@ class _WalletPageState extends State<WalletPage> {
                         ],
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 12),
 
                       // Quick Action Button
                       Container(
@@ -112,7 +120,7 @@ class _WalletPageState extends State<WalletPage> {
                           gradient: LinearGradient(
                             colors: [
                               DesignToken.blue600,
-                              Colors.purple.shade500,
+                              DesignToken.purpleShade500,
                               DesignToken.secondary,
                             ],
                             begin: Alignment.topLeft,
@@ -134,14 +142,14 @@ class _WalletPageState extends State<WalletPage> {
                             borderRadius: BorderRadius.circular(20),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 20,
+                                horizontal: 18,
+                                vertical: 12,
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.all(8),
+                                    padding: const EdgeInsets.all(6),
                                     decoration: BoxDecoration(
                                       color: DesignToken.white.withOpacity(0.2),
                                       shape: BoxShape.circle,
@@ -149,14 +157,14 @@ class _WalletPageState extends State<WalletPage> {
                                     child: const Icon(
                                       Icons.add_circle_outline,
                                       color: DesignToken.white,
-                                      size: 28,
+                                      size: 24,
                                     ),
                                   ),
-                                  const SizedBox(width: 16),
+                                  const SizedBox(width: 12),
                                   Text(
                                     l10n.addNewBill,
                                     style: AppTextStyles.nunitoBold.copyWith(
-                                      fontSize: 18,
+                                      fontSize: 16,
                                       color: DesignToken.white,
                                       letterSpacing: 0.5,
                                     ),
@@ -168,7 +176,7 @@ class _WalletPageState extends State<WalletPage> {
                         ),
                       ),
 
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 12),
 
                       // Recent Bills Section
                       Row(
@@ -196,12 +204,12 @@ class _WalletPageState extends State<WalletPage> {
                         ],
                       ),
 
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 4),
 
                       // Bills List
                       _buildBillsList(userId),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 12),
                     ],
                   ),
                 ),
@@ -218,7 +226,7 @@ class _WalletPageState extends State<WalletPage> {
     if (userId == 'loading' || _userId == null) {
       // Show loading state
       return Container(
-        padding: const EdgeInsets.all(28),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
@@ -229,13 +237,13 @@ class _WalletPageState extends State<WalletPage> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: DesignToken.primary.withOpacity(0.4),
-              blurRadius: 25,
+              color: DesignToken.primary.withOpacity(0.35),
+              blurRadius: 20,
               spreadRadius: 2,
-              offset: const Offset(0, 12),
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -251,57 +259,39 @@ class _WalletPageState extends State<WalletPage> {
                       'Total Points',
                       style: AppTextStyles.nunitoRegular.copyWith(
                         fontSize: 14,
-                        color: Colors.white.withOpacity(0.9),
+                        color: DesignToken.white.withValues(alpha: 0.9),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Text(
-                      '',
+                      '0',
                       style: AppTextStyles.nunitoBold.copyWith(
-                        fontSize: 36,
-                        color: Colors.white,
+                        fontSize: 30,
+                        color: DesignToken.white,
                       ),
                     ),
                   ],
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
+                    horizontal: 14,
+                    vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: DesignToken.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     'Silver',
                     style: AppTextStyles.nunitoSemiBold.copyWith(
                       fontSize: 14,
-                      color: Colors.white,
+                      color: DesignToken.white,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: Colors.white.withOpacity(0.9),
-                    size: 18,
-                  ),
-                  const SizedBox(width: 8),
-                ],
-              ),
-            ),
+            const SizedBox(height: 12),
           ],
         ),
       );
@@ -319,7 +309,7 @@ class _WalletPageState extends State<WalletPage> {
         final tier = data?['tier'] ?? 'Bronze';
 
         return Container(
-          padding: const EdgeInsets.all(28),
+          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
@@ -330,13 +320,13 @@ class _WalletPageState extends State<WalletPage> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: DesignToken.primary.withOpacity(0.4),
-                blurRadius: 25,
+                color: DesignToken.primary.withOpacity(0.35),
+                blurRadius: 20,
                 spreadRadius: 2,
-                offset: const Offset(0, 12),
+                offset: const Offset(0, 8),
               ),
             ],
           ),
@@ -352,39 +342,39 @@ class _WalletPageState extends State<WalletPage> {
                         l10n.totalPoints,
                         style: AppTextStyles.nunitoRegular.copyWith(
                           fontSize: 14,
-                          color: Colors.white.withOpacity(0.9),
+                          color: DesignToken.white.withValues(alpha: 0.9),
                         ),
                       ),
-                      const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                       Text(
                         '$totalPoints',
                         style: AppTextStyles.nunitoBold.copyWith(
-                          fontSize: 36,
-                          color: Colors.white,
+                        fontSize: 30,
+                          color: DesignToken.white,
                         ),
                       ),
                     ],
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
+                    horizontal: 14,
+                    vertical: 6,
                     ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
+                  decoration: BoxDecoration(
+                    color: DesignToken.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                     child: Text(
                       tier,
                       style: AppTextStyles.nunitoSemiBold.copyWith(
                         fontSize: 14,
-                        color: Colors.white,
+                        color: DesignToken.white,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+            const SizedBox(height: 12),
             ],
           ),
         );
@@ -398,15 +388,23 @@ class _WalletPageState extends State<WalletPage> {
     required Widget value,
     required Color color,
   }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final bg =
+        isDark ? theme.colorScheme.surface : DesignToken.grey50;
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: bg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: DesignToken.primary.withOpacity(isDark ? 0.14 : 0.08),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 15,
+            color: DesignToken.black.withValues(alpha: 0.08),
+            blurRadius: 12,
             spreadRadius: 1,
             offset: const Offset(0, 4),
           ),
@@ -416,24 +414,24 @@ class _WalletPageState extends State<WalletPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [color.withOpacity(0.2), color.withOpacity(0.1)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: color, size: 26),
+            child: Icon(icon, color: color, size: 22),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           value,
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             label,
             style: AppTextStyles.nunitoMedium.copyWith(
-              fontSize: 14,
+              fontSize: 12,
               color: DesignToken.textDark.withOpacity(0.7),
             ),
           ),
@@ -448,7 +446,7 @@ class _WalletPageState extends State<WalletPage> {
       return Text(
         '...',
         style: AppTextStyles.nunitoBold.copyWith(
-          fontSize: 24,
+          fontSize: 20,
           color: DesignToken.textDark,
         ),
       );
@@ -465,7 +463,7 @@ class _WalletPageState extends State<WalletPage> {
         return Text(
           '$count',
           style: AppTextStyles.nunitoBold.copyWith(
-            fontSize: 24,
+            fontSize: 20,
             color: DesignToken.textDark,
           ),
         );
@@ -479,7 +477,7 @@ class _WalletPageState extends State<WalletPage> {
       return Text(
         '...',
         style: AppTextStyles.nunitoBold.copyWith(
-          fontSize: 24,
+          fontSize: 20,
           color: DesignToken.textDark,
         ),
       );
@@ -496,7 +494,7 @@ class _WalletPageState extends State<WalletPage> {
         return Text(
           '$count',
           style: AppTextStyles.nunitoBold.copyWith(
-            fontSize: 24,
+            fontSize: 20,
             color: DesignToken.textDark,
           ),
         );
@@ -507,13 +505,13 @@ class _WalletPageState extends State<WalletPage> {
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'approved':
-        return Colors.green;
+        return DesignToken.success;
       case 'pending':
-        return Colors.orange;
+        return DesignToken.orange;
       case 'rejected':
-        return Colors.red;
+        return DesignToken.error;
       default:
-        return Colors.grey;
+        return DesignToken.grey500;
     }
   }
 
@@ -575,7 +573,7 @@ class _WalletPageState extends State<WalletPage> {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         itemCount: mockBills.length,
-        separatorBuilder: (context, index) => const SizedBox(height: 12),
+        separatorBuilder: (context, index) => const SizedBox(height: 6),
         itemBuilder: (context, index) {
           final bill = mockBills[index];
           final amount = bill['amount'] as double;
@@ -584,18 +582,21 @@ class _WalletPageState extends State<WalletPage> {
           final storeName = bill['storeName'] as String;
           final date = bill['date'] as DateTime;
 
+          final theme = Theme.of(context);
+          final isDark = theme.brightness == Brightness.dark;
+          final cardBg = isDark ? theme.colorScheme.surface : DesignToken.white;
           return Container(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
+              color: cardBg,
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: DesignToken.primary.withOpacity(0.1),
+                color: DesignToken.primary.withOpacity(isDark ? 0.14 : 0.09),
                 width: 1,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
+                  color: DesignToken.black.withValues(alpha: 0.06),
                   blurRadius: 12,
                   spreadRadius: 0.5,
                   offset: const Offset(0, 3),
@@ -605,19 +606,19 @@ class _WalletPageState extends State<WalletPage> {
             child: Row(
               children: [
                 Container(
-                  width: 50,
-                  height: 50,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
                     color: _getStatusColor(status).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     _getStatusIcon(status),
                     color: _getStatusColor(status),
-                    size: 24,
+                    size: 20,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -625,37 +626,37 @@ class _WalletPageState extends State<WalletPage> {
                       Text(
                         storeName,
                         style: AppTextStyles.nunitoBold.copyWith(
-                          fontSize: 16,
+                          fontSize: 14,
                           color: DesignToken.textDark,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 3),
                       Row(
                         children: [
                           Text(
                             '₹${amount.toStringAsFixed(0)}',
                             style: AppTextStyles.nunitoSemiBold.copyWith(
-                              fontSize: 14,
+                              fontSize: 13,
                               color: DesignToken.primary,
                             ),
                           ),
                           if (pointsEarned > 0) ...[
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 6),
                             Text(
                               '• $pointsEarned pts',
                               style: AppTextStyles.nunitoRegular.copyWith(
-                                fontSize: 13,
+                                fontSize: 12,
                                 color: DesignToken.textDark.withOpacity(0.6),
                               ),
                             ),
                           ],
                         ],
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 3),
                       Text(
                         _formatDate(date),
                         style: AppTextStyles.nunitoRegular.copyWith(
-                          fontSize: 12,
+                          fontSize: 11,
                           color: DesignToken.textDark.withOpacity(0.5),
                         ),
                       ),
@@ -664,12 +665,12 @@ class _WalletPageState extends State<WalletPage> {
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
+                    horizontal: 10,
+                    vertical: 5,
                   ),
                   decoration: BoxDecoration(
                     color: _getStatusColor(status).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: _getStatusColor(status).withOpacity(0.3),
                     ),
@@ -677,7 +678,7 @@ class _WalletPageState extends State<WalletPage> {
                   child: Text(
                     _getStatusLabel(status, context),
                     style: AppTextStyles.nunitoSemiBold.copyWith(
-                      fontSize: 11,
+                      fontSize: 10,
                       color: _getStatusColor(status),
                     ),
                   ),
@@ -709,21 +710,26 @@ class _WalletPageState extends State<WalletPage> {
 
         if (snapshot.hasError) {
           debugPrint('WalletPage: ❌ ERROR loading bills: ${snapshot.error}');
+          final theme = Theme.of(context);
           return Container(
-            padding: const EdgeInsets.all(40),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
               children: [
-                const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                const SizedBox(height: 16),
+                const Icon(
+                  Icons.error_outline,
+                  size: 48,
+                  color: DesignToken.error,
+                ),
+                const SizedBox(height: 12),
                 Text(
                   'Error loading bills',
                   style: AppTextStyles.nunitoSemiBold.copyWith(
                     fontSize: 16,
-                    color: Colors.red,
+                    color: DesignToken.error,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -743,7 +749,7 @@ class _WalletPageState extends State<WalletPage> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
             child: Padding(
-              padding: EdgeInsets.all(40),
+              padding: EdgeInsets.all(24),
               child: CircularProgressIndicator(),
             ),
           );
@@ -751,20 +757,21 @@ class _WalletPageState extends State<WalletPage> {
 
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           debugPrint('WalletPage: No bills found for user $userId');
+          final theme = Theme.of(context);
           return Container(
-            padding: const EdgeInsets.all(40),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
               children: [
                 Icon(
                   Icons.receipt_long_outlined,
-                  size: 64,
+                  size: 48,
                   color: DesignToken.textDark.withOpacity(0.3),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 Text(
                   AppLocalizations.of(context)!.noBillsYet,
                   style: AppTextStyles.nunitoSemiBold.copyWith(
@@ -793,7 +800,7 @@ class _WalletPageState extends State<WalletPage> {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: bills.length,
-          separatorBuilder: (context, index) => const SizedBox(height: 12),
+          separatorBuilder: (context, index) => const SizedBox(height: 6),
           itemBuilder: (context, index) {
             final bill = bills[index].data() as Map<String, dynamic>;
             final amount = bill['amount'] ?? 0.0;
@@ -806,18 +813,21 @@ class _WalletPageState extends State<WalletPage> {
               '  Bill[$index]: amount=$amount, status=$status, carpenterId=${bill['carpenterId']}, createdAt=$createdAt',
             );
 
+            final theme = Theme.of(context);
+            final isDark = theme.brightness == Brightness.dark;
+            final cardBg = isDark ? theme.colorScheme.surface : DesignToken.white;
             return Container(
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
+                color: cardBg,
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: DesignToken.primary.withOpacity(0.1),
+                  color: DesignToken.primary.withOpacity(isDark ? 0.14 : 0.09),
                   width: 1,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
+                    color: DesignToken.black.withValues(alpha: 0.06),
                     blurRadius: 12,
                     spreadRadius: 0.5,
                     offset: const Offset(0, 3),
@@ -827,19 +837,19 @@ class _WalletPageState extends State<WalletPage> {
               child: Row(
                 children: [
                   Container(
-                    width: 50,
-                    height: 50,
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
                       color: _getStatusColor(status).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
                       _getStatusIcon(status),
                       color: _getStatusColor(status),
-                      size: 24,
+                      size: 20,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -849,26 +859,26 @@ class _WalletPageState extends State<WalletPage> {
                               ? storeName
                               : AppLocalizations.of(context)!.billLabel,
                           style: AppTextStyles.nunitoBold.copyWith(
-                            fontSize: 16,
+                            fontSize: 14,
                             color: DesignToken.textDark,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 3),
                         Row(
                           children: [
                             Text(
                               '₹${amount.toStringAsFixed(0)}',
                               style: AppTextStyles.nunitoSemiBold.copyWith(
-                                fontSize: 14,
+                                fontSize: 13,
                                 color: DesignToken.primary,
                               ),
                             ),
                             if (pointsEarned > 0) ...[
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 6),
                               Text(
                                 '• $pointsEarned pts',
                                 style: AppTextStyles.nunitoRegular.copyWith(
-                                  fontSize: 13,
+                                  fontSize: 12,
                                   color: DesignToken.textDark.withOpacity(0.6),
                                 ),
                               ),
@@ -876,11 +886,11 @@ class _WalletPageState extends State<WalletPage> {
                           ],
                         ),
                         if (createdAt != null) ...[
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 3),
                           Text(
                             _formatDate(createdAt.toDate()),
                             style: AppTextStyles.nunitoRegular.copyWith(
-                              fontSize: 12,
+                              fontSize: 11,
                               color: DesignToken.textDark.withOpacity(0.5),
                             ),
                           ),
@@ -890,12 +900,12 @@ class _WalletPageState extends State<WalletPage> {
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
+                      horizontal: 10,
+                      vertical: 5,
                     ),
                     decoration: BoxDecoration(
                       color: _getStatusColor(status).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: _getStatusColor(status).withOpacity(0.3),
                       ),
@@ -903,7 +913,7 @@ class _WalletPageState extends State<WalletPage> {
                     child: Text(
                       status.toUpperCase(),
                       style: AppTextStyles.nunitoSemiBold.copyWith(
-                        fontSize: 11,
+                        fontSize: 10,
                         color: _getStatusColor(status),
                       ),
                     ),

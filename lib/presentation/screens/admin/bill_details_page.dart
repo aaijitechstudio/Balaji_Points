@@ -140,11 +140,11 @@ class _BillDetailsPageState extends State<BillDetailsPage> {
 
   Future<void> _approveBill() async {
     final l10n = AppLocalizations.of(context)!;
-    final amount = _billData!['amount'].toString();
+    final amountText = _billData!['amount'].toString();
     final phone = _billData!['carpenterPhone'] ?? '';
     final confirmed = await _showConfirmDialog(
       title: l10n.approveBill,
-      message: l10n.approveBillConfirmation(amount, phone),
+      message: l10n.approveBillConfirmation(amountText, phone),
       confirmText: l10n.approve,
       confirmColor: Colors.green,
     );
@@ -155,7 +155,21 @@ class _BillDetailsPageState extends State<BillDetailsPage> {
 
     try {
       final carpenterId = _billData!['carpenterId'] as String;
-      final amount = _billData!['amount'] as double;
+      final rawAmount = _billData!['amount'];
+      final amount = rawAmount is num
+          ? rawAmount.toDouble()
+          : double.tryParse(rawAmount.toString()) ?? 0.0;
+
+      if (amount <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invalid bill amount'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() => _isProcessing = false);
+        return;
+      }
 
       final success = await _billService.approveBill(
         widget.billId,
@@ -337,47 +351,58 @@ class _BillDetailsPageState extends State<BillDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
 
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: DesignToken.primary,
+        backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
+          backgroundColor: Colors.white,
+          foregroundColor: DesignToken.textDark,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
           title: Text(
             'Bill Details',
-            style: AppTextStyles.nunitoBold.copyWith(fontSize: 20, color: Colors.white),
+            style: AppTextStyles.nunitoBold.copyWith(fontSize: 18, color: DesignToken.textDark),
           ),
-          backgroundColor: DesignToken.primary,
-          iconTheme: const IconThemeData(color: Colors.white),
-          elevation: 0,
+          centerTitle: true,
         ),
         body: const Center(
-          child: CircularProgressIndicator(color: Colors.white),
+          child: CircularProgressIndicator(color: DesignToken.primary),
         ),
       );
     }
 
     if (_billData == null) {
       return Scaffold(
-        backgroundColor: DesignToken.primary,
+        backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
+          backgroundColor: Colors.white,
+          foregroundColor: DesignToken.textDark,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
           title: Text(
             'Bill Details',
-            style: AppTextStyles.nunitoBold.copyWith(fontSize: 20, color: Colors.white),
+            style: AppTextStyles.nunitoBold.copyWith(fontSize: 18, color: DesignToken.textDark),
           ),
-          backgroundColor: DesignToken.primary,
-          iconTheme: const IconThemeData(color: Colors.white),
-          elevation: 0,
+          centerTitle: true,
         ),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.white),
+              Icon(Icons.error_outline, size: 64, color: DesignToken.grey600),
               const SizedBox(height: 16),
               Text(
                 'Bill not found',
-                style: AppTextStyles.nunitoBold.copyWith(fontSize: 18, color: Colors.white),
+                style: AppTextStyles.nunitoBold.copyWith(fontSize: 18, color: DesignToken.textDark),
               ),
             ],
           ),
@@ -405,15 +430,27 @@ class _BillDetailsPageState extends State<BillDetailsPage> {
     final carpenterPoints = _carpenterData?['totalPoints'] as int? ?? 0;
 
     return Scaffold(
-      backgroundColor: DesignToken.primary,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        foregroundColor: DesignToken.textDark,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: Text(
           'Bill Details',
-          style: AppTextStyles.nunitoBold.copyWith(fontSize: 20, color: Colors.white),
+          style: AppTextStyles.nunitoBold.copyWith(fontSize: 18, color: DesignToken.textDark),
         ),
-        backgroundColor: DesignToken.primary,
-        iconTheme: const IconThemeData(color: Colors.white),
-        elevation: 0,
+        centerTitle: true,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(
+            height: 1,
+            color: Colors.black.withValues(alpha: 0.08),
+          ),
+        ),
       ),
       body: Column(
         children: [

@@ -389,6 +389,9 @@ class AppLocalizationsHi extends AppLocalizations {
   String get darkMode => 'डार्क मोड';
 
   @override
+  String get notifications => 'सूचनाएं';
+
+  @override
   String get logout => 'लॉगआउट';
 
   @override
