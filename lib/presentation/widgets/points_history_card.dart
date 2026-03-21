@@ -105,8 +105,7 @@ class _PointsHistoryCardState extends State<PointsHistoryCard> {
       return _buildEmptyCard();
     }
 
-    final displayedHistory =
-        _isExpanded ? _history : _history.take(3).toList();
+    final displayedHistory = _isExpanded ? _history : _history.take(3).toList();
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -349,11 +348,7 @@ class _PointsHistoryCardState extends State<PointsHistoryCard> {
       ),
       child: Column(
         children: [
-          Icon(
-            Icons.history_rounded,
-            size: 60,
-            color: Colors.grey[300],
-          ),
+          Icon(Icons.history_rounded, size: 60, color: Colors.grey[300]),
           const SizedBox(height: 16),
           Text(
             'No Points History',

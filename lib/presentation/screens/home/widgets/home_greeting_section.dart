@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' as LegacyTheme;
 
+/// Minimal-height greeting strip (~half the height of a typical card row).
 class HomeGreetingSection extends StatefulWidget {
   final String userName;
 
-  const HomeGreetingSection({
-    super.key,
-    required this.userName,
-  });
+  const HomeGreetingSection({super.key, required this.userName});
 
   @override
   State<HomeGreetingSection> createState() => _HomeGreetingSectionState();
@@ -19,56 +18,61 @@ class _HomeGreetingSectionState extends State<HomeGreetingSection> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
     final hour = now.hour;
     final isDayTime = hour >= 6 && hour < 18;
 
     final greeting = hour < 12
-        ? 'Good Morning'
-        : (hour < 17 ? 'Good Afternoon' : 'Good Evening');
+        ? l10n.goodMorningGreeting
+        : (hour < 17 ? l10n.goodAfternoonGreeting : l10n.goodEveningGreeting);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: DesignToken.paddingLG,
-      ),
+      padding: DesignToken.layoutScreenHorizontal,
       child: Container(
-        padding: const EdgeInsets.all(DesignToken.paddingLG),
+        padding: const EdgeInsets.symmetric(
+          horizontal: DesignToken.paddingSM,
+          vertical: DesignToken.paddingXS,
+        ),
         decoration: BoxDecoration(
-          borderRadius: DesignToken.borderRadiusXL,
+          borderRadius: DesignToken.borderRadiusSM,
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              DesignToken.primary.withValues(alpha: 0.08),
-              DesignToken.secondary.withValues(alpha: 0.10),
+              DesignToken.primary.withValues(alpha: 0.07),
+              DesignToken.secondary.withValues(alpha: 0.08),
             ],
           ),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '$greeting,',
-                    style: LegacyTheme.AppTextStyles.nunitoRegular.copyWith(
-                      fontSize: DesignToken.fontSizeLG,
-                      color: DesignToken.textDark.withOpacity(0.7),
-                    ),
+              child: Text.rich(
+                TextSpan(
+                  style: LegacyTheme.AppTextStyles.nunitoRegular.copyWith(
+                    fontSize: DesignToken.fontSizeSM,
+                    color: DesignToken.textDark.withValues(alpha: 0.72),
+                    height: 1.0,
                   ),
-                  const SizedBox(height: DesignToken.heightSM),
-                  Text(
-                    widget.userName,
-                    style: LegacyTheme.AppTextStyles.nunitoBold.copyWith(
-                      fontSize: DesignToken.fontSize2XL,
-                      color: DesignToken.textDark,
+                  children: [
+                    TextSpan(text: '$greeting, '),
+                    TextSpan(
+                      text: widget.userName,
+                      style: LegacyTheme.AppTextStyles.nunitoBold.copyWith(
+                        fontSize: DesignToken.fontSizeSM,
+                        color: DesignToken.textDark,
+                        height: 1.0,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(width: DesignToken.widthLG),
+            SizedBox(width: DesignToken.widthXS),
             _SunMoonBadge(
               isDayTime: isDayTime,
               pressed: _pressed,
@@ -106,40 +110,26 @@ class _SunMoonBadge extends StatelessWidget {
       onTapCancel: () => onPressedChanged(false),
       child: AnimatedScale(
         duration: DesignToken.animationDurationFast,
-        scale: pressed ? 0.9 : 1.0,
+        scale: pressed ? 0.92 : 1.0,
         child: Container(
-          padding: const EdgeInsets.all(DesignToken.paddingSM),
+          padding: const EdgeInsets.all(3),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: isDayTime
-                  ? [
-                      DesignToken.amberShade300,
-                      DesignToken.amberShade500,
-                    ]
-                  : [
-                      DesignToken.blueShade600,
-                      DesignToken.purpleShade600,
-                    ],
+                  ? [DesignToken.amberShade300, DesignToken.amberShade500]
+                  : [DesignToken.blueShade600, DesignToken.purpleShade600],
             ),
-            boxShadow: [
-              BoxShadow(
-                color: DesignToken.black.withValues(alpha: 0.15),
-                blurRadius: DesignToken.elevationLG,
-                offset: const Offset(0, 4),
-              ),
-            ],
           ),
           child: Icon(
             icon,
             color: DesignToken.white,
-            size: DesignToken.iconSizeXL,
+            size: DesignToken.iconSizeSM,
           ),
         ),
       ),
     );
   }
 }
-

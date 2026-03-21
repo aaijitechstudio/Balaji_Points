@@ -327,6 +327,81 @@ class AppLocalizationsTa extends AppLocalizations {
   String get latestOffers => 'சமீபத்திய ஆஃபர்கள்';
 
   @override
+  String get goodMorningGreeting => 'காலை வணக்கம்,';
+
+  @override
+  String get goodAfternoonGreeting => 'மதிய வணக்கம்,';
+
+  @override
+  String get goodEveningGreeting => 'மாலை வணக்கம்,';
+
+  @override
+  String get homeBrowseProductsTitle => 'மரம் & பிளைவுட்';
+
+  @override
+  String get homeBrowseProductsSubtitle =>
+      'பிரீமியம் லேமினேட் மற்றும் மேற்பரப்புகள்';
+
+  @override
+  String get viewAll => 'அனைத்தும்';
+
+  @override
+  String get homeStoreBranch => 'ஈ ரோடு';
+
+  @override
+  String get homeTierSuffix => 'நிலை';
+
+  @override
+  String get homeRankingsSectionTitle => 'தரவரிசை & இன்றைய வெற்றியாளர்';
+
+  @override
+  String get homeRankingsSectionSubtitle =>
+      'லீடர்போர்டு, உங்கள் தரம், இன்றைய பரிசு';
+
+  @override
+  String get drawerProductsTitle => 'தயாரிப்புகள்';
+
+  @override
+  String get drawerProductsSubtitle => 'வகைகள் & கேட்டலாக்';
+
+  @override
+  String get drawerCart => 'கார்ட்';
+
+  @override
+  String get drawerSectionMainNav => 'முக்கிய வழிசெலுத்தல்';
+
+  @override
+  String get drawerSectionMore => 'மேலும்';
+
+  @override
+  String get myOrders => 'எனது ஆர்டர்கள்';
+
+  @override
+  String get profileSectionAccount => 'கணக்கு';
+
+  @override
+  String get profileSectionPreferences => 'விருப்பங்கள்';
+
+  @override
+  String get profileSectionSupport => 'ஆதரவு';
+
+  @override
+  String get profileAboutLink => 'ஆப்பைப் பற்றி';
+
+  @override
+  String get routeErrorTitle => 'பக்கம் கிடைக்கவில்லை';
+
+  @override
+  String get routeErrorNotFound =>
+      'இந்த இணைப்பு தவறானது அல்லது பக்கம் நீக்கப்பட்டது.';
+
+  @override
+  String get routeErrorGoHome => 'முகப்புக்குச் செல்';
+
+  @override
+  String get routeErrorDetailsLabel => 'தொழில்நுட்ப விவரங்கள்';
+
+  @override
   String get topCarpenters => 'சிறந்த 3 தச்சர்கள்';
 
   @override
@@ -512,9 +587,6 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get transactionHistory => 'பரிவர்த்தனை வரலாறு';
-
-  @override
-  String get noTransactions => 'பரிவர்த்தனைகள் இல்லை';
 
   @override
   String get earned => 'பெற்றது';
@@ -1114,9 +1186,6 @@ class AppLocalizationsTa extends AppLocalizations {
   String get myPoints => 'என் பாயிண்ட்ஸ்';
 
   @override
-  String get redeemRewards => 'வெகுமதிகளை ரீடீம் செய்யவும்';
-
-  @override
   String get leaderboard => 'தரவரிசை பட்டியல்';
 
   @override
@@ -1126,7 +1195,7 @@ class AppLocalizationsTa extends AppLocalizations {
   String get rankShort => 'ரேங்க்';
 
   @override
-  String get earn => 'சம்பாதி';
+  String get earn => 'வாலட்';
 
   @override
   String get approved => 'ஒப்புதல்';
@@ -1345,4 +1414,86 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get languageTamil => 'தமிழ்';
+
+  @override
+  String get aboutUs => 'எங்களைப் பற்றி';
+
+  @override
+  String get aboutUsMenuSubtitle =>
+      'தச்சர்களுக்கான வெகுமதி & நம்பிக்கை திட்டம்';
+
+  @override
+  String get aboutUsSubtitle => 'உங்கள் ஹார்டுவேர் வெகுமதி துணை';
+
+  @override
+  String get aboutUsOverviewTitle => 'பாலாஜி பாயிண்ட்ஸ் என்றால் என்ன?';
+
+  @override
+  String get aboutUsOverviewBody =>
+      'பாலாஜி பாயிண்ட்ஸ் தச்சர்களுக்கும் ஹார்டுவேர் கடைகளுக்கும் ஒரு டிஜிட்டல் நம்பிக்கை தளம். தகுதியான பொருள் கொள்முதல்களைப் புள்ளிகள், வெகுமதிகள் மற்றும் அங்கீகாரமாக மாற்ற உதவுகிறது. நீங்கள் செயலியில் பில்களைச் சமர்ப்பிக்கிறீர்கள்; நீங்கள் இணைந்துள்ள கடை அவற்றைச் சரிபார்த்து ஒப்புதல் அளிக்கிறது; உங்கள் பணப்பையும் வரலாறும் தானாக புதுப்பிக்கப்படுவதால் நிலையை எப்போதும் தெரிந்துகொள்ளலாம்.';
+
+  @override
+  String get aboutUsEarningTitle => 'புள்ளிகளை எப்படிச் சம்பாதிப்பது';
+
+  @override
+  String get aboutUsEarningBody =>
+      'தெளிவான புகைப்படங்கள், சரியான தொகை மற்றும் கடை கேட்கும் விவரங்களுடன் கொள்முதல் பில்களைப் பதிவேற்றவும். நியாயமான திட்டமும் தவறுகள்/துஷ்பிரயோகம் குறைவும் இருக்க நிர்வாகி ஒவ்வொரு சமர்ப்பிப்பையும் சரிபார்க்கிறார். ஒப்புதலுக்குப் பிறகு அந்தக் கடையின் விதிகளின்படி புள்ளிகள் சேர்க்கப்படும் (உதா: ரூபாய்–புள்ளி மாற்றம்). செயலியில் இருப்பு, பரிவர்த்தனை வரலாறு, நிலை முன்னேற்றம் ஆகியவற்றை எப்போதும் காணலாம்.';
+
+  @override
+  String get aboutUsOffersTitle => 'தலைமைப் பலகை, சலுகைகள் மற்றும் தகவல்கள்';
+
+  @override
+  String get aboutUsOffersBody =>
+      'பல கடைகள் தலைமைப் பலகை நடத்துகின்றன; அந்தத் திட்டத்தில் மற்ற தச்சர்களிடையே உங்கள் நிலையைக் காணலாம். பேனர், சலுகைகள், அறிவிப்புகள்—பருவ சலுகைகள், கூடுதல் புள்ளி நிகழ்வுகள்—உங்கள் கடை வழங்கும் வாய்ப்புகளைத் தவறவிடாமல் இருக்க உதவும்.';
+
+  @override
+  String get aboutUsFairnessTitle => 'ஒப்புதல், வெளிப்படைத்தன்மை மற்றும் ஆதரவு';
+
+  @override
+  String get aboutUsFairnessBody =>
+      'ஒவ்வொரு பில்லும் கவனமாகச் சரிபார்க்கப்படுவதால் சிறிது நேரம் ஆகலாம். நிராகரிப்பானால் காரணம் செயலியில் தெரிய வேண்டும் அல்லது கடைக் குழு வழிகாட்டும். உள்நுழைவு, PIN, சுயவிவரம் அல்லது அறிவிப்புப் பிரச்சினைகளுக்குச் செயலி வழிகளையும் தேவையில் கடையையும் தொடர்புகொள்ளவும். நிலுவை, ஒப்புதல், நிராகரிப்பு ஆகியவற்றிற்குத் தெளிவான விதிகள் மற்றும் நிலை காட்சி முக்கியம்.';
+
+  @override
+  String get aboutUsStoresTitle => 'உங்கள் கடை, உங்கள் திட்டம்';
+
+  @override
+  String get aboutUsStoresBody =>
+      'புள்ளிகள், நிலைகள் மற்றும் சலுகைகள் இந்தச் செயலியில் நீங்கள் இணைந்த ஹார்டுவேர் கடையுடன் இணைக்கப்பட்டவை. வெவ்வேறு கடைகள் வெவ்வேறு விதிகள், மாற்ற விகிதங்கள் மற்றும் நன்மைகளைக் கொண்டிருக்கலாம். பல கடைகளில் வாங்கினால் ஒவ்வொரு உறவும் பொதுவாகத் தனி; கடை வேறுவிதமாகச் சொல்லாவிட்டால்—விவரங்களுக்கு உங்களைச் சேர்த்த கடையை உறுதிப்படுத்தவும்.';
+
+  @override
+  String get aboutUsClosing =>
+      'பாலாஜி பாயிண்ட்ஸ் பயன்படுத்துவதற்கு நன்றி—தச்சர்களுக்கும் உங்களுடன் இணைந்த கடைகளுக்கும் உதவுவதில் பெருமை கொள்கிறோம்.';
+
+  @override
+  String get aboutUsCreditsHeading => 'வடிவமைப்பு மற்றும் உருவாக்கம்';
+
+  @override
+  String get aboutUsCreditsStudio => 'Aaiji Tech Studio — Vadodara, Gujarat';
+
+  @override
+  String get onboardingSkip => 'தவிர்';
+
+  @override
+  String get onboardingGetStarted => 'தொடங்கு';
+
+  @override
+  String get onboardingSlide1Title => 'பில்களைச் சமர்ப்பி, புள்ளிகளைச் சம்பாதி';
+
+  @override
+  String get onboardingSlide1Body =>
+      'உங்கள் ஹார்டுவேர் கொள்முதல் பில்களைப் பதிவேற்றவும். உங்கள் கடை ஒப்புதல் அளிக்கும்போது புள்ளிகள் உங்கள் பணப்பையில் சேரும்.';
+
+  @override
+  String get onboardingSlide2Title => 'வெகுமதிகளைக் கண்காணி';
+
+  @override
+  String get onboardingSlide2Body =>
+      'இருப்பு, நிலை மற்றும் தலைமைப் பலகை நிலையைக் காண்க. உங்களைப் போன்ற தச்சர்களுக்கான சலுகைகளை உலாவவும்.';
+
+  @override
+  String get onboardingSlide3Title => 'புதுப்பித்த நிலையில் இருங்கள்';
+
+  @override
+  String get onboardingSlide3Body =>
+      'பில்கள் ஒப்புதல் அல்லது நிராகரிப்பு பற்றி அறிவிப்புகளைப் பெறுங்கள். சுயவிவரம் மற்றும் விருப்பங்களை எப்போதும் மேலாண்மை செய்யுங்கள்.';
 }

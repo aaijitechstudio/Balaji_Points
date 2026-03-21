@@ -54,9 +54,19 @@ class PinAuthService {
       final salt = _generateSalt();
       final pinHash = _hashPin(pin, salt);
 
+      DocumentSnapshot<Map<String, dynamic>>? existingDoc;
       if (existingQuery.docs.isNotEmpty) {
+        existingDoc = existingQuery.docs.first;
+      } else {
+        final byId = await usersRef.doc(normalized).get();
+        if (byId.exists) {
+          existingDoc = byId;
+        }
+      }
+
+      if (existingDoc != null) {
         // Update existing user
-        final doc = existingQuery.docs.first;
+        final doc = existingDoc;
         final data = <String, dynamic>{
           'pinHash': pinHash,
           'pinSalt': salt,
@@ -198,6 +208,7 @@ class PinAuthService {
   }
 
   /// Check if a phone already has a PIN set.
+  /// Matches [userExists]: by `phone` field, else document id == normalized phone.
   Future<bool> hasPin(String phone) async {
     try {
       final normalized = normalizePhone(phone);
@@ -207,8 +218,17 @@ class PinAuthService {
           .limit(1)
           .get();
 
-      if (query.docs.isEmpty) return false;
-      final data = query.docs.first.data();
+      Map<String, dynamic>? data;
+      if (query.docs.isNotEmpty) {
+        data = query.docs.first.data();
+      } else {
+        final doc = await _firestore.collection('users').doc(normalized).get();
+        if (doc.exists) {
+          data = doc.data();
+        }
+      }
+
+      if (data == null) return false;
       return data['pinHash'] != null && data['pinSalt'] != null;
     } catch (e) {
       AppLogger.error('Error checking PIN for phone $phone', e);

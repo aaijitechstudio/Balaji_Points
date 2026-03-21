@@ -12,7 +12,7 @@ class CompleteProfileCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return Container(
-      margin: DesignToken.paddingHorizontalLG,
+      margin: DesignToken.layoutScreenHorizontal,
       decoration: BoxDecoration(
         // Thin gradient border to match home header & bottom bar
         gradient: LinearGradient(
@@ -80,10 +80,12 @@ class CompleteProfileCard extends StatelessWidget {
                           l10n.completeProfileDetails,
                           style: LegacyTheme.AppTextStyles.nunitoRegular
                               .copyWith(
-                            fontSize: DesignToken.fontSizeMD,
-                            color: DesignToken.white.withValues(alpha: 0.95),
-                            height: 1.4,
-                          ),
+                                fontSize: DesignToken.fontSizeMD,
+                                color: DesignToken.white.withValues(
+                                  alpha: 0.95,
+                                ),
+                                height: 1.4,
+                              ),
                         ),
                       ],
                     ),
@@ -102,4 +104,3 @@ class CompleteProfileCard extends StatelessWidget {
     );
   }
 }
-

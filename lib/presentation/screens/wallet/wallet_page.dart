@@ -6,6 +6,7 @@ import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/services/session_service.dart';
 import '../../widgets/home_nav_bar.dart';
+import 'package:balaji_points/core/layout/carpenter_shell_layout.dart';
 
 class WalletPage extends StatefulWidget {
   const WalletPage({super.key});
@@ -50,13 +51,10 @@ class _WalletPageState extends State<WalletPage> {
     final userId = _userId ?? 'loading';
 
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    // Slightly off-white makes the UI feel cleaner than pure white.
-    final pageBackground =
-        isDark ? theme.colorScheme.surface : DesignToken.grey50;
-    // Dashboard uses a custom bottom bar (~98px stack height). Keep
-    // enough padding so content won't hide under it, but tighter than before.
-    final bottomPadding = 84.0 + MediaQuery.of(context).padding.bottom;
+    final pageBackground = theme.scaffoldBackgroundColor;
+    final bottomPadding = CarpenterShellLayout.bottomPaddingForScrollView(
+      MediaQuery.of(context),
+    );
     return Scaffold(
       backgroundColor: pageBackground,
       body: Column(
@@ -345,11 +343,11 @@ class _WalletPageState extends State<WalletPage> {
                           color: DesignToken.white.withValues(alpha: 0.9),
                         ),
                       ),
-                    const SizedBox(height: 6),
+                      const SizedBox(height: 6),
                       Text(
                         '$totalPoints',
                         style: AppTextStyles.nunitoBold.copyWith(
-                        fontSize: 30,
+                          fontSize: 30,
                           color: DesignToken.white,
                         ),
                       ),
@@ -357,13 +355,13 @@ class _WalletPageState extends State<WalletPage> {
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 6,
+                      horizontal: 14,
+                      vertical: 6,
                     ),
-                  decoration: BoxDecoration(
-                    color: DesignToken.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
+                    decoration: BoxDecoration(
+                      color: DesignToken.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                     child: Text(
                       tier,
                       style: AppTextStyles.nunitoSemiBold.copyWith(
@@ -374,7 +372,7 @@ class _WalletPageState extends State<WalletPage> {
                   ),
                 ],
               ),
-            const SizedBox(height: 12),
+              const SizedBox(height: 12),
             ],
           ),
         );
@@ -390,8 +388,7 @@ class _WalletPageState extends State<WalletPage> {
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final bg =
-        isDark ? theme.colorScheme.surface : DesignToken.grey50;
+    final bg = isDark ? theme.colorScheme.surface : DesignToken.white;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -711,10 +708,11 @@ class _WalletPageState extends State<WalletPage> {
         if (snapshot.hasError) {
           debugPrint('WalletPage: ❌ ERROR loading bills: ${snapshot.error}');
           final theme = Theme.of(context);
+          final isDark = theme.brightness == Brightness.dark;
           return Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
+              color: isDark ? theme.colorScheme.surface : DesignToken.white,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
@@ -758,10 +756,13 @@ class _WalletPageState extends State<WalletPage> {
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           debugPrint('WalletPage: No bills found for user $userId');
           final theme = Theme.of(context);
+          final isDarkEmpty = theme.brightness == Brightness.dark;
           return Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
+              color: isDarkEmpty
+                  ? theme.colorScheme.surface
+                  : DesignToken.white,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
@@ -815,7 +816,9 @@ class _WalletPageState extends State<WalletPage> {
 
             final theme = Theme.of(context);
             final isDark = theme.brightness == Brightness.dark;
-            final cardBg = isDark ? theme.colorScheme.surface : DesignToken.white;
+            final cardBg = isDark
+                ? theme.colorScheme.surface
+                : DesignToken.white;
             return Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(

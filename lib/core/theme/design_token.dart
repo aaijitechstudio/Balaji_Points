@@ -94,14 +94,91 @@ class DesignToken {
   static const Color offerBasicBg = Color(0xFFDCFCE7); // Green shade 100
   static const Color offerFullWidthBg = Color(0xFFFCE7F3); // Pink shade 100
 
+  /// Min height for offer image dialog error / placeholder state.
+  static const double offerImageDialogFallbackMinHeight = 220.0;
+
+  static const double offerCarouselShadowBlur = 10.0;
+  static const double offerCarouselShadowDy = 4.0;
+
   // Tier Colors (Platinum, Gold, Silver, Bronze)
   static const Color tierPlatinum = Color(0xFF00D4FF); // Cyan
   static const Color tierGold = Color(0xFFFFD700); // Gold
   static const Color tierSilver = Color(0xFFC0C0C0); // Silver
   static const Color tierBronze = Color(0xFFCD7F32); // Bronze/Copper
 
-  // Navy Background (for dashboard, redeem, role selection)
+  // Navy Background (dark-mode carpenter bottom bar accent shell)
   static const Color navyBackground = Color(0xFF001F3F);
+
+  /// Carpenter app canvas (light mode): slate-50 — matches soft branded shells.
+  static const Color carpenterAppBackground = Color(0xFFF8FAFC); // #F8FAFC
+
+  // ---------------------------------------------------------------------------
+  // Home screen blueprint (calm, premium, minimal — light mode)
+  // ---------------------------------------------------------------------------
+  static const Color homeTextPrimary = Color(0xFF1E293B);
+  static const Color homeTextMuted = Color(0xFF64748B);
+  static const Color homeHeaderTint = Color(0xFFF1F5F9);
+  static const Color homeCardBorder = Color(0xFFEDF1F5);
+
+  /// Hairline under carpenter shell top nav ([HomeNavBar], home app bar): dark in light mode, light in dark mode.
+  static Color carpenterAppBarBottomBorderColor(bool isDark) {
+    return isDark
+        ? white.withValues(alpha: 0.24)
+        : textDark.withValues(alpha: 0.16);
+  }
+
+  static const Color homeIconCircleBlue = Color(0xFFE6EEF8);
+  static const Color homeQuickActionScanBg = Color(0xFFE6EEF8);
+  static const Color homeQuickActionRedeemBg = Color(0xFFFFF3F5);
+  static const Color homeQuickActionHistoryBg = Color(0xFFF1F5F9);
+  static const Color homeQuickActionSupportBg = Color(0xFFF8FAFC);
+  static const Color homeAccentPink = Color(0xFFFF6B81);
+  static const Color homePointsPositive = Color(0xFF16A34A);
+  static const Color homePointsNegative = Color(0xFFDC2626);
+
+  /// Main points summary on home (radius 20, very soft shadow).
+  static BoxDecoration homeSummaryCardDecoration({
+    required bool isDark,
+    required Color surfaceColor,
+  }) {
+    return BoxDecoration(
+      color: isDark ? surfaceColor : white,
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(
+        color: isDark ? white.withValues(alpha: 0.12) : homeCardBorder,
+        width: 1,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: homeTextMuted.withValues(alpha: isDark ? 0.12 : 0.06),
+          blurRadius: 14,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    );
+  }
+
+  /// Standard white section cards (quick actions, list rows).
+  static BoxDecoration homeSectionCardDecoration({
+    required bool isDark,
+    required Color surfaceColor,
+  }) {
+    return BoxDecoration(
+      color: isDark ? surfaceColor : white,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(
+        color: isDark ? white.withValues(alpha: 0.10) : homeCardBorder,
+        width: 1,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: homeTextMuted.withValues(alpha: isDark ? 0.1 : 0.05),
+          blurRadius: 10,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    );
+  }
 
   // Leaderboard Rank Position Colors
   static const Color rank1Background = Color(0xFFFFF8E1); // Amber.shade100
@@ -246,6 +323,28 @@ class DesignToken {
   static const double padding2XL = 24.0;
   static const double padding3XL = 32.0;
   static const double padding4XL = 40.0;
+
+  // --------------------------------------------------------------------------
+  // Layout rhythm — premium spacing (carpenter shell / home)
+  // Screen padding 16–20, card gaps 12–16, major section gaps 20–24.
+  // --------------------------------------------------------------------------
+  /// Default horizontal screen inset (16).
+  static const double layoutScreenPaddingX = paddingLG;
+  /// Looser horizontal inset / card padding when a 20px rhythm fits better.
+  static const double layoutScreenPaddingXLoose = paddingXL;
+  /// Space between stacked cards or related blocks (16).
+  static const double layoutCardGap = spacingLG;
+  /// Tighter stack inside a section (12).
+  static const double layoutCardGapTight = spacingMD;
+  /// Space between major sections (24).
+  static const double layoutSectionGap = spacing2XL;
+  /// Slightly tighter major break (20).
+  static const double layoutSectionGapTight = spacingXL;
+
+  static const EdgeInsets layoutScreenHorizontal =
+      EdgeInsets.symmetric(horizontal: layoutScreenPaddingX);
+  static const EdgeInsets layoutScreenHorizontalLoose =
+      EdgeInsets.symmetric(horizontal: layoutScreenPaddingXLoose);
 
   // Margin
   static const double marginXS = 4.0;

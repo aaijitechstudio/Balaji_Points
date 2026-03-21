@@ -60,11 +60,9 @@ class _CartPageState extends State<CartPage> {
       );
       if (result == null) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Your cart is empty.'),
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Your cart is empty.')));
         return;
       }
 
@@ -91,9 +89,7 @@ class _CartPageState extends State<CartPage> {
         final name = item['name'] ?? '';
         final qty = item['quantity'] ?? 0;
         final price = (item['price'] ?? 0) as num;
-        buffer.writeln(
-          '- $name x$qty @ ₹${price.toStringAsFixed(0)}',
-        );
+        buffer.writeln('- $name x$qty @ ₹${price.toStringAsFixed(0)}');
       }
       buffer.writeln('');
       buffer.writeln('Total: ₹${total.toStringAsFixed(0)}');
@@ -106,17 +102,13 @@ class _CartPageState extends State<CartPage> {
       if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Unable to open WhatsApp.'),
-          ),
+          const SnackBar(content: Text('Unable to open WhatsApp.')),
         );
       }
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Order placed successfully.'),
-        ),
+        const SnackBar(content: Text('Order placed successfully.')),
       );
     } catch (e) {
       if (!mounted) return;
@@ -133,14 +125,17 @@ class _CartPageState extends State<CartPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final appBarFill =
+        theme.appBarTheme.backgroundColor ?? theme.scaffoldBackgroundColor;
     final borderColor = isDark
         ? Colors.white.withValues(alpha: 0.12)
         : Colors.black.withValues(alpha: 0.08);
 
     if (_loadingUser) {
       return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: Colors.white,
+          backgroundColor: appBarFill,
           foregroundColor: DesignToken.textDark,
           elevation: 0,
           leading: IconButton(
@@ -162,8 +157,9 @@ class _CartPageState extends State<CartPage> {
 
     if (_userId == null) {
       return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: Colors.white,
+          backgroundColor: appBarFill,
           foregroundColor: DesignToken.textDark,
           elevation: 0,
           leading: IconButton(
@@ -177,16 +173,14 @@ class _CartPageState extends State<CartPage> {
             child: Container(height: 1, color: borderColor),
           ),
         ),
-        body: const Center(
-          child: Text('Please log in to use cart.'),
-        ),
+        body: const Center(child: Text('Please log in to use cart.')),
       );
     }
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: appBarFill,
         foregroundColor: DesignToken.textDark,
         elevation: 0,
         leading: IconButton(
@@ -197,10 +191,7 @@ class _CartPageState extends State<CartPage> {
         centerTitle: true,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(
-            height: 1,
-            color: borderColor,
-          ),
+          child: Container(height: 1, color: borderColor),
         ),
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -291,8 +282,7 @@ class _CartPageState extends State<CartPage> {
                       final price = (data['price'] ?? 0) as num;
                       final mainCategory =
                           (data['mainCategory'] ?? '') as String;
-                      final subCategory =
-                          (data['subCategory'] ?? '') as String;
+                      final subCategory = (data['subCategory'] ?? '') as String;
                       final lineTotal = qty * price.toDouble();
 
                       return Card(
@@ -315,8 +305,9 @@ class _CartPageState extends State<CartPage> {
                                           fit: BoxFit.cover,
                                         )
                                       : Container(
-                                          color: DesignToken.primary
-                                              .withValues(alpha: 0.1),
+                                          color: DesignToken.primary.withValues(
+                                            alpha: 0.1,
+                                          ),
                                           child: const Icon(
                                             Icons.layers_rounded,
                                             color: DesignToken.primary,
@@ -335,9 +326,9 @@ class _CartPageState extends State<CartPage> {
                                       overflow: TextOverflow.ellipsis,
                                       style: AppTextStyles.nunitoSemiBold
                                           .copyWith(
-                                        fontSize: 16,
-                                        color: DesignToken.textDark,
-                                      ),
+                                            fontSize: 16,
+                                            color: DesignToken.textDark,
+                                          ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
@@ -346,9 +337,9 @@ class _CartPageState extends State<CartPage> {
                                           : mainCategory,
                                       style: AppTextStyles.nunitoRegular
                                           .copyWith(
-                                        fontSize: 12,
-                                        color: Colors.grey[600],
-                                      ),
+                                            fontSize: 12,
+                                            color: Colors.grey[600],
+                                          ),
                                     ),
                                     const SizedBox(height: 6),
                                     Text(
@@ -379,10 +370,8 @@ class _CartPageState extends State<CartPage> {
                                       ),
                                       Text(
                                         '$qty',
-                                        style:
-                                            AppTextStyles.nunitoBold.copyWith(
-                                          fontSize: 14,
-                                        ),
+                                        style: AppTextStyles.nunitoBold
+                                            .copyWith(fontSize: 14),
                                       ),
                                       IconButton(
                                         icon: const Icon(Icons.add_circle),
@@ -400,11 +389,11 @@ class _CartPageState extends State<CartPage> {
                                   ),
                                   Text(
                                     '₹${lineTotal.toStringAsFixed(0)}',
-                                    style:
-                                        AppTextStyles.nunitoSemiBold.copyWith(
-                                      fontSize: 12,
-                                      color: DesignToken.textDark,
-                                    ),
+                                    style: AppTextStyles.nunitoSemiBold
+                                        .copyWith(
+                                          fontSize: 12,
+                                          color: DesignToken.textDark,
+                                        ),
                                   ),
                                   TextButton.icon(
                                     onPressed: () {
@@ -440,8 +429,10 @@ class _CartPageState extends State<CartPage> {
                   ),
                 ),
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: TextField(
                     controller: _addressController,
                     maxLines: 2,
@@ -459,8 +450,10 @@ class _CartPageState extends State<CartPage> {
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surface,
                     boxShadow: [
@@ -505,8 +498,7 @@ class _CartPageState extends State<CartPage> {
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 20),
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
                           ),
                           icon: const Icon(Icons.shopping_bag),
                           label: const Text(
@@ -526,4 +518,3 @@ class _CartPageState extends State<CartPage> {
     );
   }
 }
-

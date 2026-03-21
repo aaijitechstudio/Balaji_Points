@@ -43,8 +43,7 @@ class _OffersCarouselState extends State<OffersCarousel> {
             },
           ),
         ),
-        const SizedBox(height: 12),
-        // Dots Indicator
+        const SizedBox(height: DesignToken.layoutCardGapTight),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(
@@ -58,165 +57,167 @@ class _OffersCarouselState extends State<OffersCarousel> {
 
   Widget _buildOfferCard(BuildContext context, OfferItem offer) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      margin: const EdgeInsets.symmetric(
+        horizontal: DesignToken.layoutScreenPaddingX,
+      ),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: DesignToken.borderRadiusLG,
         boxShadow: [
           BoxShadow(
-            color: Colors.purple.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: DesignToken.purpleShade500.withValues(alpha: 0.3),
+            blurRadius: DesignToken.offerCarouselShadowBlur,
+            offset: Offset(0, DesignToken.offerCarouselShadowDy),
           ),
         ],
       ),
-      child: Stack(
-        children: [
-          // Offer image from admin (full card background)
-          if (offer.imageUrl != null && offer.imageUrl!.isNotEmpty)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.network(
-                offer.imageUrl!,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: Colors.purple.shade400,
-                  );
-                },
+      child: ClipRRect(
+        borderRadius: DesignToken.borderRadiusLG,
+        child: Stack(
+          children: [
+            if (offer.imageUrl != null && offer.imageUrl!.isNotEmpty)
+              Positioned.fill(
+                child: Image.network(
+                  offer.imageUrl!,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
+                  errorBuilder: (context, error, stackTrace) {
+                    return ColoredBox(color: DesignToken.purpleShade300);
+                  },
+                ),
+              )
+            else
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        DesignToken.purpleShade600,
+                        DesignToken.purpleShade300,
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                ),
               ),
-            )
-          else
-            // Fallback gradient when no image configured
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                gradient: LinearGradient(
-                  colors: [Colors.purple.shade600, Colors.purple.shade400],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+            Positioned.fill(
+              child: CustomPaint(painter: _OfferPatternPainter()),
+            ),
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      DesignToken.black.withValues(alpha: 0.35),
+                      DesignToken.black.withValues(alpha: 0.55),
+                    ],
+                  ),
                 ),
               ),
             ),
-          // Decorative pattern overlay
-          Positioned.fill(child: CustomPaint(painter: _OfferPatternPainter())),
-          // Dark overlay to keep text readable on top of image
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withOpacity(0.35),
-                    Colors.black.withOpacity(0.55),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // Content
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (offer.title.isNotEmpty)
-                  Text(
-                    offer.title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+            Padding(
+              padding: const EdgeInsets.all(DesignToken.paddingXL),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (offer.title.isNotEmpty)
+                    Text(
+                      offer.title,
+                      style: DesignToken.textBold.copyWith(
+                        color: DesignToken.white,
+                        fontSize: DesignToken.fontSize3XL,
+                      ),
                     ),
-                  ),
-                const SizedBox(height: 12),
-                if (offer.description.isNotEmpty)
-                  Text(
-                    offer.description,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 16,
+                  const SizedBox(height: DesignToken.spacingMD),
+                  if (offer.description.isNotEmpty)
+                    Text(
+                      offer.description,
+                      style: DesignToken.textRegular.copyWith(
+                        color: DesignToken.white.withValues(alpha: 0.9),
+                        fontSize: DesignToken.fontSizeLG,
+                      ),
                     ),
-                  ),
-                const SizedBox(height: 16),
-                if (offer.actionText.isNotEmpty)
-                  InkWell(
-                    onTap: () {
-                      if (offer.imageUrl != null &&
-                          offer.imageUrl!.isNotEmpty) {
-                        showDialog(
-                          context: context,
-                          builder: (context) {
-                            return Dialog(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: Image.network(
-                                  offer.imageUrl!,
-                                  fit: BoxFit.contain,
-                                  errorBuilder:
-                                      (context, error, stackTrace) {
-                                    return Container(
-                                      color: Colors.grey[200],
-                                      height: 220,
-                                      child: const Center(
-                                        child: Icon(
-                                          Icons.broken_image,
-                                          size: 40,
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                                    );
-                                  },
+                  const SizedBox(height: DesignToken.spacingLG),
+                  if (offer.actionText.isNotEmpty)
+                    InkWell(
+                      onTap: () {
+                        if (offer.imageUrl != null &&
+                            offer.imageUrl!.isNotEmpty) {
+                          showDialog(
+                            context: context,
+                            builder: (context) {
+                              return Dialog(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: DesignToken.borderRadiusLG,
                                 ),
-                              ),
-                            );
-                          },
-                        );
-                      }
-                    },
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        offer.actionText,
-                        style: TextStyle(
-                          color: Colors.purple.shade700,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
+                                child: ClipRRect(
+                                  borderRadius: DesignToken.borderRadiusLG,
+                                  child: Image.network(
+                                    offer.imageUrl!,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        color: DesignToken.grey200,
+                                        height: DesignToken
+                                            .offerImageDialogFallbackMinHeight,
+                                        child: Center(
+                                          child: Icon(
+                                            Icons.broken_image,
+                                            size: DesignToken.iconSize2XL,
+                                            color: DesignToken.grey500,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(DesignToken.radiusXL),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: DesignToken.paddingXL,
+                          vertical: DesignToken.paddingSM + 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: DesignToken.white,
+                          borderRadius: BorderRadius.circular(
+                            DesignToken.radiusXL,
+                          ),
+                        ),
+                        child: Text(
+                          offer.actionText,
+                          style: DesignToken.textBold.copyWith(
+                            color: DesignToken.purpleShade700,
+                            fontSize: DesignToken.fontSizeMD,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildDot(bool isActive) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      width: isActive ? 24 : 8,
-      height: 8,
+      margin: const EdgeInsets.symmetric(horizontal: DesignToken.spacingXS),
+      width: isActive ? DesignToken.width2XL : DesignToken.spacingSM,
+      height: DesignToken.spacingSM,
       decoration: BoxDecoration(
-        color: isActive ? DesignToken.secondary : Colors.grey.shade300,
-        borderRadius: BorderRadius.circular(4),
+        color: isActive ? DesignToken.secondary : DesignToken.grey300,
+        borderRadius: DesignToken.borderRadiusXS,
       ),
     );
   }
@@ -240,15 +241,14 @@ class _OfferPatternPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.1)
+      ..color = DesignToken.white.withValues(alpha: 0.1)
       ..style = PaintingStyle.fill;
 
-    // Draw decorative circles
     for (int i = 0; i < 5; i++) {
       for (int j = 0; j < 3; j++) {
         canvas.drawCircle(
           Offset(size.width * 0.2 * (i + 1), size.height * 0.3 * (j + 1)),
-          20,
+          DesignToken.iconSizeMD,
           paint,
         );
       }

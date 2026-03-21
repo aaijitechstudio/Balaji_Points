@@ -12,6 +12,7 @@ import 'package:balaji_points/services/fcm_service.dart';
 import 'package:balaji_points/presentation/providers/theme_provider.dart';
 import 'package:balaji_points/presentation/providers/locale_provider.dart';
 import 'package:balaji_points/presentation/widgets/home_nav_bar.dart';
+import 'package:balaji_points/core/layout/carpenter_shell_layout.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   final bool showBottomNav;
@@ -247,7 +248,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                       backgroundColor: theme.colorScheme.surface,
                       child: SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.only(bottom: 120),
+                        padding: EdgeInsets.only(
+                          bottom:
+                              CarpenterShellLayout.bottomPaddingForScrollView(
+                                MediaQuery.of(context),
+                              ),
+                        ),
                         child: Column(
                           children: [
                             const SizedBox(height: 24),
@@ -263,8 +269,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                                 borderRadius: BorderRadius.circular(16),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: DesignToken.black
-                                        .withValues(alpha: 0.1),
+                                    color: DesignToken.black.withValues(
+                                      alpha: 0.1,
+                                    ),
                                     blurRadius: 10,
                                     offset: const Offset(0, 4),
                                   ),
@@ -293,7 +300,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                                               _userData!['profileImage']
                                                   as String,
                                               key: ValueKey<String>(
-                                                _userData!['profileImage'] as String,
+                                                _userData!['profileImage']
+                                                    as String,
                                               ),
                                               fit: BoxFit.cover,
                                               loadingBuilder: (context, child, loadingProgress) {
@@ -460,6 +468,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
+                                  _profileSectionHeader(
+                                    l10n.profileSectionAccount,
+                                    theme,
+                                  ),
+                                  const SizedBox(height: 8),
                                   // Edit Profile Button
                                   _buildSimpleButton(
                                     icon: Icons.edit,
@@ -497,20 +510,31 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                                   // My Orders Button
                                   _buildSimpleButton(
                                     icon: Icons.receipt_long,
-                                    title: 'My Orders',
+                                    title: l10n.myOrders,
                                     onTap: () {
                                       context.push('/orders');
                                     },
                                   ),
-                                  const SizedBox(height: 12),
+                                  const SizedBox(height: 20),
 
+                                  _profileSectionHeader(
+                                    l10n.profileSectionSupport,
+                                    theme,
+                                  ),
+                                  const SizedBox(height: 8),
                                   // Help & Support Button
                                   _buildSimpleButton(
                                     icon: Icons.phone,
                                     title: l10n.helpSupport,
                                     onTap: () => _showSupportDialog(context),
                                   ),
-                                  const SizedBox(height: 12),
+                                  const SizedBox(height: 20),
+
+                                  _profileSectionHeader(
+                                    l10n.profileSectionPreferences,
+                                    theme,
+                                  ),
+                                  const SizedBox(height: 8),
 
                                   // Language Selection Button
                                   _buildLanguageSelector(ref),
@@ -518,16 +542,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
 
                                   // Theme Toggle Button
                                   _buildThemeToggleButton(ref),
-                                  const SizedBox(height: 12),
-
-                                  // Notification Settings Button
-                                  _buildSimpleButton(
-                                    icon: Icons.notifications,
-                                    title: 'Notification Settings',
-                                    onTap: () {
-                                      context.push('/notification-settings');
-                                    },
-                                  ),
 
                                   const SizedBox(height: 24),
 
@@ -583,7 +597,26 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                                     ),
                                   ),
 
-                                  const SizedBox(height: 20),
+                                  const SizedBox(height: 12),
+
+                                  TextButton.icon(
+                                    onPressed: () => context.push('/about-us'),
+                                    icon: Icon(
+                                      Icons.info_outline_rounded,
+                                      size: 20,
+                                      color: DesignToken.secondary,
+                                    ),
+                                    label: Text(
+                                      l10n.profileAboutLink,
+                                      style: AppTextStyles.nunitoSemiBold
+                                          .copyWith(
+                                            fontSize: 15,
+                                            color: DesignToken.secondary,
+                                          ),
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 8),
 
                                   // App Version
                                   if (_appVersion.isNotEmpty)
@@ -594,7 +627,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                                             .copyWith(
                                               fontSize: 13,
                                               color: DesignToken.textDark
-                                                  .withOpacity(0.5),
+                                                  .withValues(alpha: 0.5),
                                             ),
                                       ),
                                     ),
@@ -799,10 +832,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
       decoration: BoxDecoration(
         color: iconColor.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: iconColor.withValues(alpha: 0.2),
-          width: 1,
-        ),
+        border: Border.all(color: iconColor.withValues(alpha: 0.2), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -864,11 +894,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
               color: DesignToken.success.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(
-              icon,
-              color: DesignToken.greenShade700,
-              size: 20,
-            ),
+            child: Icon(icon, color: DesignToken.greenShade700, size: 20),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -898,10 +924,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  DesignToken.greenShade600,
-                  DesignToken.greenShade700,
-                ],
+                colors: [DesignToken.greenShade600, DesignToken.greenShade700],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -931,6 +954,20 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _profileSectionHeader(String title, ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, top: 4),
+      child: Text(
+        title.toUpperCase(),
+        style: AppTextStyles.nunitoSemiBold.copyWith(
+          fontSize: 12,
+          letterSpacing: 0.8,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+        ),
       ),
     );
   }
@@ -972,10 +1009,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                   ),
                 ),
                 const Spacer(),
-                const Icon(
-                  Icons.chevron_right,
-                  color: DesignToken.grey400,
-                ),
+                const Icon(Icons.chevron_right, color: DesignToken.grey400),
               ],
             ),
           ),

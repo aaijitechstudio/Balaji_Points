@@ -10,22 +10,21 @@ import 'package:balaji_points/services/session_service.dart';
 class ProductListPage extends StatelessWidget {
   final String? initialCategory;
 
-  const ProductListPage({
-    super.key,
-    this.initialCategory,
-  });
+  const ProductListPage({super.key, this.initialCategory});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final appBarFill =
+        theme.appBarTheme.backgroundColor ?? theme.scaffoldBackgroundColor;
     final sessionService = SessionService();
     final cartService = CartService();
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: appBarFill,
         foregroundColor: DesignToken.textDark,
         elevation: 0,
         leading: IconButton(
@@ -133,7 +132,8 @@ class ProductListPage extends StatelessWidget {
           final categories = categorySet.toList()..sort();
           final hasCategories = categories.isNotEmpty;
 
-          final selectedCategory = (initialCategory != null &&
+          final selectedCategory =
+              (initialCategory != null &&
                   initialCategory != 'All' &&
                   hasCategories &&
                   categories.contains(initialCategory))
@@ -145,7 +145,8 @@ class ProductListPage extends StatelessWidget {
               : docs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
                   final cat =
-                      (data['mainCategory'] ?? data['category'] ?? '') as String;
+                      (data['mainCategory'] ?? data['category'] ?? '')
+                          as String;
                   return cat == selectedCategory;
                 }).toList();
 
@@ -156,8 +157,10 @@ class ProductListPage extends StatelessWidget {
               if (hasCategories)
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
                   child: Row(
                     children: [
                       Padding(
@@ -201,8 +204,7 @@ class ProductListPage extends StatelessWidget {
               Expanded(
                 child: GridView.builder(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     mainAxisSpacing: 12,
                     crossAxisSpacing: 12,
@@ -216,7 +218,8 @@ class ProductListPage extends StatelessWidget {
                     final productId = doc.id;
                     final name = (data['name'] ?? '') as String;
                     final mainCategory =
-                        (data['mainCategory'] ?? data['category'] ?? '') as String;
+                        (data['mainCategory'] ?? data['category'] ?? '')
+                            as String;
                     final subCategory = (data['subCategory'] ?? '') as String;
                     final size = (data['size'] ?? '') as String;
                     final thickness = (data['thickness'] ?? '') as String;
@@ -231,8 +234,8 @@ class ProductListPage extends StatelessWidget {
                       subtitle: subCategory.isNotEmpty
                           ? '$mainCategory • $subCategory'
                           : (mainCategory.isNotEmpty
-                              ? mainCategory
-                              : 'Furniture'),
+                                ? mainCategory
+                                : 'Furniture'),
                       price: price,
                       size: size,
                       thickness: thickness,
@@ -281,8 +284,7 @@ class _ProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final Color titleColor =
-        isDark ? DesignToken.white : DesignToken.textDark;
+    final Color titleColor = isDark ? DesignToken.white : DesignToken.textDark;
     final Color subtitleColor = isDark
         ? DesignToken.white.withValues(alpha: 0.80)
         : DesignToken.textDark.withValues(alpha: 0.70);
@@ -312,9 +314,9 @@ class _ProductCard extends StatelessWidget {
         imageUrl: imageUrl,
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Added to cart')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Added to cart')));
     }
 
     void openDetails() {
@@ -385,8 +387,10 @@ class _ProductCard extends StatelessWidget {
                           addToCart();
                         },
                         child: const Padding(
-                          padding:
-                              EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -414,8 +418,9 @@ class _ProductCard extends StatelessWidget {
               ),
             ),
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12).copyWith(top: 8),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+              ).copyWith(top: 8),
               child: Text(
                 name,
                 maxLines: 1,
@@ -427,8 +432,9 @@ class _ProductCard extends StatelessWidget {
               ),
             ),
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12).copyWith(top: 2),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+              ).copyWith(top: 2),
               child: Text(
                 subtitle,
                 maxLines: 1,
@@ -440,8 +446,9 @@ class _ProductCard extends StatelessWidget {
               ),
             ),
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12).copyWith(top: 4),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+              ).copyWith(top: 4),
               child: Text(
                 price > 0 ? '₹${price.toStringAsFixed(0)}' : '',
                 style: AppTextStyles.nunitoBold.copyWith(
@@ -452,27 +459,19 @@ class _ProductCard extends StatelessWidget {
             ),
             if (size.isNotEmpty || thickness.isNotEmpty || quality.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12)
-                    .copyWith(bottom: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                ).copyWith(bottom: 4),
                 child: Wrap(
                   spacing: 6,
                   runSpacing: 4,
                   children: [
                     if (size.isNotEmpty)
-                      _SmallChip(
-                        icon: Icons.straighten,
-                        label: size,
-                      ),
+                      _SmallChip(icon: Icons.straighten, label: size),
                     if (thickness.isNotEmpty)
-                      _SmallChip(
-                        icon: Icons.line_weight,
-                        label: thickness,
-                      ),
+                      _SmallChip(icon: Icons.line_weight, label: thickness),
                     if (quality.isNotEmpty)
-                      _SmallChip(
-                        icon: Icons.verified,
-                        label: quality,
-                      ),
+                      _SmallChip(icon: Icons.verified, label: quality),
                   ],
                 ),
               ),
@@ -520,10 +519,7 @@ class _CartIconButton extends StatelessWidget {
   final int count;
   final VoidCallback onTap;
 
-  const _CartIconButton({
-    required this.count,
-    required this.onTap,
-  });
+  const _CartIconButton({required this.count, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -540,18 +536,12 @@ class _CartIconButton extends StatelessWidget {
             right: 6,
             top: 6,
             child: Container(
-              constraints: const BoxConstraints(
-                minWidth: 16,
-                minHeight: 16,
-              ),
+              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
               padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
               decoration: BoxDecoration(
                 color: DesignToken.error,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: Colors.white,
-                  width: 1,
-                ),
+                border: Border.all(color: Colors.white, width: 1),
               ),
               child: Text(
                 count > 99 ? '99+' : '$count',
@@ -569,4 +559,3 @@ class _CartIconButton extends StatelessWidget {
     );
   }
 }
-

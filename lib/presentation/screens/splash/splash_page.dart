@@ -7,6 +7,7 @@ import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/services/session_service.dart';
 import 'package:balaji_points/services/fcm_service.dart';
+import 'package:balaji_points/services/onboarding_prefs.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -21,11 +22,14 @@ class _SplashPageState extends State<SplashPage> {
   @override
   void initState() {
     super.initState();
+    // Short branded pause, then route as soon as session is resolved (was ~3s fixed).
+    unawaited(_runSplashSequence());
+  }
 
-    // Navigate after delay - check authentication
-    Timer(const Duration(seconds: 3), () {
-      _checkAuthAndNavigate();
-    });
+  Future<void> _runSplashSequence() async {
+    await Future<void>.delayed(const Duration(milliseconds: 750));
+    if (!mounted) return;
+    await _checkAuthAndNavigate();
   }
 
   Future<void> _checkAuthAndNavigate() async {
@@ -42,8 +46,7 @@ class _SplashPageState extends State<SplashPage> {
         final fcmService = FCMService();
         fcmService.processPendingNavigation();
 
-        // Small delay to ensure navigation is processed
-        await Future.delayed(const Duration(milliseconds: 500));
+        await Future<void>.delayed(const Duration(milliseconds: 150));
 
         if (!mounted) return;
 
@@ -59,11 +62,17 @@ class _SplashPageState extends State<SplashPage> {
           context.go('/');
         }
       } else {
-        // No active session - navigate to login
-        context.go('/login');
+        // No session: first install → onboarding, then login; returning → login
+        final onboardingDone = await OnboardingPrefs.isCompleted();
+        if (!mounted) return;
+        if (onboardingDone) {
+          context.go('/login');
+        } else {
+          context.go('/onboarding');
+        }
       }
     } catch (e) {
-      // On error, navigate to login
+      // On error, go to login (avoid trapping user on splash)
       if (mounted) {
         context.go('/login');
       }

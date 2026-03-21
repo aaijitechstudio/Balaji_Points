@@ -102,6 +102,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final appBarFill =
+        theme.appBarTheme.backgroundColor ?? theme.scaffoldBackgroundColor;
     final borderColor = isDark
         ? Colors.white.withValues(alpha: 0.12)
         : Colors.black.withValues(alpha: 0.08);
@@ -109,7 +111,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: appBarFill,
         foregroundColor: DesignToken.textDark,
         elevation: 0,
         leading: IconButton(

@@ -25,7 +25,6 @@ import 'package:balaji_points/presentation/screens/admin/admin_add_bill_page.dar
 import 'package:balaji_points/presentation/screens/admin/diagnostic_page.dart';
 import 'package:balaji_points/presentation/screens/admin/admin_notifications_page.dart';
 import 'package:balaji_points/presentation/screens/bills/add_bill_page.dart';
-import 'package:balaji_points/presentation/screens/settings/notification_settings_page.dart';
 import 'package:balaji_points/presentation/screens/notifications/notifications_page.dart';
 import 'package:balaji_points/services/session_service.dart';
 import 'package:balaji_points/presentation/screens/products/product_list_page.dart';
@@ -33,7 +32,9 @@ import 'package:balaji_points/presentation/screens/cart/cart_page.dart';
 import 'package:balaji_points/presentation/screens/products/product_detail_page.dart';
 import 'package:balaji_points/presentation/screens/orders/orders_page.dart';
 import 'package:balaji_points/presentation/screens/orders/order_detail_page.dart';
-
+import 'package:balaji_points/presentation/screens/info/about_us_page.dart';
+import 'package:balaji_points/presentation/screens/onboarding/onboarding_page.dart';
+import 'package:balaji_points/l10n/app_localizations.dart';
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -58,47 +59,77 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
 
-    errorBuilder: (context, state) => Scaffold(
-      appBar: AppBar(title: const Text('Page Not Found')),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
-            Text('Page not found: ${state.uri}'),
-            if (state.error != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 12, left: 24, right: 24),
-                child: Text(
-                  'Error: ${state.error}',
+    errorBuilder: (context, state) {
+      final l10n = AppLocalizations.of(context);
+      final title = l10n?.routeErrorTitle ?? 'Page not found';
+      final body = l10n?.routeErrorNotFound ?? 'This page could not be opened.';
+      final goHome = l10n?.routeErrorGoHome ?? 'Go home';
+      final detailsLabel = l10n?.routeErrorDetailsLabel ?? 'Details';
+      return Scaffold(
+        appBar: AppBar(title: Text(title)),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                const SizedBox(height: 16),
+                Text(
+                  body,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 12),
-                  maxLines: 5,
-                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyLarge,
                 ),
-              ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () async {
-                final role =
-                    (await SessionService().getUserRole())?.trim().toLowerCase();
-                if (!context.mounted) return;
-                if (role == 'admin') {
-                  context.go('/admin');
-                } else {
-                  context.go('/');
-                }
-              },
-              child: const Text('Go Home'),
+                const SizedBox(height: 8),
+                SelectableText(
+                  state.uri.toString(),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                if (state.error != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    detailsLabel,
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: SelectableText(
+                      '${state.error}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () async {
+                    final role =
+                        (await SessionService().getUserRole())?.trim().toLowerCase();
+                    if (!context.mounted) return;
+                    if (role == 'admin') {
+                      context.go('/admin');
+                    } else {
+                      context.go('/');
+                    }
+                  },
+                  child: Text(goHome),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
-    ),
+      );
+    },
 
     routes: [
       GoRoute(path: '/splash', builder: (context, _) => const SplashPage()),
+
+      GoRoute(
+        path: '/onboarding',
+        name: 'onboarding',
+        builder: (context, _) => const OnboardingPage(),
+      ),
 
       // NEW ARCHITECTURE - Auth routes with BLoC
       GoRoute(
@@ -173,9 +204,9 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const AddBillPage(),
           ),
           GoRoute(
-            path: '/notification-settings',
-            name: 'notification-settings',
-            builder: (context, state) => const NotificationSettingsPage(),
+            path: '/about-us',
+            name: 'about-us',
+            builder: (context, state) => const AboutUsPage(),
           ),
           GoRoute(
             path: '/products',

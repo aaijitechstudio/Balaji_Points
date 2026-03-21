@@ -134,6 +134,12 @@ class _DailySpinPageState extends ConsumerState<DailySpinPage>
   @override
   Widget build(BuildContext context) {
     final spinState = ref.watch(dailySpinProvider);
+    final theme = Theme.of(context);
+    final light = theme.brightness == Brightness.light;
+    final carpenterBg = light ? DesignToken.carpenterAppBackground : theme.scaffoldBackgroundColor;
+    final appBarBg = light
+        ? DesignToken.carpenterAppBackground
+        : (theme.appBarTheme.backgroundColor ?? theme.scaffoldBackgroundColor);
 
     return PopScope(
       canPop: !_isSpinning,
@@ -158,9 +164,9 @@ class _DailySpinPageState extends ConsumerState<DailySpinPage>
         }
       },
       child: Scaffold(
-        backgroundColor: DesignToken.background,
+        backgroundColor: carpenterBg,
         appBar: AppBar(
-          backgroundColor: Colors.white,
+          backgroundColor: appBarBg,
           foregroundColor: DesignToken.textDark,
           elevation: 0,
           leading: IconButton(

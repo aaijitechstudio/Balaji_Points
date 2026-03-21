@@ -322,6 +322,80 @@ class AppLocalizationsEn extends AppLocalizations {
   String get latestOffers => 'Latest Offers';
 
   @override
+  String get goodMorningGreeting => 'Good morning,';
+
+  @override
+  String get goodAfternoonGreeting => 'Good afternoon,';
+
+  @override
+  String get goodEveningGreeting => 'Good evening,';
+
+  @override
+  String get homeBrowseProductsTitle => 'Wood & Plywood';
+
+  @override
+  String get homeBrowseProductsSubtitle => 'Premium laminates & surfaces';
+
+  @override
+  String get viewAll => 'View all';
+
+  @override
+  String get homeStoreBranch => 'E road';
+
+  @override
+  String get homeTierSuffix => 'Tier';
+
+  @override
+  String get homeRankingsSectionTitle => 'Rankings & daily winner';
+
+  @override
+  String get homeRankingsSectionSubtitle =>
+      'Leaderboard, your rank, and today’s prize';
+
+  @override
+  String get drawerProductsTitle => 'Products';
+
+  @override
+  String get drawerProductsSubtitle => 'Browse categories and catalog';
+
+  @override
+  String get drawerCart => 'Cart';
+
+  @override
+  String get drawerSectionMainNav => 'Main navigation';
+
+  @override
+  String get drawerSectionMore => 'More';
+
+  @override
+  String get myOrders => 'My orders';
+
+  @override
+  String get profileSectionAccount => 'Account';
+
+  @override
+  String get profileSectionPreferences => 'Preferences';
+
+  @override
+  String get profileSectionSupport => 'Support';
+
+  @override
+  String get profileAboutLink => 'About this app';
+
+  @override
+  String get routeErrorTitle => 'Page not found';
+
+  @override
+  String get routeErrorNotFound =>
+      'This link is invalid or the page was removed.';
+
+  @override
+  String get routeErrorGoHome => 'Go home';
+
+  @override
+  String get routeErrorDetailsLabel => 'Technical details';
+
+  @override
   String get topCarpenters => 'Top 3 Carpenters';
 
   @override
@@ -508,9 +582,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get transactionHistory => 'Transaction History';
-
-  @override
-  String get noTransactions => 'No transactions yet';
 
   @override
   String get earned => 'Earned';
@@ -1111,9 +1182,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myPoints => 'My Points';
 
   @override
-  String get redeemRewards => 'Redeem Rewards';
-
-  @override
   String get leaderboard => 'Leaderboard';
 
   @override
@@ -1123,7 +1191,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get rankShort => 'Rank';
 
   @override
-  String get earn => 'Earn';
+  String get earn => 'Wallet';
 
   @override
   String get approved => 'Approved';
@@ -1337,4 +1405,85 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get languageTamil => 'தமிழ்';
+
+  @override
+  String get aboutUs => 'About Us';
+
+  @override
+  String get aboutUsMenuSubtitle => 'Rewards & loyalty for carpenters';
+
+  @override
+  String get aboutUsSubtitle => 'Your hardware rewards partner';
+
+  @override
+  String get aboutUsOverviewTitle => 'What is Balaji Points?';
+
+  @override
+  String get aboutUsOverviewBody =>
+      'Balaji Points is a digital loyalty platform for carpenters and hardware stores. It helps you turn eligible material purchases into points, rewards, and recognition. You use the app to submit bills; the hardware store you are enrolled with reviews and approves them; your wallet and history update automatically so you always know where you stand.';
+
+  @override
+  String get aboutUsEarningTitle => 'How you earn points';
+
+  @override
+  String get aboutUsEarningBody =>
+      'Upload purchase bills with clear photos, correct amounts, and any details your store asks for. Store admins review submissions to keep the program fair and prevent errors or misuse. After approval, points are credited using that store’s rules (for example, how rupees convert to points). You can track your balance, transaction history, and tier progress anytime in the app.';
+
+  @override
+  String get aboutUsOffersTitle => 'Leaderboards, offers, and updates';
+
+  @override
+  String get aboutUsOffersBody =>
+      'Many stores run a leaderboard so you can see how you rank among carpenters in their program. You will also see offers, banners, and announcements—seasonal deals, bonus point events, or special promotions—so you do not miss opportunities that your store enables for you.';
+
+  @override
+  String get aboutUsFairnessTitle => 'Approvals, transparency, and support';
+
+  @override
+  String get aboutUsFairnessBody =>
+      'Reviews can take a short time because each bill is checked carefully. If something is rejected, you should see a reason or get guidance from your store’s team. For login, PIN, profile, or notification issues, use the options inside the app and contact your store when needed. We focus on clear rules and visible status for pending, approved, and rejected bills.';
+
+  @override
+  String get aboutUsStoresTitle => 'Your store, your program';
+
+  @override
+  String get aboutUsStoresBody =>
+      'Points, tiers, and offers are tied to the hardware store you joined in this app. Different stores may use different rules, conversion rates, and benefits. If you buy from more than one participating store, each relationship is usually separate unless the stores tell you otherwise—always confirm details with the store that enrolled you.';
+
+  @override
+  String get aboutUsClosing =>
+      'Thank you for using Balaji Points—we are proud to support carpenters and the stores that partner with you.';
+
+  @override
+  String get aboutUsCreditsHeading => 'Designed and developed by';
+
+  @override
+  String get aboutUsCreditsStudio => 'Aaiji Tech Studio — Vadodara, Gujarat';
+
+  @override
+  String get onboardingSkip => 'Skip';
+
+  @override
+  String get onboardingGetStarted => 'Get started';
+
+  @override
+  String get onboardingSlide1Title => 'Submit bills, earn points';
+
+  @override
+  String get onboardingSlide1Body =>
+      'Upload your hardware purchase bills. When your store approves them, points are added to your wallet.';
+
+  @override
+  String get onboardingSlide2Title => 'Track your rewards';
+
+  @override
+  String get onboardingSlide2Body =>
+      'See your balance, tier, and leaderboard rank. Browse offers made for carpenters like you.';
+
+  @override
+  String get onboardingSlide3Title => 'Stay in the loop';
+
+  @override
+  String get onboardingSlide3Body =>
+      'Get notified when bills are approved or rejected. Manage your profile and preferences anytime.';
 }

@@ -37,6 +37,7 @@ class HomeNavBar extends StatelessWidget {
     }
 
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final appBarColor =
         theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface;
     final appBarForeground =
@@ -54,6 +55,12 @@ class HomeNavBar extends StatelessWidget {
             borderRadius: const BorderRadius.only(
               bottomLeft: Radius.circular(20),
               bottomRight: Radius.circular(20),
+            ),
+            border: Border(
+              bottom: BorderSide(
+                color: DesignToken.carpenterAppBarBottomBorderColor(isDark),
+                width: 1,
+              ),
             ),
             boxShadow: [
               BoxShadow(

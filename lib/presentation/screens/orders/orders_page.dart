@@ -38,14 +38,17 @@ class _OrdersPageState extends State<OrdersPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final appBarFill =
+        theme.appBarTheme.backgroundColor ?? theme.scaffoldBackgroundColor;
     final borderColor = isDark
         ? Colors.white.withValues(alpha: 0.12)
         : Colors.black.withValues(alpha: 0.08);
 
     if (_loadingUser) {
       return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: Colors.white,
+          backgroundColor: appBarFill,
           foregroundColor: DesignToken.textDark,
           elevation: 0,
           leading: IconButton(
@@ -67,8 +70,9 @@ class _OrdersPageState extends State<OrdersPage> {
 
     if (_userId == null) {
       return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: Colors.white,
+          backgroundColor: appBarFill,
           foregroundColor: DesignToken.textDark,
           elevation: 0,
           leading: IconButton(
@@ -82,16 +86,14 @@ class _OrdersPageState extends State<OrdersPage> {
             child: Container(height: 1, color: borderColor),
           ),
         ),
-        body: const Center(
-          child: Text('Please log in to view orders.'),
-        ),
+        body: const Center(child: Text('Please log in to view orders.')),
       );
     }
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: appBarFill,
         foregroundColor: DesignToken.textDark,
         elevation: 0,
         leading: IconButton(
@@ -102,10 +104,7 @@ class _OrdersPageState extends State<OrdersPage> {
         centerTitle: true,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(
-            height: 1,
-            color: borderColor,
-          ),
+          child: Container(height: 1, color: borderColor),
         ),
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -184,14 +183,14 @@ class _OrdersPageState extends State<OrdersPage> {
                 final data = doc.data();
                 final orderId = data['orderId'] as String? ?? doc.id;
                 final status = data['status'] as String? ?? 'pending';
-                final total =
-                    (data['totalAmount'] as num?)?.toDouble() ?? 0;
+                final total = (data['totalAmount'] as num?)?.toDouble() ?? 0;
                 final createdAt = data['createdAt'] as Timestamp?;
                 final createdDate = createdAt != null
                     ? createdAt.toDate()
                     : DateTime.now();
-                final dateStr = DateFormat('dd MMM yyyy, hh:mm a')
-                    .format(createdDate);
+                final dateStr = DateFormat(
+                  'dd MMM yyyy, hh:mm a',
+                ).format(createdDate);
 
                 return Material(
                   color: Colors.transparent,
@@ -262,15 +261,14 @@ class _OrdersPageState extends State<OrdersPage> {
                                               child: Text(
                                                 'Order $orderId',
                                                 maxLines: 1,
-                                                overflow:
-                                                    TextOverflow.ellipsis,
+                                                overflow: TextOverflow.ellipsis,
                                                 style: AppTextStyles
                                                     .nunitoSemiBold
                                                     .copyWith(
-                                                  fontSize: 15,
-                                                  color:
-                                                      DesignToken.textDark,
-                                                ),
+                                                      fontSize: 15,
+                                                      color:
+                                                          DesignToken.textDark,
+                                                    ),
                                               ),
                                             ),
                                           ],
@@ -280,26 +278,25 @@ class _OrdersPageState extends State<OrdersPage> {
                                           dateStr,
                                           style: AppTextStyles.nunitoRegular
                                               .copyWith(
-                                            fontSize: 12,
-                                            color: Colors.grey[600],
-                                          ),
+                                                fontSize: 12,
+                                                color: Colors.grey[600],
+                                              ),
                                         ),
                                         const SizedBox(height: 6),
                                         Text(
                                           '₹${total.toStringAsFixed(0)}',
                                           style: AppTextStyles.nunitoBold
                                               .copyWith(
-                                            fontSize: 16,
-                                            color: DesignToken.primary,
-                                          ),
+                                                fontSize: 16,
+                                                color: DesignToken.primary,
+                                              ),
                                         ),
                                       ],
                                     ),
                                   ),
                                   const SizedBox(width: 8),
                                   Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.end,
+                                    crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
                                       _StatusChip(status: status),
                                       const SizedBox(height: 6),
@@ -318,16 +315,14 @@ class _OrdersPageState extends State<OrdersPage> {
                                           style: TextStyle(fontSize: 11),
                                         ),
                                         style: TextButton.styleFrom(
-                                          foregroundColor:
-                                              DesignToken.primary,
+                                          foregroundColor: DesignToken.primary,
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 8,
                                             vertical: 4,
                                           ),
                                           minimumSize: Size.zero,
                                           tapTargetSize:
-                                              MaterialTapTargetSize
-                                                  .shrinkWrap,
+                                              MaterialTapTargetSize.shrinkWrap,
                                         ),
                                       ),
                                     ],
@@ -922,4 +917,3 @@ class _StatusChip extends StatelessWidget {
     );
   }
 }
-

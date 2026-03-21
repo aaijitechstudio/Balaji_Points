@@ -122,12 +122,6 @@ class _ResetPINPageState extends State<ResetPINPage>
       }
     }
 
-    // Security check: If not logged in, deny reset (silently)
-    if (!_isLoggedIn) {
-      // Don't show error banner - user can see the informational text below
-      return;
-    }
-
     setState(() {
       _isCheckingPhone = true;
       _phoneChecked = false;
@@ -164,18 +158,6 @@ class _ResetPINPageState extends State<ResetPINPage>
 
     final l10n = AppLocalizations.of(context)!;
 
-    // Security check: Must be logged in
-    if (!_isLoggedIn) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.mustBeLoggedInToResetPin),
-          backgroundColor: DesignToken.error,
-          duration: const Duration(seconds: 4),
-        ),
-      );
-      return;
-    }
-
     if (!_phoneChecked || !_phoneExists) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -191,17 +173,6 @@ class _ResetPINPageState extends State<ResetPINPage>
     final currentPin = _currentPinController.text.trim();
     final phone = _phoneController.text.trim();
 
-    // Verify current PIN is provided
-    if (currentPin.isEmpty || currentPin.length != 4) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.enterCurrentPin),
-          backgroundColor: DesignToken.error,
-        ),
-      );
-      return;
-    }
-
     if (pin != confirm) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -212,27 +183,42 @@ class _ResetPINPageState extends State<ResetPINPage>
       return;
     }
 
-    // Prevent setting same PIN
-    if (currentPin == pin) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.newPinMustBeDifferent),
-          backgroundColor: DesignToken.error,
-        ),
-      );
-      return;
+    if (_isLoggedIn) {
+      if (currentPin.isEmpty || currentPin.length != 4) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.enterCurrentPin),
+            backgroundColor: DesignToken.error,
+          ),
+        );
+        return;
+      }
+
+      if (currentPin == pin) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.newPinMustBeDifferent),
+            backgroundColor: DesignToken.error,
+          ),
+        );
+        return;
+      }
     }
 
     setState(() => _isSaving = true);
 
-    // Reset PIN with security verification
-    final ok = await _pinAuthService.resetPin(
-      phone: phone,
-      newPin: pin,
-      loggedInPhone: _loggedInPhone,
-      currentPin: currentPin,
-      isAdmin: false,
-    );
+    final bool ok;
+    if (_isLoggedIn) {
+      ok = await _pinAuthService.resetPin(
+        phone: phone,
+        newPin: pin,
+        loggedInPhone: _loggedInPhone,
+        currentPin: currentPin,
+        isAdmin: false,
+      );
+    } else {
+      ok = await _pinAuthService.setPinForPhone(phone: phone, pin: pin);
+    }
 
     if (!mounted) return;
 
@@ -966,13 +952,14 @@ class _ResetPINPageState extends State<ResetPINPage>
 
                               const SizedBox(height: 24),
 
-                              // Reset Button with Gradient (only enabled if logged in)
+                              // Reset Button (enabled when phone verified + PIN ready)
                               SizedBox(
                                 width: double.infinity,
                                 child: Container(
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
-                                      colors: _isLoggedIn
+                                      colors: (_phoneChecked &&
+                                              _phoneExists)
                                           ? [
                                               DesignToken.secondary,
                                               DesignToken.secondary.withOpacity(
@@ -990,7 +977,7 @@ class _ResetPINPageState extends State<ResetPINPage>
                                     borderRadius: BorderRadius.circular(16),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: (_isLoggedIn
+                                        color: (_phoneChecked && _phoneExists
                                                 ? DesignToken.secondary
                                                 : DesignToken.grey500)
                                             .withValues(alpha: 0.4),
@@ -1000,7 +987,9 @@ class _ResetPINPageState extends State<ResetPINPage>
                                     ],
                                   ),
                                   child: ElevatedButton(
-                                    onPressed: (_isSaving || !_isLoggedIn)
+                                    onPressed: (_isSaving ||
+                                            !_phoneChecked ||
+                                            !_phoneExists)
                                         ? null
                                         : _saveNewPin,
                                     style: ElevatedButton.styleFrom(
@@ -1040,12 +1029,12 @@ class _ResetPINPageState extends State<ResetPINPage>
                                 ),
                               ),
 
-                              // Static informational text for non-logged-in users (only if phone not verified)
+                              // Hint: verify phone first when not logged in
                               if (!_isLoggedIn &&
                                   (!_phoneChecked || !_phoneExists)) ...[
                                 const SizedBox(height: 16),
                                 Text(
-                                  l10n.contactAdminForPinReset,
+                                  l10n.pleaseVerifyMobile,
                                   textAlign: TextAlign.center,
                                   style: LegacyTheme.AppTextStyles.nunitoRegular
                                       .copyWith(

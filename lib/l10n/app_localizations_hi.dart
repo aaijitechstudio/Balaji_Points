@@ -324,6 +324,79 @@ class AppLocalizationsHi extends AppLocalizations {
   String get latestOffers => 'नवीनतम ऑफर्स';
 
   @override
+  String get goodMorningGreeting => 'सुप्रभात,';
+
+  @override
+  String get goodAfternoonGreeting => 'नमस्कार,';
+
+  @override
+  String get goodEveningGreeting => 'शुभ संध्या,';
+
+  @override
+  String get homeBrowseProductsTitle => 'लकड़ी और प्लाईवुड';
+
+  @override
+  String get homeBrowseProductsSubtitle => 'प्रीमियम लैमिनेट और सतहें';
+
+  @override
+  String get viewAll => 'सभी देखें';
+
+  @override
+  String get homeStoreBranch => 'ई रोड';
+
+  @override
+  String get homeTierSuffix => 'टियर';
+
+  @override
+  String get homeRankingsSectionTitle => 'रैंकिंग और आज का विजेता';
+
+  @override
+  String get homeRankingsSectionSubtitle =>
+      'लीडरबोर्ड, आपकी रैंक और आज का इनाम';
+
+  @override
+  String get drawerProductsTitle => 'उत्पाद';
+
+  @override
+  String get drawerProductsSubtitle => 'श्रेणियाँ और कैटलॉग देखें';
+
+  @override
+  String get drawerCart => 'कार्ट';
+
+  @override
+  String get drawerSectionMainNav => 'मुख्य नेविगेशन';
+
+  @override
+  String get drawerSectionMore => 'और विकल्प';
+
+  @override
+  String get myOrders => 'मेरे ऑर्डर';
+
+  @override
+  String get profileSectionAccount => 'खाता';
+
+  @override
+  String get profileSectionPreferences => 'प्राथमिकताएँ';
+
+  @override
+  String get profileSectionSupport => 'सहायता';
+
+  @override
+  String get profileAboutLink => 'ऐप के बारे में';
+
+  @override
+  String get routeErrorTitle => 'पेज नहीं मिला';
+
+  @override
+  String get routeErrorNotFound => 'यह लिंक गलत है या पेज हटा दिया गया।';
+
+  @override
+  String get routeErrorGoHome => 'होम पर जाएं';
+
+  @override
+  String get routeErrorDetailsLabel => 'तकनीकी विवरण';
+
+  @override
   String get topCarpenters => 'शीर्ष 3 बढ़ई';
 
   @override
@@ -510,9 +583,6 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get transactionHistory => 'लेनदेन इतिहास';
-
-  @override
-  String get noTransactions => 'अभी तक कोई लेनदेन नहीं';
 
   @override
   String get earned => 'अर्जित';
@@ -1114,9 +1184,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get myPoints => 'मेरे पॉइंट्स';
 
   @override
-  String get redeemRewards => 'पुरस्कार भुनाएं';
-
-  @override
   String get leaderboard => 'लीडरबोर्ड';
 
   @override
@@ -1126,7 +1193,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get rankShort => 'रैंक';
 
   @override
-  String get earn => 'कमाएं';
+  String get earn => 'वॉलेट';
 
   @override
   String get approved => 'स्वीकृत';
@@ -1344,4 +1411,85 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get languageTamil => 'தமிழ்';
+
+  @override
+  String get aboutUs => 'हमारे बारे में';
+
+  @override
+  String get aboutUsMenuSubtitle => 'बढ़ई के लिए पुरस्कार और लॉयल्टी';
+
+  @override
+  String get aboutUsSubtitle => 'आपका हार्डवेयर पुरस्कार साथी';
+
+  @override
+  String get aboutUsOverviewTitle => 'बालाजी पॉइंट्स क्या है?';
+
+  @override
+  String get aboutUsOverviewBody =>
+      'बालाजी पॉइंट्स बढ़ई और हार्डवेयर स्टोर्स के लिए एक डिजिटल लॉयल्टी प्लेटफ़ॉर्म है। यह योग्य सामग्री खरीद को अंक, पुरस्कार और पहचान में बदलने में मदद करता है। आप ऐप से बिल जमा करते हैं; जिस स्टोर में आप जुड़े हैं वह उन्हें जाँचकर स्वीकार करता है; आपका वॉलेट और इतिहास अपडेट होता रहता है ताकि आप हमेशा अपनी स्थिति जान सकें।';
+
+  @override
+  String get aboutUsEarningTitle => 'अंक कैसे कमाएँ';
+
+  @override
+  String get aboutUsEarningBody =>
+      'साफ़ फ़ोटो, सही राशि और जो विवरण स्टोर माँगे उसके साथ खरीद के बिल अपलोड करें। स्टोर एडमिन जमा की जाँच करता है ताकि प्रोग्राम निष्पक्ष रहे और गलती या दुरुपयोग कम हो। स्वीकृति के बाद अंक उसी स्टोर के नियमों से जुड़ते हैं (जैसे रुपये से अंक)। ऐप में कभी भी बैलेंस, लेन-देन इतिहास और टियर प्रगति देख सकते हैं।';
+
+  @override
+  String get aboutUsOffersTitle => 'लीडरबोर्ड, ऑफ़र और अपडेट';
+
+  @override
+  String get aboutUsOffersBody =>
+      'कई स्टोर लीडरबोर्ड चलाते हैं ताकि आप अपने प्रोग्राम में दूसरे बढ़ई के बीच अपनी रैंक देख सकें। आपको बैनर, ऑफ़र और घोषणाएँ भी मिलेंगी—मौसमी डील, बोनस अंक या विशेष प्रचार—ताकि स्टोर जो सुविधाएँ देता है वे छूटें नहीं।';
+
+  @override
+  String get aboutUsFairnessTitle => 'स्वीकृति, पारदर्शिता और सहायता';
+
+  @override
+  String get aboutUsFairnessBody =>
+      'हर बिल की जाँच होती है इसलिए समय लग सकता है। अस्वीकृति पर ऐप में कारण दिखना चाहिए या स्टोर टीम मार्गदर्शन देगी। लॉगिन, पिन, प्रोफ़ाइल या सूचना की समस्या हो तो ऐप के विकल्प और ज़रूरत पड़ने पर स्टोर से संपर्क करें। हम स्पष्ट नियम और लंबित, स्वीकृत व अस्वीकृत बिलों की स्पष्ट स्थिति पर ध्यान देते हैं।';
+
+  @override
+  String get aboutUsStoresTitle => 'आपका स्टोर, आपका प्रोग्राम';
+
+  @override
+  String get aboutUsStoresBody =>
+      'अंक, टियर और ऑफ़र उस हार्डवेयर स्टोर से जुड़े होते हैं जिसमें आप इस ऐप से जुड़े हैं। अलग-अलग स्टोर अलग नियम, रूपांतरण दर और लाभ रख सकते हैं। यदि आप एक से ज़्यादा स्टोर से खरीदते हैं तो हर संबंध आमतौर पर अलग होता है जब तक स्टोर अन्यथा न बताए—विवरण के लिए जिस स्टोर ने आपको जोड़ा है उससे पुष्टि करें।';
+
+  @override
+  String get aboutUsClosing =>
+      'बालाजी पॉइंट्स उपयोग करने के लिए धन्यवाद—हमें बढ़ई और उन स्टोर्स का साथ देने पर गर्व है जो आपके साथ भागीदार हैं।';
+
+  @override
+  String get aboutUsCreditsHeading => 'डिज़ाइन और विकास';
+
+  @override
+  String get aboutUsCreditsStudio => 'Aaiji Tech Studio — Vadodara, Gujarat';
+
+  @override
+  String get onboardingSkip => 'छोड़ें';
+
+  @override
+  String get onboardingGetStarted => 'शुरू करें';
+
+  @override
+  String get onboardingSlide1Title => 'बिल जमा करें, अंक कमाएँ';
+
+  @override
+  String get onboardingSlide1Body =>
+      'अपने हार्डवेयर खरीद के बिल अपलोड करें। जब आपका स्टोर उन्हें स्वीकार करता है, अंक आपके वॉलेट में जुड़ जाते हैं।';
+
+  @override
+  String get onboardingSlide2Title => 'अपने पुरस्कार देखें';
+
+  @override
+  String get onboardingSlide2Body =>
+      'अपना बैलेंस, टियर और लीडरबोर्ड रैंक देखें। आप जैसे बढ़ई के लिए बनाए गए ऑफ़र देखें।';
+
+  @override
+  String get onboardingSlide3Title => 'अपडेट रहें';
+
+  @override
+  String get onboardingSlide3Body =>
+      'बिल स्वीकृत या अस्वीकृत होने पर सूचना पाएं। कभी भी प्रोफ़ाइल और पसंद प्रबंधित करें।';
 }

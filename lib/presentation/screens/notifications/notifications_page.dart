@@ -14,17 +14,16 @@ import 'dart:async';
 enum NotificationsPageMode {
   /// Decide behavior from the logged-in user's role.
   auto,
+
   /// Force carpenter behavior (personal + broadcast notifications).
   carpenter,
+
   /// Force admin behavior (admin-only notifications + admin back navigation).
   admin,
 }
 
 class NotificationsPage extends StatefulWidget {
-  const NotificationsPage({
-    super.key,
-    this.mode = NotificationsPageMode.auto,
-  });
+  const NotificationsPage({super.key, this.mode = NotificationsPageMode.auto});
 
   final NotificationsPageMode mode;
 
@@ -105,85 +104,85 @@ class _NotificationsPageState extends State<NotificationsPage> {
     // Single stream - filter only carpenter-relevant notifications
     _userNotificationsSubscription = notificationsQuery.snapshots().listen(
       (snapshot) {
-      debugPrint(
-        '📊 Received ${snapshot.docs.length} notifications from Firestore',
-      );
-
-      // SAFETY CHECK: Verify all notifications belong to this user
-      if (snapshot.docs.isNotEmpty) {
-        final firstDoc = snapshot.docs.first.data();
-        final firstUserId = firstDoc['userId'];
         debugPrint(
-          '   ✓ First notification userId: $firstUserId (Expected: $userId)',
+          '📊 Received ${snapshot.docs.length} notifications from Firestore',
         );
 
-        // Double-check: filter out any notifications that don't belong to this user
-        // (This should never happen due to Firestore query, but extra safety)
-        final userNotifications = snapshot.docs.where((doc) {
-          final data = doc.data();
-          return data['userId'] == userId;
-        }).toList();
-
-        if (userNotifications.length != snapshot.docs.length) {
+        // SAFETY CHECK: Verify all notifications belong to this user
+        if (snapshot.docs.isNotEmpty) {
+          final firstDoc = snapshot.docs.first.data();
+          final firstUserId = firstDoc['userId'];
           debugPrint(
-            '   ⚠️ WARNING: Filtered out ${snapshot.docs.length - userNotifications.length} notifications from other users!',
+            '   ✓ First notification userId: $firstUserId (Expected: $userId)',
+          );
+
+          // Double-check: filter out any notifications that don't belong to this user
+          // (This should never happen due to Firestore query, but extra safety)
+          final userNotifications = snapshot.docs.where((doc) {
+            final data = doc.data();
+            return data['userId'] == userId;
+          }).toList();
+
+          if (userNotifications.length != snapshot.docs.length) {
+            debugPrint(
+              '   ⚠️ WARNING: Filtered out ${snapshot.docs.length - userNotifications.length} notifications from other users!',
+            );
+          }
+        }
+
+        // Filter notifications based on user role
+        List<QueryDocumentSnapshot> filteredDocs = snapshot.docs;
+
+        if (_resolvedIsAdmin) {
+          // Admins: show only admin-specific notifications
+          filteredDocs = snapshot.docs.where((doc) {
+            final data = doc.data();
+            final type = data['type'] as String?;
+
+            // Admin sees only these notification types
+            const adminNotificationTypes = [
+              'newPendingBill', // New bill to review
+              'newUserRegistered', // New carpenter registered
+              'dailySpinReminder', // Daily spin reminder (analytics)
+            ];
+            return adminNotificationTypes.contains(type);
+          }).toList();
+
+          debugPrint(
+            '📊 After filtering: ${filteredDocs.length} admin notifications',
+          );
+        } else {
+          // Carpenters: hide admin-only notifications + ensure user isolation
+          filteredDocs = snapshot.docs.where((doc) {
+            final data = doc.data();
+            final type = data['type'] as String?;
+            final notifUserId = data['userId'] as String?;
+
+            // SAFETY: Ensure this notification belongs to THIS carpenter
+            if (notifUserId != userId) {
+              debugPrint(
+                '   ⚠️ Skipping notification for different user: $notifUserId',
+              );
+              return false;
+            }
+
+            // Carpenter should NOT see these admin-only types
+            const adminOnlyTypes = [
+              'dailySpinReminder',
+              'newPendingBill',
+              'newUserRegistered',
+            ];
+            return !adminOnlyTypes.contains(type);
+          }).toList();
+
+          debugPrint(
+            '📊 After filtering: ${filteredDocs.length} carpenter notifications (all for userId: $userId)',
           );
         }
-      }
 
-      // Filter notifications based on user role
-      List<QueryDocumentSnapshot> filteredDocs = snapshot.docs;
-
-      if (_resolvedIsAdmin) {
-        // Admins: show only admin-specific notifications
-        filteredDocs = snapshot.docs.where((doc) {
-          final data = doc.data();
-          final type = data['type'] as String?;
-
-          // Admin sees only these notification types
-          const adminNotificationTypes = [
-            'newPendingBill', // New bill to review
-            'newUserRegistered', // New carpenter registered
-            'dailySpinReminder', // Daily spin reminder (analytics)
-          ];
-          return adminNotificationTypes.contains(type);
-        }).toList();
-
-        debugPrint(
-          '📊 After filtering: ${filteredDocs.length} admin notifications',
-        );
-      } else {
-        // Carpenters: hide admin-only notifications + ensure user isolation
-        filteredDocs = snapshot.docs.where((doc) {
-          final data = doc.data();
-          final type = data['type'] as String?;
-          final notifUserId = data['userId'] as String?;
-
-          // SAFETY: Ensure this notification belongs to THIS carpenter
-          if (notifUserId != userId) {
-            debugPrint(
-              '   ⚠️ Skipping notification for different user: $notifUserId',
-            );
-            return false;
-          }
-
-          // Carpenter should NOT see these admin-only types
-          const adminOnlyTypes = [
-            'dailySpinReminder',
-            'newPendingBill',
-            'newUserRegistered',
-          ];
-          return !adminOnlyTypes.contains(type);
-        }).toList();
-
-        debugPrint(
-          '📊 After filtering: ${filteredDocs.length} carpenter notifications (all for userId: $userId)',
-        );
-      }
-
-      if (!_streamController!.isClosed) {
-        _streamController!.add(filteredDocs);
-      }
+        if (!_streamController!.isClosed) {
+          _streamController!.add(filteredDocs);
+        }
       },
       onError: (e) {
         debugPrint('❌ Admin notifications stream error: $e');
@@ -588,9 +587,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
     if (_isLoading) {
       return Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
-        body: const Center(
-          child: CircularProgressIndicator(),
-        ),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -646,16 +643,6 @@ class _NotificationsPageState extends State<NotificationsPage> {
                     },
                   ),
                 ],
-              ),
-              Container(
-                height: 1,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: DesignToken.primaryGradient,
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                  ),
-                ),
               ),
             ],
           ),
@@ -858,14 +845,16 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                         borderRadius: BorderRadius.circular(14),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: DesignToken.black
-                                                .withValues(alpha: 0.04),
+                                            color: DesignToken.black.withValues(
+                                              alpha: 0.04,
+                                            ),
                                             blurRadius: 10,
                                             offset: const Offset(0, 2),
                                           ),
                                           BoxShadow(
-                                            color: DesignToken.black
-                                                .withValues(alpha: 0.02),
+                                            color: DesignToken.black.withValues(
+                                              alpha: 0.02,
+                                            ),
                                             blurRadius: 4,
                                             offset: const Offset(0, 1),
                                           ),
@@ -998,12 +987,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
                           );
                         },
                       ),
-                ),
               ),
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
   }
 
   /// Handle notification tap - navigate based on notification type and role
@@ -1012,7 +1001,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
       // Get screen route from notification data
       final screenRaw = data['screen'] as String?;
       final screen = screenRaw?.trim();
-      final normalizedScreen = (screen != null && screen.isNotEmpty && screen.endsWith('/') && screen.length > 1)
+      final normalizedScreen =
+          (screen != null &&
+              screen.isNotEmpty &&
+              screen.endsWith('/') &&
+              screen.length > 1)
           ? screen.substring(0, screen.length - 1)
           : screen;
 

@@ -678,6 +678,38 @@ class NotificationService {
   // ADMIN NOTIFICATION METHODS
   // ============================================
 
+  /// One row in [notification_logs] so admin panel / dashboard streams show the event.
+  /// Push delivery still uses [notification_queue] per admin; this is the in-app inbox.
+  Future<void> _logAdminBroadcastToNotificationLogs({
+    required NotificationType type,
+    required String title,
+    required String body,
+    required int adminsQueuedCount,
+    Map<String, dynamic>? data,
+  }) async {
+    try {
+      final logData = <String, dynamic>{
+        'type': type.name,
+        'title': title,
+        'body': body,
+        'sentAt': FieldValue.serverTimestamp(),
+        'status': 'admin_broadcast',
+        'isBroadcast': true,
+        'adminsQueued': adminsQueuedCount,
+      };
+      if (data != null) {
+        for (final e in data.entries) {
+          if (e.value is FieldValue) continue;
+          logData[e.key] = e.value;
+        }
+      }
+      await _firestore.collection('notification_logs').add(logData);
+      AppLogger.info('Admin broadcast logged to notification_logs: ${type.name}');
+    } catch (e) {
+      AppLogger.warning('Failed to log admin broadcast to notification_logs: $e');
+    }
+  }
+
   /// Send notification to all admin users
   Future<int> _sendNotificationToAllAdmins({
     required NotificationType type,
@@ -701,6 +733,14 @@ class NotificationService {
 
       if (adminUsers.isEmpty) {
         AppLogger.warning('No admin users found with FCM tokens');
+        // Still record the event so admin UI shows latest activity (push may be unavailable).
+        await _logAdminBroadcastToNotificationLogs(
+          type: type,
+          title: title,
+          body: body,
+          adminsQueuedCount: 0,
+          data: data,
+        );
         return 0;
       }
 
@@ -750,6 +790,14 @@ class NotificationService {
 
       AppLogger.info(
         '📢 Admin notification complete: $successCount sent, $skippedCount skipped',
+      );
+
+      await _logAdminBroadcastToNotificationLogs(
+        type: type,
+        title: title,
+        body: body,
+        adminsQueuedCount: successCount,
+        data: data,
       );
 
       return successCount;
