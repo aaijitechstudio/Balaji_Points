@@ -200,10 +200,10 @@ class _HomePageState extends State<HomePage>
   }
 
   Future<void> _loadPointsUserId() async {
-    final phoneNumber = await _sessionService.getPhoneNumber();
+    final userDocId = await _resolveCurrentUserDocId();
     if (!mounted) return;
     setState(() {
-      _pointsUserId = phoneNumber;
+      _pointsUserId = userDocId;
     });
   }
 
@@ -437,53 +437,106 @@ class _HomePageState extends State<HomePage>
     });
   }
 
-  Future<void> _subscribeUserPointsForCurrentUser() async {
+  Future<DocumentSnapshot<Map<String, dynamic>>?> _resolveCurrentUserDoc() async {
+    final firestore = FirebaseFirestore.instance;
+    final userId = await _sessionService.getUserId();
     final phoneNumber = await _sessionService.getPhoneNumber();
-    if (phoneNumber == null) return;
+    final candidateIds = <String>{
+      if (userId != null && userId.isNotEmpty) userId,
+      if (phoneNumber != null && phoneNumber.isNotEmpty) phoneNumber,
+    };
+
+    for (final candidateId in candidateIds) {
+      final doc = await firestore.collection('users').doc(candidateId).get();
+      if (doc.exists) return doc;
+    }
+
+    if (phoneNumber != null && phoneNumber.isNotEmpty) {
+      final query = await firestore
+          .collection('users')
+          .where('phone', isEqualTo: phoneNumber)
+          .limit(1)
+          .get();
+      if (query.docs.isNotEmpty) {
+        return query.docs.first;
+      }
+    }
+
+    return null;
+  }
+
+  Future<String?> _resolveCurrentUserDocId() async {
+    final userDoc = await _resolveCurrentUserDoc();
+    return userDoc?.id;
+  }
+
+  Future<DocumentReference<Map<String, dynamic>>?>
+      _resolveCurrentUserPointsDocRef() async {
+    final firestore = FirebaseFirestore.instance;
+    final userId = await _sessionService.getUserId();
+    final phoneNumber = await _sessionService.getPhoneNumber();
+    final candidateIds = <String>{
+      if (userId != null && userId.isNotEmpty) userId,
+      if (phoneNumber != null && phoneNumber.isNotEmpty) phoneNumber,
+    };
+
+    for (final candidateId in candidateIds) {
+      final docRef = firestore.collection('user_points').doc(candidateId);
+      final snapshot = await docRef.get();
+      if (snapshot.exists) return docRef;
+    }
+
+    for (final candidateId in candidateIds) {
+      final query = await firestore
+          .collection('user_points')
+          .where('userId', isEqualTo: candidateId)
+          .limit(1)
+          .get();
+      if (query.docs.isNotEmpty) {
+        return query.docs.first.reference;
+      }
+    }
+
+    return null;
+  }
+
+  Future<void> _subscribeUserPointsForCurrentUser() async {
+    final pointsDocRef = await _resolveCurrentUserPointsDocRef();
+    if (pointsDocRef == null) return;
 
     _userPointsSubscription?.cancel();
-    _userPointsSubscription = FirebaseFirestore.instance
-        .collection('user_points')
-        .doc(phoneNumber)
-        .snapshots()
-        .listen((snapshot) {
-          if (!mounted) return;
-          final data = snapshot.data();
-          if (data == null) return;
+    _userPointsSubscription = pointsDocRef.snapshots().listen((snapshot) {
+      if (!mounted) return;
+      final data = snapshot.data();
+      if (data == null) return;
 
-          final newPoints = (data['totalPoints'] ?? 0) as int;
+      final newPoints = (data['totalPoints'] ?? 0) as int;
 
-          setState(() {
-            _currentUserPoints = newPoints;
-            // Merge latest Firestore data into current user data so tier/name etc. stay fresh
-            _currentUserData = {...?_currentUserData, ...data};
-          });
-        });
+      setState(() {
+        _currentUserPoints = newPoints;
+        // Merge latest Firestore data into current user data so tier/name etc. stay fresh
+        _currentUserData = {...?_currentUserData, ...data};
+      });
+    });
   }
 
   // ------------------ Current user rank ------------------
   Future<void> _loadCurrentUserRank() async {
     try {
-      // Use phone-based document ID for carpenters
-      final phoneNumber = await _sessionService.getPhoneNumber();
-      if (phoneNumber == null) {
+      final userDoc = await _resolveCurrentUserDoc();
+      final userData = userDoc?.data();
+      if (userData == null) {
         if (mounted) setState(() => _currentUserRank = null);
         return;
       }
-
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(phoneNumber)
-          .get();
-      final userData = userDoc.data();
 
       // Check if user is a carpenter
-      if (userData?['role'] != 'carpenter') {
+      if (userData['role'] != 'carpenter') {
         if (mounted) setState(() => _currentUserRank = null);
         return;
       }
 
-      final userPoints = (userData?['totalPoints'] ?? 0) as int;
+      final userPoints = (userData['totalPoints'] ?? 0) as int;
 
       // Fetch all carpenters and calculate rank in memory (avoids index requirement)
       final allCarpenters = await FirebaseFirestore.instance
