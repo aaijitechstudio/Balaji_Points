@@ -23,15 +23,12 @@ class ResetPINPage extends StatefulWidget {
 }
 
 class _ResetPINPageState extends State<ResetPINPage>
-    with SingleTickerProviderStateMixin {
+    {
   final _phoneController = TextEditingController();
   final _pinController = TextEditingController();
   final _confirmPinController = TextEditingController();
   final _currentPinController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-
-  late AnimationController _animationController;
-  late List<FloatingElement> _floatingElements;
 
   final _pinAuthService = PinAuthService();
   final _sessionService = SessionService();
@@ -57,20 +54,6 @@ class _ResetPINPageState extends State<ResetPINPage>
         _checkPhone();
       });
     }
-
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 8),
-    )..repeat();
-
-    _floatingElements = List.generate(25, (index) {
-      return FloatingElement(
-        x: math.Random().nextDouble(),
-        y: math.Random().nextDouble(),
-        speed: 0.2 + math.Random().nextDouble() * 0.8,
-        type: FloatingType.values[index % FloatingType.values.length],
-      );
-    });
   }
 
   Future<void> _checkLoginStatus() async {
@@ -105,7 +88,6 @@ class _ResetPINPageState extends State<ResetPINPage>
 
   @override
   void dispose() {
-    _animationController.dispose();
     _phoneController.dispose();
     _pinController.dispose();
     _confirmPinController.dispose();
@@ -138,12 +120,6 @@ class _ResetPINPageState extends State<ResetPINPage>
         // Silently return - don't show error banner
         return;
       }
-    }
-
-    // Security check: If not logged in, deny reset (silently)
-    if (!_isLoggedIn) {
-      // Don't show error banner - user can see the informational text below
-      return;
     }
 
     setState(() {
@@ -182,18 +158,6 @@ class _ResetPINPageState extends State<ResetPINPage>
 
     final l10n = AppLocalizations.of(context)!;
 
-    // Security check: Must be logged in
-    if (!_isLoggedIn) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.mustBeLoggedInToResetPin),
-          backgroundColor: DesignToken.error,
-          duration: const Duration(seconds: 4),
-        ),
-      );
-      return;
-    }
-
     if (!_phoneChecked || !_phoneExists) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -209,17 +173,6 @@ class _ResetPINPageState extends State<ResetPINPage>
     final currentPin = _currentPinController.text.trim();
     final phone = _phoneController.text.trim();
 
-    // Verify current PIN is provided
-    if (currentPin.isEmpty || currentPin.length != 4) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.enterCurrentPin),
-          backgroundColor: DesignToken.error,
-        ),
-      );
-      return;
-    }
-
     if (pin != confirm) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -230,27 +183,42 @@ class _ResetPINPageState extends State<ResetPINPage>
       return;
     }
 
-    // Prevent setting same PIN
-    if (currentPin == pin) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.newPinMustBeDifferent),
-          backgroundColor: DesignToken.error,
-        ),
-      );
-      return;
+    if (_isLoggedIn) {
+      if (currentPin.isEmpty || currentPin.length != 4) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.enterCurrentPin),
+            backgroundColor: DesignToken.error,
+          ),
+        );
+        return;
+      }
+
+      if (currentPin == pin) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.newPinMustBeDifferent),
+            backgroundColor: DesignToken.error,
+          ),
+        );
+        return;
+      }
     }
 
     setState(() => _isSaving = true);
 
-    // Reset PIN with security verification
-    final ok = await _pinAuthService.resetPin(
-      phone: phone,
-      newPin: pin,
-      loggedInPhone: _loggedInPhone,
-      currentPin: currentPin,
-      isAdmin: false,
-    );
+    final bool ok;
+    if (_isLoggedIn) {
+      ok = await _pinAuthService.resetPin(
+        phone: phone,
+        newPin: pin,
+        loggedInPhone: _loggedInPhone,
+        currentPin: currentPin,
+        isAdmin: false,
+      );
+    } else {
+      ok = await _pinAuthService.setPinForPhone(phone: phone, pin: pin);
+    }
 
     if (!mounted) return;
 
@@ -343,9 +311,9 @@ class _ResetPINPageState extends State<ResetPINPage>
         }
       },
       child: Scaffold(
-        backgroundColor: DesignToken.woodenBackground,
+        backgroundColor: Colors.transparent,
         appBar: AppBar(
-          backgroundColor: Colors.transparent,
+          backgroundColor: DesignToken.transparent,
           elevation: 0,
           title: Text(l10n.resetPinTitle),
           leading: BackButton(
@@ -362,21 +330,10 @@ class _ResetPINPageState extends State<ResetPINPage>
         ),
         body: Stack(
           children: [
-            // Animated Background Elements
-            IgnorePointer(
-              child: RepaintBoundary(
-                child: ListenableBuilder(
-                  listenable: _animationController,
-                  builder: (context, child) {
-                    return CustomPaint(
-                      size: Size.infinite,
-                      painter: CelebrationPainter(
-                        animationValue: _animationController.value,
-                        elements: _floatingElements,
-                      ),
-                    );
-                  },
-                ),
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/background_image.png',
+                fit: BoxFit.cover,
               ),
             ),
 
@@ -558,8 +515,9 @@ class _ResetPINPageState extends State<ResetPINPage>
                                             .copyWith(fontSize: 14),
                                       ),
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.transparent,
-                                        shadowColor: Colors.transparent,
+                                        backgroundColor:
+                                            DesignToken.transparent,
+                                        shadowColor: DesignToken.transparent,
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 16,
                                           vertical: 10,
@@ -994,13 +952,14 @@ class _ResetPINPageState extends State<ResetPINPage>
 
                               const SizedBox(height: 24),
 
-                              // Reset Button with Gradient (only enabled if logged in)
+                              // Reset Button (enabled when phone verified + PIN ready)
                               SizedBox(
                                 width: double.infinity,
                                 child: Container(
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
-                                      colors: _isLoggedIn
+                                      colors: (_phoneChecked &&
+                                              _phoneExists)
                                           ? [
                                               DesignToken.secondary,
                                               DesignToken.secondary.withOpacity(
@@ -1008,8 +967,9 @@ class _ResetPINPageState extends State<ResetPINPage>
                                               ),
                                             ]
                                           : [
-                                              Colors.grey,
-                                              Colors.grey.withOpacity(0.8),
+                                              DesignToken.grey500,
+                                              DesignToken.grey500
+                                                  .withValues(alpha: 0.8),
                                             ],
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
@@ -1017,23 +977,25 @@ class _ResetPINPageState extends State<ResetPINPage>
                                     borderRadius: BorderRadius.circular(16),
                                     boxShadow: [
                                       BoxShadow(
-                                        color:
-                                            (_isLoggedIn
-                                                    ? DesignToken.secondary
-                                                    : Colors.grey)
-                                                .withOpacity(0.4),
+                                        color: (_phoneChecked && _phoneExists
+                                                ? DesignToken.secondary
+                                                : DesignToken.grey500)
+                                            .withValues(alpha: 0.4),
                                         blurRadius: 12,
                                         offset: const Offset(0, 6),
                                       ),
                                     ],
                                   ),
                                   child: ElevatedButton(
-                                    onPressed: (_isSaving || !_isLoggedIn)
+                                    onPressed: (_isSaving ||
+                                            !_phoneChecked ||
+                                            !_phoneExists)
                                         ? null
                                         : _saveNewPin,
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.transparent,
-                                      shadowColor: Colors.transparent,
+                                      backgroundColor:
+                                          DesignToken.transparent,
+                                      shadowColor: DesignToken.transparent,
                                       padding: const EdgeInsets.symmetric(
                                         vertical: 18,
                                       ),
@@ -1067,12 +1029,12 @@ class _ResetPINPageState extends State<ResetPINPage>
                                 ),
                               ),
 
-                              // Static informational text for non-logged-in users (only if phone not verified)
+                              // Hint: verify phone first when not logged in
                               if (!_isLoggedIn &&
                                   (!_phoneChecked || !_phoneExists)) ...[
                                 const SizedBox(height: 16),
                                 Text(
-                                  l10n.contactAdminForPinReset,
+                                  l10n.pleaseVerifyMobile,
                                   textAlign: TextAlign.center,
                                   style: LegacyTheme.AppTextStyles.nunitoRegular
                                       .copyWith(

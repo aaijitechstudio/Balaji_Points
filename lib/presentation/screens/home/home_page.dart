@@ -3,78 +3,34 @@
 // Uses CarpenterRank (version A: rank, name, points, imageUrl) from top_carpenters_display.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:confetti/confetti.dart';
 import 'dart:math';
+import 'dart:async';
 
 import 'package:balaji_points/l10n/app_localizations.dart';
-import 'package:balaji_points/presentation/widgets/home_nav_bar.dart';
-import 'package:balaji_points/presentation/widgets/user_profile_card.dart';
 import 'package:balaji_points/presentation/widgets/top_carpenters_display.dart'; // provides CarpenterRank
 import 'package:balaji_points/presentation/widgets/top_carpenters_list.dart';
 import 'package:balaji_points/presentation/widgets/shimmer_loading.dart';
-import 'package:balaji_points/presentation/widgets/complete_profile_card.dart';
+import 'package:balaji_points/presentation/screens/home/widgets/complete_profile_card.dart';
+import 'package:balaji_points/presentation/widgets/offers_carousel.dart';
 // Daily spin removed - admin only feature now
 import 'package:balaji_points/services/user_service.dart';
 import 'package:balaji_points/services/session_service.dart';
+import 'package:balaji_points/services/cart_service.dart';
+import 'package:balaji_points/services/fcm_service.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:intl/intl.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
+import 'package:balaji_points/core/layout/carpenter_shell_layout.dart';
 
-/// ---------------------------------------------------------------------------
-/// OFFER MODEL
-/// ---------------------------------------------------------------------------
-class OfferItem {
-  final String id;
-  final String title;
-  final String description;
-  final String bannerUrl;
-  final int points;
-  final DateTime? validUntil;
-  final bool isActive;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-
-  OfferItem({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.bannerUrl,
-    required this.points,
-    required this.validUntil,
-    required this.isActive,
-    required this.createdAt,
-    required this.updatedAt,
-  });
-
-  // Robust converter for Firestore timestamps / iso strings / null
-  static DateTime _toDate(dynamic ts, [DateTime? fallback]) {
-    final fb = fallback ?? DateTime.now();
-    try {
-      if (ts == null) return fb;
-      if (ts is Timestamp) return ts.toDate();
-      if (ts is DateTime) return ts;
-      if (ts is String) return DateTime.parse(ts);
-    } catch (_) {}
-    return fb;
-  }
-
-  factory OfferItem.fromDoc(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>? ?? <String, dynamic>{};
-    return OfferItem(
-      id: doc.id,
-      title: (data['title'] ?? '') as String,
-      description: (data['description'] ?? '') as String,
-      bannerUrl: (data['bannerUrl'] ?? '') as String,
-      points: (data['points'] ?? 0) as int,
-      validUntil: data['validUntil'] != null
-          ? _toDate(data['validUntil'])
-          : null,
-      isActive: data['isActive'] ?? true,
-      createdAt: _toDate(data['createdAt'], DateTime.now()),
-      updatedAt: _toDate(data['updatedAt'], DateTime.now()),
-    );
-  }
+/// Decode width in physical pixels for [Image] `cacheWidth` to cut memory & jank.
+int _imageCacheWidthPx(BuildContext context, double logicalWidth) {
+  final dpr = MediaQuery.devicePixelRatioOf(context);
+  return (logicalWidth * dpr).round().clamp(120, 2048);
 }
 
 /// ---------------------------------------------------------------------------
@@ -82,387 +38,6 @@ class OfferItem {
 /// - horizontal list for banner offers with page indicators
 /// - vertical list with full-width cards when no banners
 /// ---------------------------------------------------------------------------
-class OffersCarousel extends StatefulWidget {
-  final List<OfferItem> offers;
-
-  const OffersCarousel({super.key, required this.offers});
-
-  @override
-  State<OffersCarousel> createState() => _OffersCarouselState();
-}
-
-class _OffersCarouselState extends State<OffersCarousel> {
-  final PageController _pageController = PageController();
-  int _currentPage = 0;
-
-  bool get _hasBanners =>
-      widget.offers.any((offer) => offer.bannerUrl.isNotEmpty);
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // If no banners, show vertical list with full-width cards
-    if (!_hasBanners) {
-      return Column(
-        children: widget.offers.asMap().entries.map((entry) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: _FullWidthOfferCard(offer: entry.value, index: entry.key),
-          );
-        }).toList(),
-      );
-    }
-
-    // If banners exist, show horizontal carousel with page indicators
-    return Column(
-      children: [
-        SizedBox(
-          height: 200,
-          child: PageView.builder(
-            controller: _pageController,
-            onPageChanged: (index) {
-              setState(() {
-                _currentPage = index;
-              });
-            },
-            itemCount: widget.offers.length,
-            itemBuilder: (context, index) {
-              final offer = widget.offers[index];
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: offer.bannerUrl.isNotEmpty
-                    ? _BannerOfferCard(offer: offer)
-                    : _BasicOfferCard(offer: offer),
-              );
-            },
-          ),
-        ),
-        // Page indicators (dots) - only show if more than 1 offer
-        if (widget.offers.length > 1) ...[
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(
-              widget.offers.length,
-              (index) => _buildDot(index),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildDot(int index) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      width: _currentPage == index ? 24 : 8,
-      height: 8,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(4),
-        color: _currentPage == index
-            ? DesignToken.primary
-            : DesignToken.primary.withOpacity(0.3),
-      ),
-    );
-  }
-}
-
-class _BannerOfferCard extends StatelessWidget {
-  final OfferItem offer;
-  const _BannerOfferCard({required this.offer});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      clipBehavior: Clip.hardEdge,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [DesignToken.primary, DesignToken.secondary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: DesignToken.primary.withOpacity(0.3),
-          width: 2,
-        ),
-      ),
-      child: Stack(
-        children: [
-          offer.bannerUrl.isNotEmpty
-              ? Image.network(
-                  offer.bannerUrl,
-                  width: double.infinity,
-                  height: double.infinity,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [DesignToken.primary, DesignToken.secondary],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.image_not_supported,
-                        size: 48,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  loadingBuilder: (context, child, progress) {
-                    if (progress == null) return child;
-                    return Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [DesignToken.primary, DesignToken.secondary],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: const Center(
-                        child: CircularProgressIndicator(color: Colors.white),
-                      ),
-                    );
-                  },
-                )
-              : Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [DesignToken.primary, DesignToken.secondary],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: const Center(
-                    child: Icon(Icons.image, size: 48, color: Colors.white),
-                  ),
-                ),
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.center,
-                  colors: [DesignToken.black54, DesignToken.transparent],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: 6,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  offer.title,
-                  style: const TextStyle(
-                    color: DesignToken.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                // const SizedBox(height: 6),
-                // Text(
-                //   offer.description,
-                //   maxLines: 2,
-                //   overflow: TextOverflow.ellipsis,
-                //   style: TextStyle(color: DesignToken.white70, fontSize: 14),
-                // ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BasicOfferCard extends StatelessWidget {
-  final OfferItem offer;
-  const _BasicOfferCard({required this.offer});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: DesignToken.transparent, // no white background
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: DesignToken.primary.withOpacity(0.3),
-          width: 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: DesignToken.black12,
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            offer.title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            offer.description,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 14, color: DesignToken.black54),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FullWidthOfferCard extends StatelessWidget {
-  final OfferItem offer;
-  final int index;
-  const _FullWidthOfferCard({required this.offer, required this.index});
-
-  // Generate dynamic gradient based on index
-  LinearGradient _getGradient() {
-    final gradients = [
-      LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          DesignToken.primary,
-          DesignToken.primary.withOpacity(0.7),
-          DesignToken.secondary.withOpacity(0.8),
-        ],
-      ),
-      LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          DesignToken.secondary,
-          DesignToken.secondary.withOpacity(0.7),
-          DesignToken.primary.withOpacity(0.8),
-        ],
-      ),
-      LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          DesignToken.blue600,
-          DesignToken.primary,
-          DesignToken.secondary,
-        ],
-      ),
-      LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          DesignToken.purpleShade500,
-          DesignToken.secondary,
-          DesignToken.primary.withOpacity(0.9),
-        ],
-      ),
-      LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          DesignToken.primary.withOpacity(0.9),
-          DesignToken.blue500,
-          DesignToken.secondary.withOpacity(0.9),
-        ],
-      ),
-    ];
-    return gradients[index % gradients.length];
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: _getGradient(),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: DesignToken.primary.withOpacity(0.4),
-          width: 2,
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: DesignToken.black26,
-            blurRadius: 12,
-            offset: Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  offer.title,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: DesignToken.white,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  offer.description,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    color: DesignToken.white70,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.25),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: Colors.white.withOpacity(0.3),
-                width: 1,
-              ),
-            ),
-            child: const Icon(
-              Icons.card_giftcard,
-              color: Colors.white,
-              size: 28,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 /// ---------------------------------------------------------------------------
 /// HOME PAGE
 /// ---------------------------------------------------------------------------
@@ -474,51 +49,179 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage>
-    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+    with WidgetsBindingObserver, AutomaticKeepAliveClientMixin<HomePage> {
   final UserService _userService = UserService();
   final SessionService _sessionService = SessionService();
+  final CartService _cartService = CartService();
+  final FCMService _fcmService = FCMService();
 
   // Offers
   List<OfferItem> _offers = [];
   bool _isLoadingOffers = true;
 
+  // Cart count for header badge
+  int _cartItemCount = 0;
+  StreamSubscription<int>? _cartSubscription;
+
+  // Live user points / tier subscription so Home reflects real-time updates
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>?
+  _userPointsSubscription;
+
+  // User id (phone) for points stream – kept in sync with wallet page logic
+  String? _pointsUserId;
+
+  // App version (mirrors profile page)
+  String _appVersion = '';
+
   // Top carpenters
   List<CarpenterRank> _topCarpenters = [];
   bool _isLoadingCarpenters = true;
+
+  /// Cached future so [FutureBuilder] is not recreated every frame (was causing jank).
+  Future<CarpenterRank?>? _currentUserRankFuture;
+
+  /// Avoid replaying confetti on every StreamBuilder/FutureBuilder rebuild.
+  String? _confettiPlayedKey;
 
   // current user
   Map<String, dynamic>? _currentUserData;
   int? _currentUserRank;
   int _currentUserPoints = 0;
   bool _isCarpenter = false;
+  // ignore: unused_field
   String? _currentUserId;
+  // ignore: unused_field
   String? _userRole;
 
-  // animation for add points button
-  late AnimationController _animationController;
-  late Animation<double> _glowAnimation;
+  bool _greetingIconPressed = false;
 
   // Confetti controller for celebration
   late ConfettiController _confettiController;
+
+  // Product hero carousel
+  late final PageController _productHeroPageController;
+  int _currentProductHeroPage = 0;
+
+  static const List<_HomeProductCategory> _categories = <_HomeProductCategory>[
+    _HomeProductCategory(
+      title: 'Bedroom',
+      icon: Icons.bed_rounded,
+      background: Color(0xFFF5F0FF),
+      imageAsset: 'docs/furnitures_pics/luxirous lifestyle.jpeg',
+    ),
+    _HomeProductCategory(
+      title: 'Kitchen',
+      icon: Icons.kitchen_rounded,
+      background: Color(0xFFFFF3E0),
+      imageAsset:
+          'docs/furnitures_pics/22 Gorgeous Brown Kitchen Cabinet Designs.jpeg',
+    ),
+    _HomeProductCategory(
+      title: 'Living Room',
+      icon: Icons.chair_rounded,
+      background: Color(0xFFE3F2FD),
+      imageAsset: 'docs/furnitures_pics/_ (6).jpeg',
+    ),
+    _HomeProductCategory(
+      title: 'Wardrobe',
+      icon: Icons.checkroom_rounded,
+      background: Color(0xFFE8F5E9),
+      imageAsset: 'docs/furnitures_pics/_ (10).jpeg',
+    ),
+    _HomeProductCategory(
+      title: 'Office',
+      icon: Icons.workspaces_rounded,
+      background: Color(0xFFE8F0FE),
+      imageAsset:
+          'docs/furnitures_pics/Home Office_Todos os direitos da autoria e imagem são reservados aos responsáveis_.jpeg',
+    ),
+    _HomeProductCategory(
+      title: 'Bathroom',
+      icon: Icons.bathtub_rounded,
+      background: Color(0xFFF3E5F5),
+      imageAsset:
+          'docs/furnitures_pics/Elegant Sage Green Kitchen with Brass Accents & Marble Island.jpeg',
+    ),
+  ];
+
+  static const List<_ProductHeroCardData> _heroCards = <_ProductHeroCardData>[
+    _ProductHeroCardData(
+      title: 'Surfaces that\nradiate luxury',
+      subtitle: 'Decorative laminates,\nveneers and acrylic panels.',
+      imageAsset:
+          'docs/furnitures_pics/22 Gorgeous Brown Kitchen Cabinet Designs.jpeg',
+      icon: Icons.layers_rounded,
+    ),
+    _ProductHeroCardData(
+      title: 'Bedroom that feels premium',
+      subtitle: 'Warm finishes for\ncozy master bedrooms.',
+      imageAsset: 'docs/furnitures_pics/luxirous lifestyle.jpeg',
+      icon: Icons.bed_rounded,
+    ),
+    _ProductHeroCardData(
+      title: 'Kitchen that inspires',
+      subtitle: 'Modern finishes for\npremium modular kitchens.',
+      imageAsset:
+          'docs/furnitures_pics/Elegant Sage Green Kitchen with Brass Accents & Marble Island.jpeg',
+      icon: Icons.kitchen_rounded,
+    ),
+    _ProductHeroCardData(
+      title: 'Living room that welcomes',
+      subtitle: 'TV units & wall panels\nfor family time.',
+      imageAsset: 'docs/furnitures_pics/_ (6).jpeg',
+      icon: Icons.weekend_rounded,
+    ),
+    _ProductHeroCardData(
+      title: 'Office that boosts focus',
+      subtitle: 'Create productive workspaces\nwith designer surfaces.',
+      imageAsset:
+          'docs/furnitures_pics/Home Office_Todos os direitos da autoria e imagem são reservados aos responsáveis_.jpeg',
+      icon: Icons.chair_rounded,
+    ),
+  ];
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    )..repeat(reverse: true);
-    _glowAnimation = Tween<double>(begin: 0.3, end: 0.6).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
-
     _confettiController = ConfettiController(
       duration: const Duration(seconds: 3),
     );
 
+    _productHeroPageController = PageController(viewportFraction: 0.9);
+
+    _loadPointsUserId();
+    _loadAppVersion();
     _loadInitialData();
+  }
+
+  Future<void> _loadPointsUserId() async {
+    final userDocId = await _resolveCurrentUserDocId();
+    if (!mounted) return;
+    setState(() {
+      _pointsUserId = userDocId;
+    });
+  }
+
+  Future<void> _loadAppVersion() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      if (!mounted) return;
+      setState(() {
+        _appVersion =
+            'Version ${packageInfo.version} (${packageInfo.buildNumber})';
+      });
+    } catch (e) {
+      debugPrint('HomePage: Error loading app version: $e');
+      if (!mounted) return;
+      setState(() {
+        _appVersion = 'Version 1.0.0';
+      });
+    }
   }
 
   Future<void> _loadInitialData() async {
@@ -531,23 +234,40 @@ class _HomePageState extends State<HomePage>
       _loadTopCarpenters(),
       _loadCurrentUserRank(),
     ]);
+    _refreshCurrentUserRankFuture();
+  }
+
+  void _refreshCurrentUserRankFuture() {
+    if (!mounted) return;
+    setState(() {
+      _currentUserRankFuture = _buildCurrentUserAsCarpenterRank();
+    });
+  }
+
+  Future<void> _reloadOnResume() async {
+    await _loadUserData();
+    await Future.wait([
+      _loadOffers(),
+      _loadTopCarpenters(),
+      _loadCurrentUserRank(),
+    ]);
+    _refreshCurrentUserRankFuture();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _loadUserData();
-      _loadOffers();
-      _loadTopCarpenters();
-      _loadCurrentUserRank();
+      unawaited(_reloadOnResume());
     }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _animationController.dispose();
+    _cartSubscription?.cancel();
+    _userPointsSubscription?.cancel();
     _confettiController.dispose();
+    _productHeroPageController.dispose();
     super.dispose();
   }
 
@@ -561,7 +281,17 @@ class _HomePageState extends State<HomePage>
           .orderBy('createdAt', descending: true)
           .limit(10) // Limit to 10 offers for performance
           .get();
-      final list = snapshot.docs.map((d) => OfferItem.fromDoc(d)).toList();
+      final list = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>? ?? {};
+        return OfferItem(
+          title: data['title'] as String? ?? '',
+          description: data['description'] as String? ?? '',
+          actionText: (data['bannerUrl'] != null && data['bannerUrl'] != '')
+              ? 'View Offer'
+              : 'Learn More',
+          imageUrl: data['bannerUrl'] as String? ?? '',
+        );
+      }).toList();
       if (mounted) {
         setState(() {
           _offers = list;
@@ -600,13 +330,6 @@ class _HomePageState extends State<HomePage>
         final points = (data['totalPoints'] ?? 0) as int;
         final imageUrl = (data['profileImage'] ?? '') as String?;
         final userId = doc.id;
-
-        // Debug logging for name construction
-        debugPrint('Carpenter ID: $userId');
-        debugPrint('  firstName: "$firstName"');
-        debugPrint('  lastName: "$lastName"');
-        debugPrint('  Constructed name: "$name"');
-        debugPrint('  All data keys: ${data.keys.toList()}');
 
         carpenters.add(
           CarpenterRank(
@@ -656,60 +379,40 @@ class _HomePageState extends State<HomePage>
   // ------------------ Current user data ------------------
   Future<void> _loadUserData() async {
     try {
-      // Force refresh by getting fresh data directly from Firestore
-      final userId = await _sessionService.getUserId();
-      if (userId != null) {
-        // Get fresh data directly from Firestore for immediate update
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userId)
-            .get();
-
-        if (userDoc.exists) {
-          final data = userDoc.data();
-          if (mounted) {
-            setState(() {
-              _currentUserData = data;
-              _currentUserPoints = (data?['totalPoints'] ?? 0) as int;
-              _isCarpenter = (data?['role'] ?? '') == 'carpenter';
-              _userRole = (data?['role'] ?? '') as String?;
-              _currentUserId = userId;
-            });
-            debugPrint(
-              'User data refreshed: totalPoints=${_currentUserPoints}, profileImage=${data?['profileImage']}, isCarpenter=$_isCarpenter',
-            );
-          }
-          return;
-        } else {
-          debugPrint('User document does not exist for uid: $userId');
-        }
-      }
-
-      // Fallback to service method
+      // Prefer unified UserService so Home/Profile use same source of truth
       final data = await _user_service_getCurrentUserDataSafe();
-      final fallbackUserId = await _sessionService.getUserId();
-      if (mounted)
+      final userId = await _sessionService.getUserId();
+
+      if (mounted) {
         setState(() {
           _currentUserData = data;
-          _currentUserPoints = (data?['totalPoints'] ?? 0) as int;
           _isCarpenter = (data?['role'] ?? '') == 'carpenter';
           _userRole = (data?['role'] ?? '') as String?;
-          _currentUserId = fallbackUserId;
+          _currentUserId = userId;
         });
+        if (userId != null) {
+          _subscribeCartCount(userId);
+        }
+        _subscribeUserPointsForCurrentUser();
+      }
     } catch (e) {
       debugPrint('Error loading current user data: $e');
       // Fallback to service method on error
       try {
         final data = await _user_service_getCurrentUserDataSafe();
         final errorFallbackUserId = await _sessionService.getUserId();
-        if (mounted)
+        if (mounted) {
           setState(() {
             _currentUserData = data;
-            _currentUserPoints = (data?['totalPoints'] ?? 0) as int;
             _isCarpenter = (data?['role'] ?? '') == 'carpenter';
             _userRole = (data?['role'] ?? '') as String?;
             _currentUserId = errorFallbackUserId;
           });
+          if (errorFallbackUserId != null) {
+            _subscribeCartCount(errorFallbackUserId);
+          }
+          _subscribeUserPointsForCurrentUser();
+        }
       } catch (e2) {
         debugPrint('Error in fallback user data load: $e2');
       }
@@ -724,57 +427,116 @@ class _HomePageState extends State<HomePage>
     }
   }
 
-  /// Get filtered notifications stream based on user role
-  /// For carpenters: user-specific notifications (excluding admin-only types)
-  /// For admins: all notifications
-  Stream<QuerySnapshot> _getFilteredNotificationsStream() {
-    if (_currentUserId == null) {
-      // Return empty stream if no user ID - use a dummy query that returns empty
-      return FirebaseFirestore.instance
-          .collection('notification_logs')
-          .where('userId', isEqualTo: '__dummy__')
-          .snapshots();
+  void _subscribeCartCount(String userId) {
+    _cartSubscription?.cancel();
+    _cartSubscription = _cartService.watchCartCount(userId).listen((count) {
+      if (!mounted) return;
+      setState(() {
+        _cartItemCount = count;
+      });
+    });
+  }
+
+  Future<DocumentSnapshot<Map<String, dynamic>>?> _resolveCurrentUserDoc() async {
+    final firestore = FirebaseFirestore.instance;
+    final userId = await _sessionService.getUserId();
+    final phoneNumber = await _sessionService.getPhoneNumber();
+    final candidateIds = <String>{
+      if (userId != null && userId.isNotEmpty) userId,
+      if (phoneNumber != null && phoneNumber.isNotEmpty) phoneNumber,
+    };
+
+    for (final candidateId in candidateIds) {
+      final doc = await firestore.collection('users').doc(candidateId).get();
+      if (doc.exists) return doc;
     }
 
-    // For admins, show all notifications
-    if (_userRole == 'admin') {
-      return FirebaseFirestore.instance
-          .collection('notification_logs')
-          .orderBy('sentAt', descending: true)
-          .snapshots();
+    if (phoneNumber != null && phoneNumber.isNotEmpty) {
+      final query = await firestore
+          .collection('users')
+          .where('phone', isEqualTo: phoneNumber)
+          .limit(1)
+          .get();
+      if (query.docs.isNotEmpty) {
+        return query.docs.first;
+      }
     }
 
-    // For carpenters, show only user-specific notifications
-    // Admin-only types will be filtered in the StreamBuilder
-    return FirebaseFirestore.instance
-        .collection('notification_logs')
-        .where('userId', isEqualTo: _currentUserId)
-        .orderBy('sentAt', descending: true)
-        .snapshots();
+    return null;
+  }
+
+  Future<String?> _resolveCurrentUserDocId() async {
+    final userDoc = await _resolveCurrentUserDoc();
+    return userDoc?.id;
+  }
+
+  Future<DocumentReference<Map<String, dynamic>>?>
+      _resolveCurrentUserPointsDocRef() async {
+    final firestore = FirebaseFirestore.instance;
+    final userId = await _sessionService.getUserId();
+    final phoneNumber = await _sessionService.getPhoneNumber();
+    final candidateIds = <String>{
+      if (userId != null && userId.isNotEmpty) userId,
+      if (phoneNumber != null && phoneNumber.isNotEmpty) phoneNumber,
+    };
+
+    for (final candidateId in candidateIds) {
+      final docRef = firestore.collection('user_points').doc(candidateId);
+      final snapshot = await docRef.get();
+      if (snapshot.exists) return docRef;
+    }
+
+    for (final candidateId in candidateIds) {
+      final query = await firestore
+          .collection('user_points')
+          .where('userId', isEqualTo: candidateId)
+          .limit(1)
+          .get();
+      if (query.docs.isNotEmpty) {
+        return query.docs.first.reference;
+      }
+    }
+
+    return null;
+  }
+
+  Future<void> _subscribeUserPointsForCurrentUser() async {
+    final pointsDocRef = await _resolveCurrentUserPointsDocRef();
+    if (pointsDocRef == null) return;
+
+    _userPointsSubscription?.cancel();
+    _userPointsSubscription = pointsDocRef.snapshots().listen((snapshot) {
+      if (!mounted) return;
+      final data = snapshot.data();
+      if (data == null) return;
+
+      final newPoints = (data['totalPoints'] ?? 0) as int;
+
+      setState(() {
+        _currentUserPoints = newPoints;
+        // Merge latest Firestore data into current user data so tier/name etc. stay fresh
+        _currentUserData = {...?_currentUserData, ...data};
+      });
+    });
   }
 
   // ------------------ Current user rank ------------------
   Future<void> _loadCurrentUserRank() async {
     try {
-      final userId = await _sessionService.getUserId();
-      if (userId == null) {
+      final userDoc = await _resolveCurrentUserDoc();
+      final userData = userDoc?.data();
+      if (userData == null) {
         if (mounted) setState(() => _currentUserRank = null);
         return;
       }
-
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .get();
-      final userData = userDoc.data();
 
       // Check if user is a carpenter
-      if (userData?['role'] != 'carpenter') {
+      if (userData['role'] != 'carpenter') {
         if (mounted) setState(() => _currentUserRank = null);
         return;
       }
 
-      final userPoints = (userData?['totalPoints'] ?? 0) as int;
+      final userPoints = (userData['totalPoints'] ?? 0) as int;
 
       // Fetch all carpenters and calculate rank in memory (avoids index requirement)
       final allCarpenters = await FirebaseFirestore.instance
@@ -795,7 +557,6 @@ class _HomePageState extends State<HomePage>
       if (mounted)
         setState(() {
           _currentUserRank = rank;
-          _currentUserPoints = userPoints;
         });
     } catch (e, st) {
       debugPrint('Error computing user rank: $e\n$st');
@@ -837,69 +598,74 @@ class _HomePageState extends State<HomePage>
     return trimmed.startsWith('http://') || trimmed.startsWith('https://');
   }
 
-  /// Show dialog when user tries to add bill with incomplete profile
-  void _showCompleteProfileDialog(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.person_add_alt_1,
-                color: Colors.orange.shade700,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                l10n.profileIncomplete,
-                style: AppTextStyles.nunitoBold.copyWith(fontSize: 20),
-              ),
-            ),
-          ],
+  /// Large formatted points for light “Total Points” summary (blueprint §4).
+  Widget _buildHomePointsBigValue({
+    double fontSize = DesignToken.fontSize4XL,
+    Color? color,
+  }) {
+    final nf = NumberFormat.decimalPattern();
+    final valueStyle = AppTextStyles.nunitoBold.copyWith(
+      color: color ?? DesignToken.homeTextPrimary,
+      fontSize: fontSize,
+      height: 1.05,
+    );
+
+    if (_pointsUserId == null) {
+      return Text(nf.format(0), style: valueStyle);
+    }
+
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(_pointsUserId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final data = snapshot.data?.data();
+        final points = (data?['totalPoints'] ?? 0) as int;
+        return Text(nf.format(points), style: valueStyle);
+      },
+    );
+  }
+
+  /// Static gold coin beside hero points (no animation — avoids jank & hot-reload init issues).
+  Widget _buildHomePointsCoin({required bool onDarkCard}) {
+    return Container(
+      width: 46,
+      height: 46,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: onDarkCard
+              ? <Color>[
+                  DesignToken.amberShade400,
+                  DesignToken.amberShade800,
+                ]
+              : <Color>[
+                  DesignToken.amberShade200,
+                  DesignToken.amberShade700,
+                ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        content: Text(
-          l10n.completeProfileMessage,
-          style: AppTextStyles.nunitoRegular.copyWith(fontSize: 16),
+        border: Border.all(
+          color: DesignToken.white.withValues(alpha: onDarkCard ? 0.4 : 0.55),
+          width: 1.25,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              l10n.cancel,
-              style: AppTextStyles.nunitoMedium.copyWith(
-                color: Colors.grey[600],
-                fontSize: 16,
-              ),
+        boxShadow: [
+          BoxShadow(
+            color: DesignToken.amberShade800.withValues(
+              alpha: onDarkCard ? 0.22 : 0.12,
             ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              context.push('/edit-profile');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange.shade600,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text(
-              l10n.completeProfile,
-              style: AppTextStyles.nunitoSemiBold.copyWith(fontSize: 16),
-            ),
+            blurRadius: onDarkCard ? 8 : 5,
+            offset: const Offset(0, 2),
           ),
         ],
+      ),
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.toll_rounded,
+        color: DesignToken.white,
+        size: DesignToken.iconSizeLG + 2,
       ),
     );
   }
@@ -932,276 +698,1582 @@ class _HomePageState extends State<HomePage>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     // Note: currentUserRankObj is now async, handled in FutureBuilder below
     final top3 = _topCarpenters.take(3).toList();
 
+    final theme = Theme.of(context);
+    final mq = MediaQuery.of(context);
+    final bottomContentPadding =
+        CarpenterShellLayout.bottomPaddingForScrollView(mq);
+
+    final isDark = theme.brightness == Brightness.dark;
+    final canvas = isDark
+        ? theme.colorScheme.surface
+        : DesignToken.carpenterAppBackground;
+
     return Scaffold(
-      backgroundColor: DesignToken.primary,
+      backgroundColor: canvas,
+      drawer: _buildHomeDrawer(context),
+      appBar: _buildHomeAppBar(context, theme),
       body: Stack(
         children: [
-          Column(
-            children: [
-              HomeNavBar(
-                userImageUrl: _getUserProfileImage(),
-                actions: _isCarpenter && _currentUserId != null
-                    ? [
-                        // Notification button with badge
-                        StreamBuilder<QuerySnapshot>(
-                          stream: _getFilteredNotificationsStream(),
-                          builder: (context, snapshot) {
-                            int notificationCount = 0;
-
-                            if (snapshot.hasData) {
-                              // Filter out admin-only notification types for carpenters
-                              final docs = snapshot.data!.docs.where((doc) {
-                                final data = doc.data() as Map<String, dynamic>;
-                                final type = data['type'] as String?;
-                                // Hide admin-only notifications from carpenters
-                                const adminOnlyTypes = [
-                                  'dailySpinReminder',
-                                  'newPendingBill',
-                                  'newUserRegistered',
-                                ];
-                                return !adminOnlyTypes.contains(type);
-                              }).toList();
-
-                              notificationCount = docs.length;
-                            }
-
-                            return Stack(
-                              children: [
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.notifications_outlined,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                  onPressed: () {
-                                    debugPrint('Navigating to /notifications');
-                                    context.push('/notifications');
-                                  },
-                                  tooltip: 'Notifications',
-                                ),
-                                if (notificationCount > 0)
-                                  Positioned(
-                                    right: 8,
-                                    top: 8,
-                                    child: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: const BoxDecoration(
-                                        color: Colors.red,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      constraints: const BoxConstraints(
-                                        minWidth: 16,
-                                        minHeight: 16,
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          notificationCount > 99
-                                              ? '99+'
-                                              : '$notificationCount',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            );
-                          },
+          Container(
+            color: canvas,
+            child: RefreshIndicator(
+              onRefresh: _loadInitialData,
+              color: DesignToken.primary,
+              backgroundColor: canvas,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.only(bottom: bottomContentPadding),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: DesignToken.layoutSectionGapTight),
+                    RepaintBoundary(child: _buildHomeHeroCard(context)),
+                    SizedBox(height: DesignToken.layoutCardGap),
+                    // Complete Profile Card (shown if profile is incomplete)
+                    if (!_isProfileComplete()) ...[
+                      const RepaintBoundary(child: CompleteProfileCard()),
+                      SizedBox(height: DesignToken.layoutSectionGap),
+                    ],
+                    SizedBox(height: DesignToken.layoutCardGap),
+                    // Offers (blueprint: section title styling — copy unchanged)
+                    Padding(
+                      padding: DesignToken.layoutScreenHorizontal,
+                      child: Text(
+                        AppLocalizations.of(context)!.latestOffers,
+                        style: AppTextStyles.nunitoSemiBold.copyWith(
+                          color: isDark
+                              ? theme.colorScheme.onSurface
+                              : DesignToken.homeTextPrimary,
+                          fontSize: DesignToken.fontSizeMD,
                         ),
-                      ]
-                    : null,
+                      ),
+                    ),
+                    SizedBox(height: DesignToken.layoutCardGapTight),
+                    // Offers carousel
+                    RepaintBoundary(
+                      child: _isLoadingOffers
+                          ? const ShimmerOfferCard()
+                          : OffersCarousel(offers: _offers),
+                    ),
+                    SizedBox(height: DesignToken.layoutSectionGap),
+                    // Products section (horizontal carousel)
+                    RepaintBoundary(child: _buildProductsSection(context)),
+                    SizedBox(height: DesignToken.layoutSectionGap),
+                    _buildRankingsSection(context, theme, top3),
+                    SizedBox(height: DesignToken.layoutSectionGap),
+                  ],
+                ),
               ),
+            ),
+          ),
+          // Confetti widget for celebration (isolated repaint; ignores taps)
+          Align(
+            alignment: Alignment.topCenter,
+            child: RepaintBoundary(
+              child: IgnorePointer(
+                child: ConfettiWidget(
+                  confettiController: _confettiController,
+                  blastDirection: pi / 2, // Down
+                  maxBlastForce: 5,
+                  minBlastForce: 2,
+                  emissionFrequency: 0.05,
+                  numberOfParticles: 20,
+                  gravity: 0.3,
+                  shouldLoop: false,
+                  colors: const [
+                    DesignToken.amber,
+                    DesignToken.orange,
+                    DesignToken.red,
+                    DesignToken.pink,
+                    DesignToken.purple,
+                    DesignToken.blue500,
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-              Expanded(
-                child: Container(
-                  color: DesignToken.woodenBackground,
-                  child: SafeArea(
-                    top: false,
-                    child: RefreshIndicator(
-                      onRefresh: _loadInitialData,
-                      color: DesignToken.primary,
-                      backgroundColor: Colors.white,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 16),
+  Widget _buildRankingsSection(
+    BuildContext context,
+    ThemeData theme,
+    List<CarpenterRank> top3,
+  ) {
+    final l10n = AppLocalizations.of(context)!;
+    final isDark = theme.brightness == Brightness.dark;
+    final titleColor = isDark
+        ? theme.colorScheme.onSurface
+        : DesignToken.homeTextPrimary;
+    final subtitleColor = isDark
+        ? theme.colorScheme.onSurface.withValues(alpha: 0.65)
+        : DesignToken.homeTextMuted;
 
-                          // User profile card
-                          UserProfileCard(
-                            userName: _getUserDisplayName(),
-                            totalPoints: _getUserPoints(),
-                            tier: _getUserTier(),
-                            userImageUrl: _getUserProfileImage(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section heading only (no card chrome).
+        Padding(
+          padding: DesignToken.layoutScreenHorizontal,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.homeRankingsSectionTitle,
+                style: AppTextStyles.nunitoSemiBold.copyWith(
+                  fontSize: DesignToken.fontSizeMD,
+                  color: titleColor,
+                ),
+              ),
+              SizedBox(height: DesignToken.spacingXS),
+              Text(
+                l10n.homeRankingsSectionSubtitle,
+                style: AppTextStyles.nunitoRegular.copyWith(
+                  fontSize: DesignToken.fontSizeSM,
+                  color: subtitleColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: DesignToken.layoutCardGapTight),
+        RepaintBoundary(child: _buildTodaysWinner()),
+        SizedBox(height: DesignToken.layoutCardGap),
+        RepaintBoundary(child: _buildCurrentUserPositionCard()),
+        SizedBox(height: DesignToken.layoutCardGap),
+        if (_isLoadingCarpenters)
+          const RepaintBoundary(child: ShimmerTopCarpenters())
+        else if (_topCarpenters.isNotEmpty) ...[
+          RepaintBoundary(
+            child: Container(
+              margin: DesignToken.layoutScreenHorizontal,
+              padding: const EdgeInsets.all(DesignToken.layoutScreenPaddingXLoose),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(DesignToken.radiusXL),
+                border: isDark
+                    ? null
+                    : Border.all(color: DesignToken.homeCardBorder),
+                boxShadow: [
+                  BoxShadow(
+                    color: DesignToken.black.withValues(alpha: 0.05),
+                    blurRadius: DesignToken.offerCarouselShadowBlur,
+                    offset: Offset(0, DesignToken.offerCarouselShadowDy),
+                  ),
+                ],
+              ),
+              child: FutureBuilder<CarpenterRank?>(
+                future: _currentUserRankFuture,
+                builder: (context, snapshot) {
+                  return TopCarpentersDisplay(
+                    topCarpenters: top3,
+                    currentUser: snapshot.data,
+                  );
+                },
+              ),
+            ),
+          ),
+          SizedBox(height: DesignToken.layoutCardGap),
+          RepaintBoundary(
+            child: Padding(
+              padding: DesignToken.layoutScreenHorizontal,
+              child: TopCarpentersList(
+                carpenters: _topCarpenters,
+                showViewAll: false,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _drawerSectionLabel(String label, Color color) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        DesignToken.layoutScreenPaddingXLoose,
+        DesignToken.spacingMD,
+        DesignToken.layoutScreenPaddingXLoose,
+        DesignToken.spacingXS,
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.nunitoSemiBold.copyWith(
+          fontSize: 12,
+          letterSpacing: 0.35,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  Drawer _buildHomeDrawer(BuildContext context) {
+    final theme = Theme.of(context);
+    final mediaQuery = MediaQuery.of(context);
+    final topInset = mediaQuery.padding.top;
+    final drawerFooterBottom =
+        CarpenterShellLayout.bottomPaddingForScrollView(mediaQuery) +
+            DesignToken.spacingSM;
+    final bool isDarkTheme = theme.brightness == Brightness.dark;
+    final Color titleColor = isDarkTheme
+        ? DesignToken.white
+        : DesignToken.textDark;
+    final Color subtitleColor = isDarkTheme
+        ? DesignToken.white.withValues(alpha: 0.80)
+        : DesignToken.textDark.withValues(alpha: 0.70);
+
+    final String name = _getUserDisplayName();
+    final String phone = (_currentUserData?['phone'] as String?) ?? '';
+    final String? profileImageUrl = _getUserProfileImage();
+
+    final l10n = AppLocalizations.of(context)!;
+
+    // Light, modern background that adapts to theme, with a subtle pattern‑like gradient
+    final Color drawerBase = theme.colorScheme.surface;
+    final Color drawerTintSoft = isDarkTheme
+        ? DesignToken.primary.withValues(alpha: 0.10)
+        : DesignToken.secondary.withValues(alpha: 0.06);
+    final Color drawerTintAccent = isDarkTheme
+        ? DesignToken.blueShade600.withValues(alpha: 0.16)
+        : DesignToken.amberShade200.withValues(alpha: 0.30);
+
+    return Drawer(
+      elevation: 8,
+      child: SafeArea(
+        top: false,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [drawerBase, drawerTintSoft, drawerTintAccent],
+              stops: const [0.0, 0.45, 1.0],
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header (including top safe area)
+              Container(
+                padding: EdgeInsets.fromLTRB(
+                  DesignToken.layoutScreenPaddingXLoose,
+                  DesignToken.layoutScreenPaddingXLoose + topInset,
+                  DesignToken.layoutScreenPaddingXLoose,
+                  DesignToken.layoutScreenPaddingXLoose,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      isDarkTheme
+                          ? DesignToken.blueShade600.withValues(alpha: 0.6)
+                          : DesignToken.secondary.withValues(alpha: 0.15),
+                      isDarkTheme
+                          ? DesignToken.purpleShade600.withValues(alpha: 0.7)
+                          : DesignToken.amberShade100.withValues(alpha: 0.9),
+                    ],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: DesignToken.black.withValues(alpha: 0.15),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: DesignToken.white.withValues(alpha: 0.9),
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: DesignToken.black.withValues(alpha: 0.25),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
                           ),
-
-                          const SizedBox(height: 16),
-
-                          // Complete Profile Card (shown if profile is incomplete)
-                          if (!_isProfileComplete()) ...[
-                            const CompleteProfileCard(),
-                            const SizedBox(height: 16),
-                          ],
-
-                          const SizedBox(height: 4),
-
-                          // Latest Offers header
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(
-                              AppLocalizations.of(context)!.latestOffers,
-                              style: TextStyle(
-                                color: DesignToken.primary,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ).merge(AppTextStyles.nunitoBold),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Offers carousel
-                          _isLoadingOffers
-                              ? const ShimmerOfferCard()
-                              : OffersCarousel(offers: _offers),
-
-                          const SizedBox(height: 20),
-
-                          // Today's Winner Display
-                          _buildTodaysWinner(),
-
-                          const SizedBox(height: 20),
-
-                          // Current User Position Card
-                          _buildCurrentUserPositionCard(),
-
-                          const SizedBox(height: 20),
-
-                          // Top carpenters
-                          if (_isLoadingCarpenters)
-                            const ShimmerTopCarpenters()
-                          else if (_topCarpenters.isNotEmpty) ...[
-                            Container(
-                              margin: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: DesignToken.white,
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
-                                    blurRadius: 10,
-                                    offset: Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: FutureBuilder<CarpenterRank?>(
-                                future: _buildCurrentUserAsCarpenterRank(),
-                                builder: (context, snapshot) {
-                                  return TopCarpentersDisplay(
-                                    topCarpenters: top3,
-                                    currentUser: snapshot.data,
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: _isValidImageUrl(profileImageUrl)
+                            ? Image.network(
+                                profileImageUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const ColoredBox(
+                                    color: DesignToken.white,
+                                    child: Icon(
+                                      Icons.person,
+                                      color: DesignToken.primary,
+                                    ),
                                   );
                                 },
+                              )
+                            : const ColoredBox(
+                                color: DesignToken.white,
+                                child: Icon(
+                                  Icons.person,
+                                  color: DesignToken.primary,
+                                ),
+                              ),
+                      ),
+                    ),
+                    SizedBox(width: DesignToken.layoutScreenPaddingX),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name,
+                            style: AppTextStyles.nunitoSemiBold.copyWith(
+                              color: DesignToken.white,
+                              fontSize: DesignToken.fontSizeLG,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          SizedBox(height: DesignToken.spacingXS),
+                          if (phone.isNotEmpty)
+                            Text(
+                              phone,
+                              style: AppTextStyles.nunitoRegular.copyWith(
+                                color: DesignToken.white.withValues(
+                                  alpha: 0.85,
+                                ),
+                                fontSize: DesignToken.fontSizeSM,
                               ),
                             ),
-                            const SizedBox(height: 20),
-
-                            // Top 10 Carpenters List (without bordered card container)
-                            if (_topCarpenters.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                ),
-                                child: TopCarpentersList(
-                                  carpenters: _topCarpenters,
-                                  showViewAll: false,
-                                ),
-                              ),
-                          ],
-
-                          const SizedBox(height: 20),
                         ],
                       ),
                     ),
+                  ],
+                ),
+              ),
+              SizedBox(height: DesignToken.spacingXS),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.only(bottom: DesignToken.spacingSM),
+                  children: [
+                    _drawerSectionLabel(
+                      l10n.drawerSectionMainNav,
+                      subtitleColor,
+                    ),
+                    ListTile(
+                      leading: const Icon(
+                        Icons.home_rounded,
+                        color: DesignToken.secondary,
+                      ),
+                      title: Text(
+                        l10n.home,
+                        style: AppTextStyles.nunitoRegular.copyWith(
+                          color: titleColor,
+                        ),
+                      ),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        context.go('/');
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(
+                        Icons.account_balance_wallet_outlined,
+                        color: DesignToken.secondary,
+                      ),
+                      title: Text(
+                        l10n.earn,
+                        style: AppTextStyles.nunitoRegular.copyWith(
+                          color: titleColor,
+                        ),
+                      ),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        context.go('/wallet');
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(
+                        Icons.notifications_outlined,
+                        color: DesignToken.secondary,
+                      ),
+                      title: Text(
+                        l10n.notifications,
+                        style: AppTextStyles.nunitoRegular.copyWith(
+                          color: titleColor,
+                        ),
+                      ),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        context.go('/notifications');
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(
+                        Icons.person_outline,
+                        color: DesignToken.secondary,
+                      ),
+                      title: Text(
+                        l10n.profile,
+                        style: AppTextStyles.nunitoRegular.copyWith(
+                          color: titleColor,
+                        ),
+                      ),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        context.go('/profile');
+                      },
+                    ),
+                    Padding(
+                      padding: DesignToken.layoutScreenHorizontal,
+                      child: Divider(
+                        height: 24,
+                        color: subtitleColor.withValues(alpha: 0.22),
+                      ),
+                    ),
+                    _drawerSectionLabel(l10n.drawerSectionMore, subtitleColor),
+                    ListTile(
+                      leading: const Icon(
+                        Icons.layers_rounded,
+                        color: DesignToken.secondary,
+                      ),
+                      title: Text(
+                        l10n.drawerProductsTitle,
+                        style: AppTextStyles.nunitoRegular.copyWith(
+                          color: titleColor,
+                        ),
+                      ),
+                      subtitle: Text(
+                        l10n.drawerProductsSubtitle,
+                        style: AppTextStyles.nunitoRegular.copyWith(
+                          color: subtitleColor,
+                          fontSize: DesignToken.fontSizeSM,
+                        ),
+                      ),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        context.push('/products');
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(
+                        Icons.shopping_cart_outlined,
+                        color: DesignToken.secondary,
+                      ),
+                      title: Text(
+                        l10n.drawerCart,
+                        style: AppTextStyles.nunitoRegular.copyWith(
+                          color: titleColor,
+                        ),
+                      ),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        context.push('/cart');
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(
+                        Icons.receipt_long_rounded,
+                        color: DesignToken.secondary,
+                      ),
+                      title: Text(
+                        l10n.myOrders,
+                        style: AppTextStyles.nunitoRegular.copyWith(
+                          color: titleColor,
+                        ),
+                      ),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        context.push('/orders');
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(
+                        Icons.info_outline_rounded,
+                        color: DesignToken.secondary,
+                      ),
+                      title: Text(
+                        l10n.aboutUs,
+                        style: AppTextStyles.nunitoRegular.copyWith(
+                          color: titleColor,
+                        ),
+                      ),
+                      subtitle: Text(
+                        l10n.aboutUsMenuSubtitle,
+                        style: AppTextStyles.nunitoRegular.copyWith(
+                          color: subtitleColor,
+                          fontSize: DesignToken.fontSizeSM,
+                        ),
+                      ),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        context.push('/about-us');
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: DesignToken.layoutScreenHorizontal,
+                child: const Divider(),
+              ),
+              // Logout + version
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  DesignToken.layoutScreenPaddingX,
+                  DesignToken.spacingSM,
+                  DesignToken.layoutScreenPaddingX,
+                  drawerFooterBottom,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_appVersion.isNotEmpty) ...[
+                      Center(
+                        child: Text(
+                          _appVersion,
+                          style: AppTextStyles.nunitoRegular.copyWith(
+                            fontSize: 12,
+                            color: DesignToken.textDark.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: DesignToken.spacingMD),
+                    ],
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: DesignToken.redShade600,
+                        foregroundColor: DesignToken.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: DesignToken.paddingMD + 2,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      icon: const Icon(Icons.logout_rounded, size: 22),
+                      label: Text(
+                        l10n.logout,
+                        style: AppTextStyles.nunitoBold.copyWith(
+                          fontSize: 16,
+                          color: DesignToken.white,
+                        ),
+                      ),
+                      onPressed: () => _handleLogout(context),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleLogout(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        insetPadding: const EdgeInsets.symmetric(
+          horizontal: DesignToken.padding2XL,
+          vertical: DesignToken.padding2XL,
+        ),
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            DesignToken.padding2XL,
+            DesignToken.padding2XL,
+            DesignToken.padding2XL,
+            DesignToken.layoutScreenPaddingX,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: DesignToken.error.withValues(alpha: 0.08),
+                ),
+                child: const Icon(
+                  Icons.logout_rounded,
+                  color: DesignToken.error,
+                  size: 26,
+                ),
+              ),
+              SizedBox(height: DesignToken.layoutScreenPaddingX),
+              Text(
+                l10n.logout,
+                style: AppTextStyles.nunitoBold.copyWith(
+                  fontSize: 20,
+                  color: DesignToken.textDark,
+                ),
+              ),
+              SizedBox(height: DesignToken.spacingSM),
+              Text(
+                l10n.logoutConfirmation,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.nunitoRegular.copyWith(
+                  fontSize: 15,
+                  color: DesignToken.textDark.withValues(alpha: 0.75),
+                ),
+              ),
+              SizedBox(height: DesignToken.layoutSectionGapTight),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: DesignToken.grey400.withValues(alpha: 0.8),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: Text(
+                        l10n.no,
+                        style: AppTextStyles.nunitoMedium.copyWith(
+                          fontSize: 15,
+                          color: DesignToken.textDark,
+                        ),
+                      ),
+                    ),
                   ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: DesignToken.error,
+                        foregroundColor: DesignToken.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: Text(
+                        l10n.yes,
+                        style: AppTextStyles.nunitoSemiBold.copyWith(
+                          fontSize: 15,
+                          color: DesignToken.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (shouldLogout == true && context.mounted) {
+      try {
+        await _fcmService.deleteToken();
+        await _sessionService.clearSession();
+        if (context.mounted) {
+          context.go('/login');
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${l10n.logoutFailed}: ${e.toString()}'),
+              backgroundColor: DesignToken.error,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Widget _buildProductsSection(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final isDark = theme.brightness == Brightness.dark;
+    final Color titleColor = isDark
+        ? DesignToken.white
+        : DesignToken.homeTextPrimary;
+    final Color subtitleColor = isDark
+        ? DesignToken.white.withValues(alpha: 0.72)
+        : DesignToken.homeTextMuted;
+    final surfaceColor = theme.colorScheme.surface;
+    final heroDecodeW = MediaQuery.sizeOf(context).width * 0.92;
+    final Color dotActive = isDark
+        ? DesignToken.white.withValues(alpha: 0.95)
+        : DesignToken.primary;
+    final Color dotInactive = isDark
+        ? DesignToken.white.withValues(alpha: 0.45)
+        : DesignToken.homeTextMuted.withValues(alpha: 0.35);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: DesignToken.layoutScreenHorizontal,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: DesignToken.woodenGradient,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.layers_rounded,
+                      size: 18,
+                      color: DesignToken.brownShade800,
+                    ),
+                  ),
+                  SizedBox(width: DesignToken.spacingSM),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.homeBrowseProductsTitle,
+                        style: AppTextStyles.nunitoSemiBold.copyWith(
+                          color: titleColor,
+                          fontSize: DesignToken.fontSizeMD,
+                        ),
+                      ),
+                      Text(
+                        l10n.homeBrowseProductsSubtitle,
+                        style: AppTextStyles.nunitoRegular.copyWith(
+                          color: subtitleColor,
+                          fontSize: DesignToken.fontSizeSM,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              TextButton(
+                onPressed: () => context.push('/products'),
+                child: Text(
+                  l10n.viewAll,
+                  style: AppTextStyles.nunitoRegular.copyWith(
+                    color: DesignToken.primary,
+                    fontSize: DesignToken.fontSizeSM,
                   ),
                 ),
               ),
             ],
           ),
-
-          // Confetti widget for celebration
-          Align(
-            alignment: Alignment.topCenter,
-            child: ConfettiWidget(
-              confettiController: _confettiController,
-              blastDirection: pi / 2, // Down
-              maxBlastForce: 5,
-              minBlastForce: 2,
-              emissionFrequency: 0.05,
-              numberOfParticles: 20,
-              gravity: 0.3,
-              shouldLoop: false,
-              colors: const [
-                Colors.amber,
-                Colors.orange,
-                DesignToken.red,
-                DesignToken.pink,
-                DesignToken.purple,
-                DesignToken.blue500,
-              ],
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: AnimatedBuilder(
-        animation: _animationController,
-        builder: (context, child) {
-          return Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: DesignToken.secondary.withOpacity(
-                    _glowAnimation.value,
-                  ),
-                  blurRadius: 20,
-                  spreadRadius: 2,
+        ),
+        SizedBox(height: DesignToken.layoutCardGapTight),
+        SizedBox(
+          height: 190,
+          child: PageView.builder(
+            controller: _productHeroPageController,
+            itemCount: _heroCards.length,
+            onPageChanged: (index) {
+              setState(() => _currentProductHeroPage = index);
+            },
+            itemBuilder: (context, index) {
+              final hero = _heroCards[index];
+              return Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DesignToken.layoutCardGapTight,
                 ),
-              ],
-            ),
-            child: FloatingActionButton.extended(
-              onPressed: () {
-                if (!_isProfileComplete()) {
-                  _showCompleteProfileDialog(context);
-                } else {
-                  GoRouter.of(context).push('/add-bill');
-                }
-              },
-              backgroundColor: DesignToken.secondary,
-              elevation: 6,
-              icon: const Icon(Icons.add_circle, color: Colors.white, size: 28),
-              label: Text(
-                AppLocalizations.of(context)!.addPoints,
-                style: AppTextStyles.nunitoBold.copyWith(
-                  fontSize: 16,
-                  color: Colors.white,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(DesignToken.radiusXL),
+                    boxShadow: [
+                      BoxShadow(
+                        color: DesignToken.brownShade800.withValues(
+                          alpha: 0.18,
+                        ),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.asset(
+                          hero.imageAsset,
+                          fit: BoxFit.cover,
+                          cacheWidth: _imageCacheWidthPx(context, heroDecodeW),
+                        ),
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.black.withValues(alpha: 0.10),
+                                Colors.black.withValues(alpha: 0.65),
+                              ],
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(
+                            DesignToken.layoutScreenPaddingXLoose,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 34,
+                                height: 34,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: DesignToken.white.withValues(
+                                    alpha: 0.92,
+                                  ),
+                                ),
+                                child: Icon(
+                                  hero.icon,
+                                  size: 20,
+                                  color: DesignToken.brownShade800,
+                                ),
+                              ),
+                              SizedBox(height: DesignToken.spacingMD),
+                              Text(
+                                hero.title,
+                                style: AppTextStyles.nunitoBold.copyWith(
+                                  color: DesignToken.white,
+                                  fontSize: DesignToken.fontSizeLG,
+                                ),
+                              ),
+                              SizedBox(height: DesignToken.spacingSM),
+                              Text(
+                                hero.subtitle,
+                                style: AppTextStyles.nunitoRegular.copyWith(
+                                  color: DesignToken.white.withValues(
+                                    alpha: 0.92,
+                                  ),
+                                  fontSize: DesignToken.fontSizeSM,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        SizedBox(height: DesignToken.spacingSM),
+        Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(_heroCards.length, (index) {
+              final isActive = index == _currentProductHeroPage;
+              return AnimatedContainer(
+                duration: DesignToken.animationDurationFast,
+                margin: const EdgeInsets.symmetric(
+                  horizontal: DesignToken.spacingXS,
+                ),
+                height: 6,
+                width: isActive ? 18 : 6,
+                decoration: BoxDecoration(
+                  color: isActive ? dotActive : dotInactive,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              );
+            }),
+          ),
+        ),
+        SizedBox(height: DesignToken.layoutCardGapTight),
+        SizedBox(
+          height: 124,
+          child: ListView.separated(
+            padding: DesignToken.layoutScreenHorizontal,
+            scrollDirection: Axis.horizontal,
+            itemCount: _categories.length,
+            separatorBuilder: (_, __) =>
+                SizedBox(width: DesignToken.layoutCardGapTight),
+            itemBuilder: (context, index) {
+              final category = _categories[index];
+              return _ProductCategoryCard(
+                category: category,
+                surfaceColor: surfaceColor,
+                textColor: titleColor,
+                onTap: () => context.push(
+                  '/products?category=${Uri.encodeComponent(category.title)}',
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Home Top App Bar (light: flat #F1F5F9, blueprint text colors) ────────
+  Widget _buildHomeAppBarRow(
+    BuildContext context,
+    AppLocalizations l10n,
+    Color headerTextColor,
+    Color headerSubTextColor,
+  ) {
+    final topInset = MediaQuery.paddingOf(context).top;
+    // Avoid SafeArea here: total height is [topInset + kToolbarHeight]; SafeArea would
+    // shrink the inner Row and force the title Column into ~40px → RenderFlex overflow.
+    return Padding(
+      padding: EdgeInsets.only(
+        top: topInset,
+        left: DesignToken.layoutScreenPaddingX,
+        right: DesignToken.layoutScreenPaddingX,
+        bottom: DesignToken.spacingMD,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+            Builder(
+              builder: (context) => InkWell(
+                borderRadius: BorderRadius.circular(DesignToken.radiusRound),
+                onTap: () => Scaffold.of(context).openDrawer(),
+                child: Container(
+                  width: DesignToken.height5XL - DesignToken.spacingSM,
+                  height: DesignToken.height5XL - DesignToken.spacingSM,
+                  decoration: BoxDecoration(
+                    color: headerTextColor.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(DesignToken.radiusRound),
+                  ),
+                  child: Icon(
+                    Icons.menu_rounded,
+                    color: headerTextColor,
+                    size: DesignToken.iconSizeSM + 6,
+                  ),
                 ),
               ),
             ),
-          );
-        },
+            SizedBox(width: DesignToken.widthMD),
+            Container(
+              width: DesignToken.height5XL - DesignToken.spacingSM,
+              height: DesignToken.height5XL - DesignToken.spacingSM,
+              decoration: BoxDecoration(
+                color: headerTextColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(DesignToken.spacingSM + 2),
+                border: Border.all(
+                  color: headerTextColor.withValues(alpha: 0.35),
+                  width: 1.5,
+                ),
+              ),
+              padding: const EdgeInsets.all(DesignToken.paddingSM - 2),
+              child: Image.asset(
+                'assets/images/balaji_point_logo.png',
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => Icon(
+                  Icons.storefront_rounded,
+                  color: headerTextColor,
+                  size: DesignToken.iconSizeSM + 6,
+                ),
+              ),
+            ),
+            SizedBox(width: DesignToken.widthMD),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Balaji Points',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.nunitoBold.copyWith(
+                      color: headerTextColor,
+                      fontSize: DesignToken.fontSizeLG,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  SizedBox(height: DesignToken.heightXS / 2),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.location_on_rounded,
+                        color: headerSubTextColor,
+                        size: DesignToken.fontSizeSM - 1,
+                      ),
+                      SizedBox(width: DesignToken.widthXS / 2),
+                      Expanded(
+                        child: Text(
+                          '${l10n.companyName} · ${l10n.homeStoreBranch}',
+                          style: AppTextStyles.nunitoRegular.copyWith(
+                            color: headerSubTextColor,
+                            fontSize: DesignToken.fontSizeSM - 1,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            GestureDetector(
+              onTap: () => context.push('/cart'),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: DesignToken.height5XL - DesignToken.spacingSM,
+                    height: DesignToken.height5XL - DesignToken.spacingSM,
+                    decoration: BoxDecoration(
+                      color: headerTextColor.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(DesignToken.spacingSM + 2),
+                      border: Border.all(
+                        color: headerTextColor.withValues(alpha: 0.35),
+                        width: 1,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.shopping_cart_outlined,
+                      color: headerTextColor,
+                      size: DesignToken.iconSizeSM + 6,
+                    ),
+                  ),
+                  if (_cartItemCount > 0)
+                    Positioned(
+                      top: -DesignToken.spacingSM,
+                      right: -DesignToken.spacingSM,
+                      child: Container(
+                        constraints: const BoxConstraints(
+                          minWidth: 18,
+                          minHeight: 18,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: DesignToken.paddingXS,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: DesignToken.error,
+                          borderRadius: BorderRadius.circular(9),
+                          border: Border.all(
+                            color: DesignToken.white,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Text(
+                          _cartItemCount > 99 ? '99+' : '$_cartItemCount',
+                          style: TextStyle(
+                            color: DesignToken.white,
+                            fontSize: DesignToken.fontSizeXS,
+                            fontWeight: FontWeight.bold,
+                            height: 1,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+    );
+  }
+
+  PreferredSizeWidget _buildHomeAppBar(BuildContext context, ThemeData theme) {
+    final l10n = AppLocalizations.of(context)!;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final Color barColor = isDark
+        ? DesignToken.navyBackground
+        : DesignToken.carpenterAppBackground;
+
+    final Color headerTextColor = isDark
+        ? DesignToken.white
+        : DesignToken.textDark;
+    final Color headerSubTextColor = isDark
+        ? DesignToken.white.withValues(alpha: 0.85)
+        : DesignToken.textDark.withValues(alpha: 0.70);
+
+    final overlayStyle = SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: isDark
+          ? Brightness.light
+          : Brightness.dark,
+      statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+    );
+
+    final topInset = MediaQuery.paddingOf(context).top;
+    return PreferredSize(
+      preferredSize: Size.fromHeight(topInset + kToolbarHeight),
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: overlayStyle,
+        child: isDark
+            ? Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: DesignToken.primaryGradient,
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(DesignToken.radiusXL),
+                    bottomRight: Radius.circular(DesignToken.radiusXL),
+                  ),
+                ),
+                child: Container(
+                  margin: const EdgeInsets.all(1.0),
+                  decoration: BoxDecoration(
+                    color: barColor,
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(DesignToken.radiusXL - 1),
+                      bottomRight: Radius.circular(DesignToken.radiusXL - 1),
+                    ),
+                    border: Border(
+                      bottom: BorderSide(
+                        color: DesignToken.carpenterAppBarBottomBorderColor(true),
+                        width: 1,
+                      ),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: DesignToken.black.withValues(alpha: 0.35),
+                        blurRadius: DesignToken.offerCarouselShadowBlur,
+                        offset: Offset(0, DesignToken.offerCarouselShadowDy / 2),
+                      ),
+                    ],
+                  ),
+                  child: _buildHomeAppBarRow(
+                    context,
+                    l10n,
+                    headerTextColor,
+                    headerSubTextColor,
+                  ),
+                ),
+              )
+            : Container(
+                decoration: BoxDecoration(
+                  color: DesignToken.homeHeaderTint,
+                  border: Border(
+                    bottom: BorderSide(
+                      color: DesignToken.carpenterAppBarBottomBorderColor(false),
+                      width: 1,
+                    ),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: DesignToken.black.withValues(alpha: 0.05),
+                      blurRadius: DesignToken.offerCarouselShadowBlur,
+                      offset: Offset(0, DesignToken.spacingXS),
+                    ),
+                  ],
+                ),
+                child: _buildHomeAppBarRow(
+                  context,
+                  l10n,
+                  DesignToken.homeTextPrimary,
+                  DesignToken.homeTextMuted,
+                ),
+              ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+    );
+  }
+
+  Widget _buildHomeHeroCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
+    final now = DateTime.now();
+    final hour = now.hour;
+    final isDayTime = hour >= 6 && hour < 18;
+    final String greeting = hour < 12
+        ? l10n.goodMorningGreeting
+        : (hour < 17 ? l10n.goodAfternoonGreeting : l10n.goodEveningGreeting);
+
+    final profileImage = _getUserProfileImage();
+    final hasValidImage =
+        profileImage != null &&
+        (profileImage.startsWith('http://') ||
+            profileImage.startsWith('https://'));
+
+    // Light: soft border card; avatar + greeting; points + animated coin; tier row.
+    if (!isDark) {
+      return Container(
+        margin: DesignToken.layoutScreenHorizontal,
+        padding: const EdgeInsets.all(DesignToken.layoutScreenPaddingX),
+        decoration: DesignToken.homeSummaryCardDecoration(
+          isDark: false,
+          surfaceColor: theme.colorScheme.surface,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: DesignToken.height4XL,
+                  height: DesignToken.height4XL,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: DesignToken.homeCardBorder,
+                      width: 1,
+                    ),
+                  ),
+                  child: CircleAvatar(
+                    radius: 17,
+                    backgroundColor: DesignToken.grey100,
+                    backgroundImage: hasValidImage
+                        ? NetworkImage(profileImage)
+                        : null,
+                    child: !hasValidImage
+                        ? Icon(
+                            Icons.person,
+                            size: DesignToken.iconSizeMD + 2,
+                            color: DesignToken.homeTextMuted,
+                          )
+                        : null,
+                  ),
+                ),
+                SizedBox(width: DesignToken.spacingSM + 2),
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      style: AppTextStyles.nunitoRegular.copyWith(
+                        fontSize: DesignToken.fontSizeSM,
+                        color: DesignToken.homeTextMuted,
+                        height: 1.15,
+                      ),
+                      children: [
+                        TextSpan(text: '$greeting,\n'),
+                        TextSpan(
+                          text: _getUserDisplayName(),
+                          style: AppTextStyles.nunitoBold.copyWith(
+                            fontSize: DesignToken.fontSizeMD,
+                            color: DesignToken.homeTextPrimary,
+                            height: 1.15,
+                          ),
+                        ),
+                      ],
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                _SunMoonBadge(
+                  isDayTime: isDayTime,
+                  pressed: _greetingIconPressed,
+                  onPressedChanged: (v) =>
+                      setState(() => _greetingIconPressed = v),
+                  usePremiumLightStyle: true,
+                ),
+              ],
+            ),
+            SizedBox(height: DesignToken.layoutCardGapTight),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _buildHomePointsCoin(onDarkCard: false),
+                SizedBox(width: DesignToken.spacingMD),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        l10n.totalPointsLabel,
+                        style: AppTextStyles.nunitoRegular.copyWith(
+                          fontSize: DesignToken.fontSizeXS + 1,
+                          color: DesignToken.homeTextMuted,
+                          height: 1.1,
+                        ),
+                      ),
+                      SizedBox(height: DesignToken.heightXS / 2),
+                      _buildHomePointsBigValue(
+                        fontSize: DesignToken.fontSize3XL,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: DesignToken.layoutCardGapTight),
+            Row(
+              children: [
+                Icon(
+                  Icons.star_rounded,
+                  color: DesignToken.amberShade300.withValues(alpha: 0.88),
+                  size: DesignToken.iconSizeMD,
+                ),
+                SizedBox(width: DesignToken.spacingSM),
+                Expanded(
+                  child: Text(
+                    '${_getUserTier()} ${l10n.homeTierSuffix}',
+                    style: AppTextStyles.nunitoMedium.copyWith(
+                      color: DesignToken.homeTextMuted,
+                      fontSize: DesignToken.fontSizeSM,
+                      height: 1.2,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Icon(
+                  Icons.account_balance_wallet_outlined,
+                  size: DesignToken.iconSizeSM + 2,
+                  color: DesignToken.homeTextMuted.withValues(alpha: 0.55),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: DesignToken.paddingLG),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: <Color>[DesignToken.primary, DesignToken.secondary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: DesignToken.borderRadiusXL,
+        border: Border.all(
+          color: DesignToken.white.withValues(alpha: 0.18),
+          width: 1,
+        ),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: DesignToken.primary.withValues(alpha: 0.22),
+            blurRadius: 16,
+            spreadRadius: 0,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(DesignToken.layoutScreenPaddingX),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                Container(
+                  width: DesignToken.height4XL,
+                  height: DesignToken.height4XL,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: DesignToken.white.withValues(alpha: 0.45),
+                      width: 1,
+                    ),
+                  ),
+                  child: CircleAvatar(
+                    radius: 17,
+                    backgroundColor: DesignToken.white.withValues(alpha: 0.18),
+                    backgroundImage: hasValidImage
+                        ? NetworkImage(profileImage)
+                        : null,
+                    child: !hasValidImage
+                        ? const Icon(
+                            Icons.person,
+                            size: 22,
+                            color: DesignToken.white,
+                          )
+                        : null,
+                  ),
+                ),
+                SizedBox(width: DesignToken.spacingSM + 2),
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      style: AppTextStyles.nunitoRegular.copyWith(
+                        fontSize: DesignToken.fontSizeSM,
+                        color: DesignToken.white.withValues(alpha: 0.82),
+                        height: 1.15,
+                      ),
+                      children: <InlineSpan>[
+                        TextSpan(text: '$greeting,\n'),
+                        TextSpan(
+                          text: _getUserDisplayName(),
+                          style: AppTextStyles.nunitoBold.copyWith(
+                            fontSize: DesignToken.fontSizeMD,
+                            color: DesignToken.white,
+                            height: 1.15,
+                          ),
+                        ),
+                      ],
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                _SunMoonBadge(
+                  isDayTime: isDayTime,
+                  pressed: _greetingIconPressed,
+                  onPressedChanged: (v) =>
+                      setState(() => _greetingIconPressed = v),
+                ),
+              ],
+            ),
+            SizedBox(height: DesignToken.layoutCardGapTight),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                _buildHomePointsCoin(onDarkCard: true),
+                SizedBox(width: DesignToken.spacingMD),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(
+                        l10n.totalPointsLabel,
+                        style: AppTextStyles.nunitoRegular.copyWith(
+                          fontSize: DesignToken.fontSizeXS + 1,
+                          color: DesignToken.white.withValues(alpha: 0.78),
+                          height: 1.1,
+                        ),
+                      ),
+                      SizedBox(height: DesignToken.heightXS / 2),
+                      _buildHomePointsBigValue(
+                        fontSize: DesignToken.fontSize3XL,
+                        color: DesignToken.white,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: DesignToken.layoutCardGapTight),
+            Row(
+              children: <Widget>[
+                Icon(
+                  Icons.star_rounded,
+                  color: DesignToken.amberShade300,
+                  size: DesignToken.iconSizeMD,
+                ),
+                SizedBox(width: DesignToken.spacingSM),
+                Expanded(
+                  child: Text(
+                    '${_getUserTier()} ${l10n.homeTierSuffix}',
+                    style: AppTextStyles.nunitoMedium.copyWith(
+                      color: DesignToken.white.withValues(alpha: 0.92),
+                      fontSize: DesignToken.fontSizeSM,
+                      height: 1.2,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Icon(
+                  Icons.account_balance_wallet_outlined,
+                  size: DesignToken.iconSizeSM + 2,
+                  color: DesignToken.white.withValues(alpha: 0.55),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _SunMoonBadge({
+    required bool isDayTime,
+    required bool pressed,
+    required ValueChanged<bool> onPressedChanged,
+    bool usePremiumLightStyle = false,
+  }) {
+    final icon = isDayTime ? Icons.wb_sunny_outlined : Icons.nightlight_round;
+
+    if (usePremiumLightStyle) {
+      return GestureDetector(
+        onTapDown: (_) => onPressedChanged(true),
+        onTapUp: (_) => onPressedChanged(false),
+        onTapCancel: () => onPressedChanged(false),
+        child: AnimatedScale(
+          duration: DesignToken.animationDurationFast,
+          scale: pressed ? 0.9 : 1.0,
+          child: Container(
+            padding: const EdgeInsets.all(DesignToken.paddingSM + 2),
+            decoration: const BoxDecoration(
+              color: DesignToken.homeIconCircleBlue,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: DesignToken.homeTextMuted,
+              size: DesignToken.iconSizeMD + 2,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTapDown: (_) => onPressedChanged(true),
+      onTapUp: (_) => onPressedChanged(false),
+      onTapCancel: () => onPressedChanged(false),
+      child: AnimatedScale(
+        duration: DesignToken.animationDurationFast,
+        scale: pressed ? 0.9 : 1.0,
+        child: Container(
+          padding: const EdgeInsets.all(DesignToken.paddingSM + 2),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: isDayTime
+                  ? [DesignToken.amberShade300, DesignToken.amberShade500]
+                  : [DesignToken.blueShade600, DesignToken.purpleShade600],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: DesignToken.black.withValues(alpha: 0.15),
+                blurRadius: DesignToken.offerCarouselShadowBlur,
+                offset: Offset(0, DesignToken.offerCarouselShadowDy),
+              ),
+            ],
+          ),
+          child: Icon(
+            icon,
+            color: DesignToken.white,
+            size: DesignToken.iconSizeMD + 4,
+          ),
+        ),
+      ),
     );
   }
 
@@ -1218,8 +2290,8 @@ class _HomePageState extends State<HomePage>
     }
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(20),
+      margin: DesignToken.layoutScreenHorizontal,
+      padding: const EdgeInsets.all(DesignToken.layoutScreenPaddingXLoose),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [DesignToken.blue700, DesignToken.purpleShade600],
@@ -1242,12 +2314,12 @@ class _HomePageState extends State<HomePage>
             width: 70,
             height: 70,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: DesignToken.white,
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.amber.shade400, width: 3),
+              border: Border.all(color: DesignToken.amberShade400, width: 3),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.amber.withOpacity(0.4),
+                  color: DesignToken.amber.withValues(alpha: 0.4),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -1269,13 +2341,13 @@ class _HomePageState extends State<HomePage>
                   style: const TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey,
+                    color: DesignToken.grey500,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: DesignToken.layoutScreenPaddingX),
 
           // User Info
           Expanded(
@@ -1290,7 +2362,7 @@ class _HomePageState extends State<HomePage>
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: DesignToken.spacingXS),
                 Text(
                   _getUserDisplayName(),
                   style: const TextStyle(
@@ -1301,11 +2373,11 @@ class _HomePageState extends State<HomePage>
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: DesignToken.spacingSM),
                 Row(
                   children: [
-                    const Icon(Icons.stars, color: Colors.amber, size: 18),
-                    const SizedBox(width: 6),
+                    const Icon(Icons.stars, color: DesignToken.amber, size: 18),
+                    SizedBox(width: DesignToken.spacingSM),
                     Text(
                       '$_currentUserPoints Points',
                       style: const TextStyle(
@@ -1322,14 +2394,14 @@ class _HomePageState extends State<HomePage>
 
           // Trophy Icon
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(DesignToken.paddingMD),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: DesignToken.white.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.emoji_events,
-              color: Colors.amber,
+              color: DesignToken.amber,
               size: 28,
             ),
           ),
@@ -1345,7 +2417,7 @@ class _HomePageState extends State<HomePage>
         '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: DesignToken.layoutScreenHorizontal,
       child: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('daily_prize_winners')
@@ -1357,10 +2429,11 @@ class _HomePageState extends State<HomePage>
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            final theme = Theme.of(context);
             return Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(DesignToken.layoutScreenPaddingX),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: theme.colorScheme.surface,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: DesignToken.secondary.withValues(alpha: 0.2),
@@ -1368,7 +2441,7 @@ class _HomePageState extends State<HomePage>
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
+                    color: DesignToken.black.withValues(alpha: 0.05),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -1378,7 +2451,7 @@ class _HomePageState extends State<HomePage>
                 children: [
                   // Trophy Icon
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    padding: const EdgeInsets.all(DesignToken.spacingMD),
                     decoration: BoxDecoration(
                       color: DesignToken.secondary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
@@ -1389,7 +2462,7 @@ class _HomePageState extends State<HomePage>
                       color: DesignToken.secondary.withValues(alpha: 0.6),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  SizedBox(width: DesignToken.layoutScreenPaddingX),
 
                   // No Winner Text
                   Expanded(
@@ -1404,12 +2477,12 @@ class _HomePageState extends State<HomePage>
                             color: DesignToken.secondary,
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        SizedBox(height: DesignToken.spacingXS / 2),
                         Text(
                           AppLocalizations.of(context)!.noWinnerYetToday,
                           style: AppTextStyles.nunitoRegular.copyWith(
                             fontSize: 14,
-                            color: Colors.grey.shade600,
+                            color: DesignToken.grey600,
                           ),
                         ),
                       ],
@@ -1417,10 +2490,10 @@ class _HomePageState extends State<HomePage>
                   ),
 
                   // Info Icon
-                  Icon(
+                  const Icon(
                     Icons.info_outline,
                     size: 24,
-                    color: Colors.grey.shade400,
+                    color: DesignToken.grey400,
                   ),
                 ],
               ),
@@ -1442,27 +2515,32 @@ class _HomePageState extends State<HomePage>
               final isCurrentUserWinner =
                   currentUserId != null && winnerId == currentUserId;
 
-              // Trigger confetti if current user is winner
+              // Trigger confetti once per day + user (avoid replay on rebuilds)
               if (isCurrentUserWinner) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  _confettiController.play();
-                });
+                final confettiKey = '$todayStr|$currentUserId';
+                if (_confettiPlayedKey != confettiKey) {
+                  _confettiPlayedKey = confettiKey;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) _confettiController.play();
+                  });
+                }
               }
 
+              final theme = Theme.of(context);
               return Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(DesignToken.layoutScreenPaddingX),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: theme.colorScheme.surface,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: isCurrentUserWinner
-                        ? Colors.amber.shade300
+                        ? DesignToken.amberShade300
                         : DesignToken.secondary.withValues(alpha: 0.3),
                     width: 2,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
+                      color: DesignToken.black.withValues(alpha: 0.08),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -1472,10 +2550,10 @@ class _HomePageState extends State<HomePage>
                   children: [
                     // Trophy Icon
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(DesignToken.spacingMD),
                       decoration: BoxDecoration(
                         color: isCurrentUserWinner
-                            ? Colors.amber.shade50
+                            ? DesignToken.amberShade50
                             : DesignToken.secondary.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
@@ -1483,11 +2561,11 @@ class _HomePageState extends State<HomePage>
                         Icons.emoji_events,
                         size: 28,
                         color: isCurrentUserWinner
-                            ? Colors.amber.shade700
+                            ? DesignToken.amberShade700
                             : DesignToken.secondary,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: DesignToken.layoutCardGapTight),
 
                     // Profile Image
                     Container(
@@ -1497,7 +2575,7 @@ class _HomePageState extends State<HomePage>
                         shape: BoxShape.circle,
                         border: Border.all(
                           color: isCurrentUserWinner
-                              ? Colors.amber.shade300
+                              ? DesignToken.amberShade300
                               : DesignToken.secondary.withValues(alpha: 0.3),
                           width: 2,
                         ),
@@ -1507,6 +2585,7 @@ class _HomePageState extends State<HomePage>
                             ? Image.network(
                                 winnerPhoto,
                                 fit: BoxFit.cover,
+                                cacheWidth: _imageCacheWidthPx(context, 45),
                                 errorBuilder: (context, error, stackTrace) {
                                   return Container(
                                     color: DesignToken.secondary.withValues(
@@ -1532,7 +2611,7 @@ class _HomePageState extends State<HomePage>
                               ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: DesignToken.layoutCardGapTight),
 
                     // Winner Info
                     Expanded(
@@ -1549,16 +2628,16 @@ class _HomePageState extends State<HomePage>
                             style: AppTextStyles.nunitoBold.copyWith(
                               fontSize: 14,
                               color: isCurrentUserWinner
-                                  ? Colors.amber.shade800
+                                  ? DesignToken.amberShade800
                                   : DesignToken.secondary,
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          SizedBox(height: DesignToken.spacingXS / 2),
                           Text(
                             winnerName,
                             style: AppTextStyles.nunitoSemiBold.copyWith(
                               fontSize: 16,
-                              color: DesignToken.textDark,
+                              color: theme.colorScheme.onSurface,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -1570,14 +2649,14 @@ class _HomePageState extends State<HomePage>
                     // Points Badge
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
+                        horizontal: DesignToken.spacingMD,
+                        vertical: DesignToken.spacingSM,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.amber.shade50,
+                        color: DesignToken.amberShade50,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: Colors.amber.shade200,
+                          color: DesignToken.amberShade200,
                           width: 1,
                         ),
                       ),
@@ -1587,14 +2666,14 @@ class _HomePageState extends State<HomePage>
                           Icon(
                             Icons.monetization_on,
                             size: 16,
-                            color: Colors.amber.shade700,
+                            color: DesignToken.amberShade700,
                           ),
-                          const SizedBox(width: 4),
+                          SizedBox(width: DesignToken.spacingXS),
                           Text(
                             '$prizePoints',
                             style: AppTextStyles.nunitoBold.copyWith(
                               fontSize: 14,
-                              color: Colors.amber.shade900,
+                              color: DesignToken.amberShade900,
                             ),
                           ),
                         ],
@@ -1609,101 +2688,125 @@ class _HomePageState extends State<HomePage>
       ),
     );
   }
+}
 
-  // Drawer (kept same as your UI)
-  Widget _buildDrawer(BuildContext context) {
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          DrawerHeader(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [DesignToken.primary, DesignToken.secondary],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+class _HomeProductCategory {
+  final String title;
+  final IconData icon;
+  final Color background;
+  final String imageAsset;
+
+  const _HomeProductCategory({
+    required this.title,
+    required this.icon,
+    required this.background,
+    required this.imageAsset,
+  });
+}
+
+class _ProductHeroCardData {
+  final String title;
+  final String subtitle;
+  final String imageAsset;
+  final IconData icon;
+
+  const _ProductHeroCardData({
+    required this.title,
+    required this.subtitle,
+    required this.imageAsset,
+    required this.icon,
+  });
+}
+
+class _ProductCategoryCard extends StatelessWidget {
+  final _HomeProductCategory category;
+  final Color surfaceColor;
+  final Color textColor;
+  final VoidCallback onTap;
+
+  const _ProductCategoryCard({
+    required this.category,
+    required this.surfaceColor,
+    required this.textColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 140,
+        decoration: BoxDecoration(
+          color: category.background,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: DesignToken.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          children: [
+            // Furniture photo background
+            Positioned.fill(
+              child: Image.asset(
+                category.imageAsset,
+                fit: BoxFit.cover,
+                cacheWidth: _imageCacheWidthPx(context, 140),
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Colors.white,
-                  backgroundImage: _isValidImageUrl(_getUserProfileImage())
-                      ? NetworkImage(_getUserProfileImage()!)
-                      : null,
-                  child: !_isValidImageUrl(_getUserProfileImage())
-                      ? const Icon(
-                          Icons.person,
-                          size: 40,
-                          color: DesignToken.secondary,
-                        )
-                      : null,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  _getUserDisplayName(),
-                  style: const TextStyle(
-                    color: DesignToken.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+            // Dark gradient at bottom for readable text
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.10),
+                      Colors.black.withValues(alpha: 0.55),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '${_getUserTier()} Tier • ${_getUserPoints()} Points',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
-                    fontSize: 14,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(DesignToken.spacingMD),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: surfaceColor.withValues(alpha: 0.9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      category.icon,
+                      color: DesignToken.primary,
+                      size: 18,
+                    ),
                   ),
-                ),
-              ],
+                  const Spacer(),
+                  Text(
+                    category.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.nunitoSemiBold.copyWith(
+                      color: DesignToken.white,
+                      fontSize: DesignToken.fontSizeMD,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.home, color: DesignToken.primary),
-            title: Text(AppLocalizations.of(context)!.home),
-            onTap: () => Navigator.pop(context),
-          ),
-          ListTile(
-            leading: const Icon(
-              Icons.monetization_on,
-              color: DesignToken.primary,
-            ),
-            title: Text(AppLocalizations.of(context)!.myPoints),
-            onTap: () => Navigator.pop(context),
-          ),
-          ListTile(
-            leading: const Icon(
-              Icons.card_giftcard,
-              color: DesignToken.primary,
-            ),
-            title: Text(AppLocalizations.of(context)!.redeemRewards),
-            onTap: () => Navigator.pop(context),
-          ),
-          ListTile(
-            leading: const Icon(Icons.history, color: DesignToken.primary),
-            title: Text(AppLocalizations.of(context)!.transactionHistory),
-            onTap: () => Navigator.pop(context),
-          ),
-          ListTile(
-            leading: const Icon(Icons.leaderboard, color: DesignToken.primary),
-            title: Text(AppLocalizations.of(context)!.leaderboard),
-            onTap: () => Navigator.pop(context),
-          ),
-          ListTile(
-            leading: const Icon(Icons.settings, color: DesignToken.primary),
-            title: Text(AppLocalizations.of(context)!.settings),
-            onTap: () => Navigator.pop(context),
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.help_outline, color: DesignToken.primary),
-            title: Text(AppLocalizations.of(context)!.helpSupport),
-            onTap: () => Navigator.pop(context),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

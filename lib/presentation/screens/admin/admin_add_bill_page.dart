@@ -372,19 +372,21 @@ class _AdminAddBillPageState extends State<AdminAddBillPage> {
           return Scaffold(
             backgroundColor: DesignToken.woodenBackground,
             appBar: AppBar(
-              backgroundColor: DesignToken.primary,
+              backgroundColor: Colors.white,
+              foregroundColor: DesignToken.textDark,
               elevation: 0,
               leading: IconButton(
-                icon: const Icon(Icons.arrow_back, color: DesignToken.white),
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
                 onPressed: () => context.pop(),
               ),
               title: Text(
                 'Add Bill for Carpenter',
                 style: AppTextStyles.nunitoBold.copyWith(
-                  color: DesignToken.white,
-                  fontSize: 20,
+                  color: DesignToken.textDark,
+                  fontSize: 18,
                 ),
               ),
+              centerTitle: true,
             ),
             body: Column(
               children: [

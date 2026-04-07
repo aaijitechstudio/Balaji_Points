@@ -331,7 +331,7 @@ abstract class AppLocalizations {
   /// No description provided for @companyName.
   ///
   /// In en, this message translates to:
-  /// **'Shree Balaji Plywood & Hardware'**
+  /// **'Sri Balaji Plywood & Hardware'**
   String get companyName;
 
   /// No description provided for @enterPinPageTitle.
@@ -688,6 +688,150 @@ abstract class AppLocalizations {
   /// **'Latest Offers'**
   String get latestOffers;
 
+  /// No description provided for @goodMorningGreeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Good morning,'**
+  String get goodMorningGreeting;
+
+  /// No description provided for @goodAfternoonGreeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Good afternoon,'**
+  String get goodAfternoonGreeting;
+
+  /// No description provided for @goodEveningGreeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Good evening,'**
+  String get goodEveningGreeting;
+
+  /// No description provided for @homeBrowseProductsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Wood & Plywood'**
+  String get homeBrowseProductsTitle;
+
+  /// No description provided for @homeBrowseProductsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium laminates & surfaces'**
+  String get homeBrowseProductsSubtitle;
+
+  /// No description provided for @viewAll.
+  ///
+  /// In en, this message translates to:
+  /// **'View all'**
+  String get viewAll;
+
+  /// No description provided for @homeStoreBranch.
+  ///
+  /// In en, this message translates to:
+  /// **'E road'**
+  String get homeStoreBranch;
+
+  /// No description provided for @homeTierSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'Tier'**
+  String get homeTierSuffix;
+
+  /// No description provided for @homeRankingsSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rankings & daily winner'**
+  String get homeRankingsSectionTitle;
+
+  /// No description provided for @homeRankingsSectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Leaderboard, your rank, and today’s prize'**
+  String get homeRankingsSectionSubtitle;
+
+  /// No description provided for @drawerProductsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Products'**
+  String get drawerProductsTitle;
+
+  /// No description provided for @drawerProductsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse categories and catalog'**
+  String get drawerProductsSubtitle;
+
+  /// No description provided for @drawerCart.
+  ///
+  /// In en, this message translates to:
+  /// **'Cart'**
+  String get drawerCart;
+
+  /// No description provided for @drawerSectionMainNav.
+  ///
+  /// In en, this message translates to:
+  /// **'Main navigation'**
+  String get drawerSectionMainNav;
+
+  /// No description provided for @drawerSectionMore.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get drawerSectionMore;
+
+  /// No description provided for @myOrders.
+  ///
+  /// In en, this message translates to:
+  /// **'My orders'**
+  String get myOrders;
+
+  /// No description provided for @profileSectionAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get profileSectionAccount;
+
+  /// No description provided for @profileSectionPreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferences'**
+  String get profileSectionPreferences;
+
+  /// No description provided for @profileSectionSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Support'**
+  String get profileSectionSupport;
+
+  /// No description provided for @profileAboutLink.
+  ///
+  /// In en, this message translates to:
+  /// **'About this app'**
+  String get profileAboutLink;
+
+  /// No description provided for @routeErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Page not found'**
+  String get routeErrorTitle;
+
+  /// No description provided for @routeErrorNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This link is invalid or the page was removed.'**
+  String get routeErrorNotFound;
+
+  /// No description provided for @routeErrorGoHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Go home'**
+  String get routeErrorGoHome;
+
+  /// No description provided for @routeErrorDetailsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Technical details'**
+  String get routeErrorDetailsLabel;
+
   /// No description provided for @topCarpenters.
   ///
   /// In en, this message translates to:
@@ -801,6 +945,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Dark Mode'**
   String get darkMode;
+
+  /// No description provided for @notifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notifications;
 
   /// No description provided for @logout.
   ///
@@ -1035,12 +1185,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Transaction History'**
   String get transactionHistory;
-
-  /// No description provided for @noTransactions.
-  ///
-  /// In en, this message translates to:
-  /// **'No transactions yet'**
-  String get noTransactions;
 
   /// No description provided for @earned.
   ///
@@ -2176,12 +2320,6 @@ abstract class AppLocalizations {
   /// **'My Points'**
   String get myPoints;
 
-  /// No description provided for @redeemRewards.
-  ///
-  /// In en, this message translates to:
-  /// **'Redeem Rewards'**
-  String get redeemRewards;
-
   /// No description provided for @leaderboard.
   ///
   /// In en, this message translates to:
@@ -2203,7 +2341,7 @@ abstract class AppLocalizations {
   /// No description provided for @earn.
   ///
   /// In en, this message translates to:
-  /// **'Earn'**
+  /// **'Wallet'**
   String get earn;
 
   /// No description provided for @approved.
@@ -2589,6 +2727,168 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'pts'**
   String get pts;
+
+  /// No description provided for @languageEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get languageEnglish;
+
+  /// No description provided for @languageHindi.
+  ///
+  /// In en, this message translates to:
+  /// **'हिंदी'**
+  String get languageHindi;
+
+  /// No description provided for @languageTamil.
+  ///
+  /// In en, this message translates to:
+  /// **'தமிழ்'**
+  String get languageTamil;
+
+  /// No description provided for @aboutUs.
+  ///
+  /// In en, this message translates to:
+  /// **'About Us'**
+  String get aboutUs;
+
+  /// No description provided for @aboutUsMenuSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewards & loyalty for carpenters'**
+  String get aboutUsMenuSubtitle;
+
+  /// No description provided for @aboutUsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your hardware rewards partner'**
+  String get aboutUsSubtitle;
+
+  /// No description provided for @aboutUsOverviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What is Balaji Points?'**
+  String get aboutUsOverviewTitle;
+
+  /// No description provided for @aboutUsOverviewBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Balaji Points is a digital loyalty platform for carpenters and hardware stores. It helps you turn eligible material purchases into points, rewards, and recognition. You use the app to submit bills; the hardware store you are enrolled with reviews and approves them; your wallet and history update automatically so you always know where you stand.'**
+  String get aboutUsOverviewBody;
+
+  /// No description provided for @aboutUsEarningTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How you earn points'**
+  String get aboutUsEarningTitle;
+
+  /// No description provided for @aboutUsEarningBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload purchase bills with clear photos, correct amounts, and any details your store asks for. Store admins review submissions to keep the program fair and prevent errors or misuse. After approval, points are credited using that store’s rules (for example, how rupees convert to points). You can track your balance, transaction history, and tier progress anytime in the app.'**
+  String get aboutUsEarningBody;
+
+  /// No description provided for @aboutUsOffersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Leaderboards, offers, and updates'**
+  String get aboutUsOffersTitle;
+
+  /// No description provided for @aboutUsOffersBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Many stores run a leaderboard so you can see how you rank among carpenters in their program. You will also see offers, banners, and announcements—seasonal deals, bonus point events, or special promotions—so you do not miss opportunities that your store enables for you.'**
+  String get aboutUsOffersBody;
+
+  /// No description provided for @aboutUsFairnessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Approvals, transparency, and support'**
+  String get aboutUsFairnessTitle;
+
+  /// No description provided for @aboutUsFairnessBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Reviews can take a short time because each bill is checked carefully. If something is rejected, you should see a reason or get guidance from your store’s team. For login, PIN, profile, or notification issues, use the options inside the app and contact your store when needed. We focus on clear rules and visible status for pending, approved, and rejected bills.'**
+  String get aboutUsFairnessBody;
+
+  /// No description provided for @aboutUsStoresTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your store, your program'**
+  String get aboutUsStoresTitle;
+
+  /// No description provided for @aboutUsStoresBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Points, tiers, and offers are tied to the hardware store you joined in this app. Different stores may use different rules, conversion rates, and benefits. If you buy from more than one participating store, each relationship is usually separate unless the stores tell you otherwise—always confirm details with the store that enrolled you.'**
+  String get aboutUsStoresBody;
+
+  /// No description provided for @aboutUsClosing.
+  ///
+  /// In en, this message translates to:
+  /// **'Thank you for using Balaji Points—we are proud to support carpenters and the stores that partner with you.'**
+  String get aboutUsClosing;
+
+  /// No description provided for @aboutUsCreditsHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Designed and developed by'**
+  String get aboutUsCreditsHeading;
+
+  /// No description provided for @aboutUsCreditsStudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Aaiji Tech Studio — Vadodara, Gujarat'**
+  String get aboutUsCreditsStudio;
+
+  /// No description provided for @onboardingSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get onboardingSkip;
+
+  /// No description provided for @onboardingGetStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Get started'**
+  String get onboardingGetStarted;
+
+  /// No description provided for @onboardingSlide1Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit bills, earn points'**
+  String get onboardingSlide1Title;
+
+  /// No description provided for @onboardingSlide1Body.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload your hardware purchase bills. When your store approves them, points are added to your wallet.'**
+  String get onboardingSlide1Body;
+
+  /// No description provided for @onboardingSlide2Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Track your rewards'**
+  String get onboardingSlide2Title;
+
+  /// No description provided for @onboardingSlide2Body.
+  ///
+  /// In en, this message translates to:
+  /// **'See your balance, tier, and leaderboard rank. Browse offers made for carpenters like you.'**
+  String get onboardingSlide2Body;
+
+  /// No description provided for @onboardingSlide3Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Stay in the loop'**
+  String get onboardingSlide3Title;
+
+  /// No description provided for @onboardingSlide3Body.
+  ///
+  /// In en, this message translates to:
+  /// **'Get notified when bills are approved or rejected. Manage your profile and preferences anytime.'**
+  String get onboardingSlide3Body;
 }
 
 class _AppLocalizationsDelegate

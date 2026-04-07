@@ -9,12 +9,8 @@ class SessionService {
   SessionService._internal();
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-    ),
-    iOptions: IOSOptions(
-      accessibility: KeychainAccessibility.first_unlock,
-    ),
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
   );
 
   // Storage keys
@@ -24,6 +20,7 @@ class SessionService {
   static const String _keyUserId = 'user_id';
   static const String _keyFirstName = 'first_name';
   static const String _keyLastName = 'last_name';
+  static const String _keyProfileImage = 'profile_image';
 
   /// Save user session after successful login
   Future<void> saveSession({
@@ -32,18 +29,22 @@ class SessionService {
     required String role,
     String? firstName,
     String? lastName,
+    String? profileImage,
   }) async {
+    final normalizedRole = role.trim().toLowerCase();
     await _storage.write(key: _keyIsLoggedIn, value: 'true');
     await _storage.write(key: _keyPhoneNumber, value: phoneNumber);
     await _storage.write(key: _keyUserId, value: userId);
-    await _storage.write(key: _keyUserRole, value: role);
+    await _storage.write(key: _keyUserRole, value: normalizedRole);
 
     if (firstName != null) {
       await _storage.write(key: _keyFirstName, value: firstName);
     }
-
     if (lastName != null) {
       await _storage.write(key: _keyLastName, value: lastName);
+    }
+    if (profileImage != null) {
+      await _storage.write(key: _keyProfileImage, value: profileImage);
     }
   }
 
@@ -78,6 +79,11 @@ class SessionService {
     return await _storage.read(key: _keyLastName);
   }
 
+  /// Get stored profile image URL
+  Future<String?> getProfileImage() async {
+    return await _storage.read(key: _keyProfileImage);
+  }
+
   /// Get all session data
   Future<Map<String, String?>> getSessionData() async {
     return {
@@ -86,6 +92,7 @@ class SessionService {
       'role': await getUserRole(),
       'firstName': await getFirstName(),
       'lastName': await getLastName(),
+      'profileImage': await getProfileImage(),
     };
   }
 
@@ -94,17 +101,20 @@ class SessionService {
     await _storage.deleteAll();
   }
 
-  /// Update user profile information
+  /// Update user profile information (call after saving in edit profile for instant sync)
   Future<void> updateProfile({
     String? firstName,
     String? lastName,
+    String? profileImage,
   }) async {
     if (firstName != null) {
       await _storage.write(key: _keyFirstName, value: firstName);
     }
-
     if (lastName != null) {
       await _storage.write(key: _keyLastName, value: lastName);
+    }
+    if (profileImage != null) {
+      await _storage.write(key: _keyProfileImage, value: profileImage);
     }
   }
 }

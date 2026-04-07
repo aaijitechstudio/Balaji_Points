@@ -36,25 +36,35 @@ class HomeNavBar extends StatelessWidget {
       debugPrint('HomeNavBar: No profile image URL available');
     }
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final appBarColor =
+        theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface;
+    final appBarForeground =
+        theme.appBarTheme.foregroundColor ?? theme.colorScheme.onSurface;
+
     return Container(
-      color: DesignToken.primary,
+      color: appBarColor,
       child: SafeArea(
         bottom: false,
         child: Container(
           height: kToolbarHeight, // Material Design standard: 56dp
           padding: const EdgeInsets.symmetric(horizontal: 20),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                DesignToken.primary,
-                DesignToken.primary.withValues(alpha: 0.95),
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
+            color: appBarColor,
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+            ),
+            border: Border(
+              bottom: BorderSide(
+                color: DesignToken.carpenterAppBarBottomBorderColor(isDark),
+                width: 1,
+              ),
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -119,15 +129,8 @@ class HomeNavBar extends StatelessWidget {
                             title ?? 'Balaji Points',
                             style: AppTextStyles.nunitoBold.copyWith(
                               fontSize: subtitle != null ? 18 : 22,
-                              color: Colors.white,
+                              color: appBarForeground,
                               letterSpacing: 0.5,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.black.withValues(alpha: 0.2),
-                                  offset: const Offset(0, 1),
-                                  blurRadius: 2,
-                                ),
-                              ],
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -138,7 +141,7 @@ class HomeNavBar extends StatelessWidget {
                               subtitle!,
                               style: AppTextStyles.nunitoRegular.copyWith(
                                 fontSize: 11,
-                                color: Colors.white.withValues(alpha: 0.85),
+                                color: appBarForeground.withValues(alpha: 0.7),
                                 letterSpacing: 0.3,
                               ),
                               maxLines: 1,
@@ -201,6 +204,7 @@ class HomeNavBar extends StatelessWidget {
           child: userImageUrl != null && userImageUrl!.isNotEmpty
               ? Image.network(
                   userImageUrl!,
+                  key: ValueKey<String>(userImageUrl!),
                   fit: BoxFit.cover,
                   loadingBuilder: (context, child, loadingProgress) {
                     if (loadingProgress == null) return child;
@@ -264,8 +268,11 @@ class HomeNavBar extends StatelessWidget {
   }
 
   Widget _buildBackButton(BuildContext context) {
+    final theme = Theme.of(context);
+    final appBarForeground =
+        theme.appBarTheme.foregroundColor ?? theme.colorScheme.onSurface;
     return IconButton(
-      icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+      icon: Icon(Icons.arrow_back, color: appBarForeground, size: 24),
       onPressed:
           onBackTap ??
           () {

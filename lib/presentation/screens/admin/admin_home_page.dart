@@ -3,16 +3,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:balaji_points/core/constants/app_constants.dart';
 import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/core/mixins/double_tap_exit_mixin.dart';
 import 'package:balaji_points/services/fcm_service.dart';
+import 'package:balaji_points/services/session_service.dart';
+import '../../widgets/admin/admin_dashboard.dart';
 import '../../widgets/admin/pending_bills_list.dart';
 import '../../widgets/admin/offers_management.dart';
+import '../../widgets/admin/products_management.dart';
 import '../../widgets/admin/users_list.dart';
 import '../../widgets/admin/daily_spin_management.dart';
 import '../../widgets/admin/bill_history_list.dart';
+import '../../widgets/admin/orders_management.dart';
+import 'admin_notifications_page.dart';
 
 class AdminHomePage extends ConsumerStatefulWidget {
   const AdminHomePage({super.key});
@@ -22,29 +28,27 @@ class AdminHomePage extends ConsumerStatefulWidget {
 }
 
 class _AdminHomePageState extends ConsumerState<AdminHomePage>
-    with SingleTickerProviderStateMixin, DoubleTapExitMixin {
-  late TabController _tabController;
+    with DoubleTapExitMixin {
+  bool _showDashboard = true;
+  String? _selectedSection;
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+  static const List<String> _adminNotificationTypes = [
+    'newPendingBill',
+    'newUserRegistered',
+  ];
+
+  void _openSection(String section) {
+    setState(() {
+      _showDashboard = false;
+      _selectedSection = section;
+    });
   }
 
-  /// Get filtered notifications stream based on user role
-  Stream<QuerySnapshot> _getFilteredNotificationsStream() {
-    // For admins, show only admin-related notifications (new bills, new users)
-    return FirebaseFirestore.instance
-        .collection('notification_logs')
-        .where('type', whereIn: ['newPendingBill', 'newUserRegistered'])
-        .orderBy('sentAt', descending: true)
-        .snapshots();
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+  void _backToDashboard() {
+    setState(() {
+      _showDashboard = true;
+      _selectedSection = null;
+    });
   }
 
   Future<void> _handleLogout() async {
@@ -98,6 +102,9 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
         // Sign out from Firebase
         await FirebaseAuth.instance.signOut();
 
+        // Clear secure session so splash redirects correctly by role.
+        await SessionService().clearSession();
+
         if (mounted) {
           context.go('/login');
         }
@@ -115,10 +122,95 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
     }
   }
 
+  Future<void> _deleteAllAdminNotifications() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete All Notifications'),
+        content: const Text(
+          'Are you sure you want to delete all admin notifications?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: DesignToken.redShade600,
+              foregroundColor: DesignToken.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    // Blocking progress.
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('notification_logs')
+          .where('type', whereIn: _adminNotificationTypes)
+          .get();
+
+      final docs = snapshot.docs;
+      if (docs.isEmpty) {
+        if (!context.mounted) return;
+        Navigator.of(context).pop(); // progress
+        return;
+      }
+
+      // Firestore batch limit is 500 writes.
+      const batchSize = 450;
+      for (int i = 0; i < docs.length; i += batchSize) {
+        final batch = FirebaseFirestore.instance.batch();
+        final chunk = docs.sublist(
+          i,
+          i + batchSize < docs.length ? i + batchSize : docs.length,
+        );
+        for (final doc in chunk) {
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
+      }
+
+      if (!context.mounted) return;
+      Navigator.of(context).pop(); // progress
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${docs.length} notification(s) deleted'),
+          backgroundColor: DesignToken.primary,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.of(context).pop(); // progress
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Delete failed: $e'),
+          backgroundColor: DesignToken.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
     return PopScope(
       canPop: false,
       onPopInvoked: (didPop) async {
@@ -134,179 +226,203 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage>
         }
       },
       child: Scaffold(
-        backgroundColor: DesignToken.primary,
-        body: Column(
-          children: [
-            // Compact iOS-style Header
-            SafeArea(
-              bottom: false,
-              child: Container(
-                color: DesignToken.primary,
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                child: Column(
-                  children: [
-                    // Top row with title and actions
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                l10n.adminPanel,
-                                style: AppTextStyles.nunitoBold.copyWith(
-                                  fontSize: 24,
-                                  color: Colors.white,
-                                  height: 1.2,
-                                ),
-                              ),
-                              Text(
-                                l10n.adminSubtitle,
-                                style: AppTextStyles.nunitoRegular.copyWith(
-                                  fontSize: 13,
-                                  color: Colors.white.withValues(alpha: 0.8),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Compact action buttons
-                        StreamBuilder<QuerySnapshot>(
-                          stream: _getFilteredNotificationsStream(),
-                          builder: (context, snapshot) {
-                            int notificationCount = 0;
-                            if (snapshot.hasData) {
-                              notificationCount = snapshot.data!.docs.length;
-                            }
-
-                            return Stack(
-                              children: [
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.notifications_outlined,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                  onPressed: () => context.push('/notifications'),
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(
-                                    minWidth: 40,
-                                    minHeight: 40,
-                                  ),
-                                ),
-                                if (notificationCount > 0)
-                                  Positioned(
-                                    right: 6,
-                                    top: 6,
-                                    child: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: const BoxDecoration(
-                                        color: Colors.red,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      constraints: const BoxConstraints(
-                                        minWidth: 16,
-                                        minHeight: 16,
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          notificationCount > 99 ? '99+' : '$notificationCount',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            );
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.logout, color: Colors.white, size: 24),
-                          onPressed: _handleLogout,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 40,
-                            minHeight: 40,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    // iOS-style Segmented Control Tabs
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          foregroundColor: DesignToken.textDark,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          titleSpacing: _showDashboard ? 0 : null,
+          leading: _showDashboard
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
+                  onPressed: _backToDashboard,
+                ),
+          title: _showDashboard
+              ? Padding(
+                  padding: const EdgeInsets.only(left: 14),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      ClipRRect(
                         borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: TabBar(
-                        controller: _tabController,
-                        indicator: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 1),
+                        child: Image.asset(
+                          AppConstants.logoPath,
+                          width: 36,
+                          height: 36,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: DesignToken.primary.withValues(
+                                alpha: 0.15,
+                              ),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                          ],
+                            child: const Icon(
+                              Icons.forest,
+                              color: DesignToken.primary,
+                              size: 22,
+                            ),
+                          ),
                         ),
-                        indicatorSize: TabBarIndicatorSize.tab,
-                        dividerColor: Colors.transparent,
-                        labelColor: DesignToken.primary,
-                        unselectedLabelColor: Colors.white.withValues(alpha: 0.7),
-                        labelStyle: AppTextStyles.nunitoBold.copyWith(
-                          fontSize: 13,
-                          letterSpacing: 0.3,
-                        ),
-                        unselectedLabelStyle: AppTextStyles.nunitoMedium.copyWith(
-                          fontSize: 12,
-                          letterSpacing: 0.2,
-                        ),
-                        labelPadding: EdgeInsets.zero,
-                        isScrollable: false,
-                        tabs: const [
-                          Tab(text: 'Pending', height: 36),
-                          Tab(text: 'History', height: 36),
-                          Tab(text: 'Offers', height: 36),
-                          Tab(text: 'Users', height: 36),
-                          Tab(text: 'Spin', height: 36),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Balaji Points - Admin Panel',
+                            style: AppTextStyles.nunitoBold.copyWith(
+                              fontSize: 17,
+                              color: DesignToken.textDark,
+                              letterSpacing: 0.3,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            AppConstants.shopNameShort,
+                            style: AppTextStyles.nunitoRegular.copyWith(
+                              fontSize: 11,
+                              color: DesignToken.textDark.withValues(
+                                alpha: 0.65,
+                              ),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Tab Content with maximum space
-            Expanded(
-              child: Container(
-                color: DesignToken.woodenBackground,
-                child: SafeArea(
-                  top: false,
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: const [
-                      PendingBillsList(),
-                      BillHistoryList(),
-                      OffersManagement(),
-                      UsersList(),
-                      DailySpinManagement(),
                     ],
                   ),
+                )
+              : _selectedSection == 'users'
+              ? _usersCountTitle()
+              : Text(
+                  _sectionTitle(_selectedSection!),
+                  style: AppTextStyles.nunitoBold.copyWith(
+                    fontSize: 18,
+                    color: DesignToken.textDark,
+                  ),
                 ),
+          centerTitle: !_showDashboard,
+          actions: [
+            if (!_showDashboard && _selectedSection == 'notifications')
+              IconButton(
+                icon: const Icon(Icons.delete_outline, size: 24),
+                onPressed: _deleteAllAdminNotifications,
+                tooltip: 'Delete All Notifications',
+              )
+            else
+              IconButton(
+                icon: const Icon(Icons.logout, size: 24),
+                onPressed: _handleLogout,
               ),
-            ),
           ],
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(1),
+            child: Container(
+              height: 1,
+              color: Colors.black.withValues(alpha: 0.08),
+            ),
+          ),
+        ),
+        body: Container(
+          color: DesignToken.woodenBackground,
+          child: _showDashboard
+              ? AdminDashboard(onOpenSection: _openSection)
+              : _buildSectionContent(_selectedSection!),
         ),
       ),
     );
+  }
+
+  String _sectionTitle(String section) {
+    switch (section) {
+      case 'pending':
+        return 'Pending Bills';
+      case 'history':
+        return 'Bill History';
+      case 'offers':
+        return 'Offers';
+      case 'users':
+        return 'Users';
+      case 'notifications':
+        return 'Notifications';
+      case 'products':
+        return 'Products';
+      case 'orders':
+        return 'Orders';
+      case 'spin':
+        return 'Spin';
+      default:
+        return 'Admin';
+    }
+  }
+
+  Widget _usersCountTitle() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('users').snapshots(),
+      builder: (context, snapshot) {
+        final docs = snapshot.data?.docs ?? const [];
+        // Match UsersList filtering:
+        // - Exclude admins
+        // - Include carpenters (role == 'carpenter') OR missing/empty role
+        final count = docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final role = data['role'] as String?;
+          if (role == 'admin') return false;
+          return role == null || role.isEmpty || role == 'carpenter';
+        }).length;
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Text(
+            'Users - ...',
+            style: AppTextStyles.nunitoBold.copyWith(
+              fontSize: 18,
+              color: DesignToken.textDark,
+            ),
+          );
+        }
+
+        return Text(
+          'Users - $count',
+          style: AppTextStyles.nunitoBold.copyWith(
+            fontSize: 18,
+            color: DesignToken.textDark,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSectionContent(String section) {
+    switch (section) {
+      case 'pending':
+        return const PendingBillsList();
+      case 'history':
+        return const BillHistoryList();
+      case 'offers':
+        return const OffersManagement();
+      case 'users':
+        return const UsersList();
+      case 'notifications':
+        return const AdminNotificationsPage(embedded: true);
+      case 'products':
+        return const ProductsManagement();
+      case 'orders':
+        return const OrdersManagement();
+      case 'spin':
+        return const DailySpinManagement();
+      default:
+        return const SizedBox.shrink();
+    }
   }
 }

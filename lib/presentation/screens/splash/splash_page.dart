@@ -7,6 +7,7 @@ import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/services/session_service.dart';
 import 'package:balaji_points/services/fcm_service.dart';
+import 'package:balaji_points/services/onboarding_prefs.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -15,67 +16,20 @@ class SplashPage extends StatefulWidget {
   State<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
+class _SplashPageState extends State<SplashPage> {
   final _sessionService = SessionService();
-  late AnimationController _logoController;
-  late AnimationController _backgroundController;
-  late Animation<double> _fade;
-  late Animation<double> _scale;
-  late Animation<double> _rotation;
-  late List<FloatingElement> _floatingElements;
 
   @override
   void initState() {
     super.initState();
+    // Short branded pause, then route as soon as session is resolved (was ~3s fixed).
+    unawaited(_runSplashSequence());
+  }
 
-    // Logo animation controller
-    _logoController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    );
-
-    // Background animation controller
-    _backgroundController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 15),
-    )..repeat();
-
-    // Logo animations
-    _fade = CurvedAnimation(parent: _logoController, curve: Curves.easeInOut);
-
-    _scale = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _logoController, curve: Curves.elasticOut),
-    );
-
-    _rotation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _logoController, curve: Curves.easeInOut),
-    );
-
-    // Create floating background elements
-    final random = math.Random(42);
-    _floatingElements = List.generate(
-      15,
-      (index) => FloatingElement(
-        x: random.nextDouble(),
-        y: random.nextDouble(),
-        speed: 0.3 + random.nextDouble() * 0.4,
-        type: index % 4 == 0
-            ? FloatingType.coin
-            : (index % 4 == 1
-                  ? FloatingType.star
-                  : (index % 4 == 2
-                        ? FloatingType.sparkle
-                        : FloatingType.points)),
-      ),
-    );
-
-    // Start logo animation
-    _logoController.forward();
-
-    // Navigate after delay - check authentication
-    Timer(const Duration(seconds: 3), () {
-      _checkAuthAndNavigate();
-    });
+  Future<void> _runSplashSequence() async {
+    await Future<void>.delayed(const Duration(milliseconds: 750));
+    if (!mounted) return;
+    await _checkAuthAndNavigate();
   }
 
   Future<void> _checkAuthAndNavigate() async {
@@ -92,8 +46,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
         final fcmService = FCMService();
         fcmService.processPendingNavigation();
 
-        // Small delay to ensure navigation is processed
-        await Future.delayed(const Duration(milliseconds: 500));
+        await Future<void>.delayed(const Duration(milliseconds: 150));
 
         if (!mounted) return;
 
@@ -102,28 +55,30 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
 
         if (!mounted) return;
 
-        if (role?.toLowerCase() == 'admin') {
+        final normalizedRole = role?.trim().toLowerCase();
+        if (normalizedRole == 'super-admin') {
+          context.go('/super-admin');
+        } else if (normalizedRole == 'admin') {
           context.go('/admin');
         } else {
           context.go('/');
         }
       } else {
-        // No active session - navigate to login
-        context.go('/login');
+        // No session: first install → onboarding, then login; returning → login
+        final onboardingDone = await OnboardingPrefs.isCompleted();
+        if (!mounted) return;
+        if (onboardingDone) {
+          context.go('/login');
+        } else {
+          context.go('/onboarding');
+        }
       }
     } catch (e) {
-      // On error, navigate to login
+      // On error, go to login (avoid trapping user on splash)
       if (mounted) {
         context.go('/login');
       }
     }
-  }
-
-  @override
-  void dispose() {
-    _logoController.dispose();
-    _backgroundController.dispose();
-    super.dispose();
   }
 
   @override
@@ -132,155 +87,102 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     return PopScope(
       canPop: false, // Prevent back button on splash
       child: Scaffold(
-        backgroundColor: DesignToken.primary,
+        backgroundColor: Colors.transparent,
         body: Stack(
           children: [
-            // Animated Background Elements
-            IgnorePointer(
-              child: RepaintBoundary(
-                child: ListenableBuilder(
-                  listenable: _backgroundController,
-                  builder: (context, child) {
-                    return CustomPaint(
-                      size: Size.infinite,
-                      painter: CelebrationPainter(
-                        animationValue: _backgroundController.value,
-                        elements: _floatingElements,
-                      ),
-                    );
-                  },
-                ),
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/background_image.png',
+                fit: BoxFit.cover,
               ),
             ),
-
-            // Main Content
-            Center(
-              child: FadeTransition(
-                opacity: _fade,
+            SafeArea(
+              child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Animated Logo
-                    ScaleTransition(
-                      scale: _scale,
-                      child: RotationTransition(
-                        turns: _rotation,
-                        child: Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: DesignToken.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: DesignToken.secondary.withOpacity(0.4),
-                                blurRadius: 30,
-                                spreadRadius: 5,
-                                offset: const Offset(0, 10),
+                    SizedBox(
+                      width: 100,
+                      height: 100,
+                      child: Image.asset(
+                        'assets/images/balaji_point_logo.png',
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            width: 100,
+                            height: 100,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  DesignToken.primary,
+                                  DesignToken.secondary,
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: Image.asset(
-                              'assets/images/balaji_point_logo.png',
-                              width: 100,
-                              height: 100,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  width: 100,
-                                  height: 100,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        DesignToken.primary,
-                                        DesignToken.secondary,
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Icon(
-                                    Icons.star,
-                                    color: DesignToken.white,
-                                    size: 50,
-                                  ),
-                                );
-                              },
+                              borderRadius: BorderRadius.zero,
                             ),
-                          ),
-                        ),
+                            child: Icon(
+                              Icons.star,
+                              color: DesignToken.white,
+                              size: 50,
+                            ),
+                          );
+                        },
                       ),
                     ),
-
                     const SizedBox(height: 24),
-
-                    // Brand Name with animation
-                    FadeTransition(
-                      opacity: _fade,
+                    Text(
+                      l10n?.appName ?? 'Balaji Points',
+                      style: AppTextStyles.nunitoBold.copyWith(
+                        fontSize: 32,
+                        color: DesignToken.textDark,
+                        letterSpacing: 1.5,
+                        shadows: [
+                          Shadow(
+                            color: DesignToken.white,
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n?.rewardsLoyaltyProgram ??
+                          'Rewards & Loyalty Program',
+                      style: AppTextStyles.nunitoRegular.copyWith(
+                        fontSize: 16,
+                        color: DesignToken.textDark,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 60),
+                    const Text(
+                      'Loading...',
+                      style: TextStyle(
+                        color: DesignToken.textDark,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 40),
                       child: Text(
-                        l10n?.appName ?? 'Balaji Points',
-                        style: AppTextStyles.nunitoBold.copyWith(
-                          fontSize: 32,
-                          color: DesignToken.white,
-                          letterSpacing: 1.5,
+                        '${l10n?.poweredBy ?? 'Powered by'}\n${l10n?.companyName ?? 'Shri Balaji Plywood & Hardware'}',
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.nunitoSemiBold.copyWith(
+                          fontSize: 14,
+                          color: DesignToken.primary,
+                          height: 1.4,
                           shadows: [
                             Shadow(
-                              color: DesignToken.black.withOpacity(0.3),
+                              color: DesignToken.white,
                               blurRadius: 10,
-                              offset: const Offset(0, 4),
+                              offset: const Offset(0, 2),
                             ),
                           ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // Subtitle
-                    FadeTransition(
-                      opacity: _fade,
-                      child: Text(
-                        l10n?.rewardsLoyaltyProgram ??
-                            'Rewards & Loyalty Program',
-                        style: AppTextStyles.nunitoRegular.copyWith(
-                          fontSize: 16,
-                          color: DesignToken.white.withOpacity(0.9),
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 60),
-
-                    // Loading Indicator
-                    SizedBox(
-                      width: 40,
-                      height: 40,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 3,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          DesignToken.white.withOpacity(0.8),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 40),
-
-                    // Footer
-                    FadeTransition(
-                      opacity: _fade,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 40),
-                        child: Text(
-                          '${l10n?.poweredBy ?? 'Powered by'}\n${l10n?.companyName ?? 'Shree Balaji Plywood & Hardware'}',
-                          textAlign: TextAlign.center,
-                          style: AppTextStyles.nunitoRegular.copyWith(
-                            fontSize: 14,
-                            color: DesignToken.white.withOpacity(0.8),
-                            height: 1.5,
-                          ),
                         ),
                       ),
                     ),
@@ -334,7 +236,7 @@ class CelebrationPainter extends CustomPainter {
       if (opacity <= 0) continue;
 
       final paint = Paint()
-        ..color = _getColorForType(element.type).withOpacity(0.5 * opacity)
+        ..color = _getColorForType(element.type)
         ..style = PaintingStyle.fill;
 
       final position = Offset(x * size.width, y * size.height);
@@ -379,7 +281,7 @@ class CelebrationPainter extends CustomPainter {
 
   void _drawCoin(Canvas canvas, Paint paint) {
     canvas.drawCircle(Offset.zero, 10, paint);
-    paint.color = DesignToken.white.withOpacity(0.6);
+    paint.color = DesignToken.white;
     canvas.drawCircle(Offset(-3, -3), 3, paint);
   }
 
@@ -421,7 +323,7 @@ class CelebrationPainter extends CustomPainter {
       ),
     );
     canvas.drawPath(path, paint);
-    paint.color = DesignToken.white.withOpacity(0.8);
+    paint.color = DesignToken.white;
     canvas.drawCircle(Offset(-5, 0), 2.5, paint);
     canvas.drawCircle(Offset(5, 0), 2.5, paint);
   }

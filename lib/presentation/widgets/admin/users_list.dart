@@ -5,6 +5,11 @@ import 'package:balaji_points/core/theme/design_token.dart';
 import 'package:balaji_points/config/theme.dart' hide AppColors;
 import 'package:balaji_points/l10n/app_localizations.dart';
 import 'package:balaji_points/services/pin_auth_service.dart';
+import 'package:printing/printing.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:pdf/pdf.dart';
+import 'package:balaji_points/core/constants/app_constants.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:balaji_points/services/bill_service.dart';
 import 'package:intl/intl.dart';
 
@@ -28,6 +33,315 @@ class _UsersListState extends State<UsersList> {
   String _selectedSort = 'points'; // Default sort by points
   final List<String> _tiers = ['All', 'Platinum', 'Gold', 'Silver', 'Bronze'];
   final _userService = UserService();
+  bool _isExporting = false;
+
+  Future<void> _exportUsersToPdf() async {
+    if (_isExporting) return;
+
+    setState(() => _isExporting = true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Preparing carpenter list PDF...')),
+    );
+
+    try {
+      final query = await FirebaseFirestore.instance
+          .collection('users')
+          .orderBy('createdAt', descending: false)
+          .get();
+
+      var users = query.docs.toList();
+
+      // Apply same role filter used in UI (only carpenters / non-admins)
+      users = users.where((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        final role = data['role'] as String?;
+        if (role == 'admin') return false;
+        return role == null || role.isEmpty || role == 'carpenter';
+      }).toList();
+
+      // Apply current search + tier filters for consistency
+      users = users.where((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        final firstName = (data['firstName'] ?? '').toString().toLowerCase();
+        final lastName = (data['lastName'] ?? '').toString().toLowerCase();
+        final phone = (data['phone'] ?? '').toString().toLowerCase();
+        final tier = data['tier'] ?? 'Bronze';
+
+        final matchesSearch =
+            _searchQuery.isEmpty ||
+            firstName.contains(_searchQuery) ||
+            lastName.contains(_searchQuery) ||
+            phone.contains(_searchQuery);
+
+        final matchesTier = _selectedTier == 'All' || tier == _selectedTier;
+
+        return matchesSearch && matchesTier;
+      }).toList();
+
+      if (users.isEmpty) {
+        setState(() => _isExporting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No carpenters to export for current filters.'),
+            backgroundColor: DesignToken.warning,
+          ),
+        );
+        return;
+      }
+
+      final pdf = pw.Document();
+      pw.MemoryImage? logoImage;
+      try {
+        final logoData = await rootBundle.load(AppConstants.logoPath);
+        logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
+      } catch (_) {}
+
+      final generatedStr =
+          'Generated on ${DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now())}';
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(24),
+          footer: (context) => pw.Padding(
+            padding: const pw.EdgeInsets.only(top: 8),
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.center,
+              children: [
+                pw.Text(
+                  'Carpenter List • ${context.pageNumber} of ${context.pagesCount}',
+                  style: const pw.TextStyle(
+                    fontSize: 9,
+                    color: PdfColors.grey600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          build: (context) => [
+            // Header with logo and shop details
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
+                if (logoImage != null)
+                  pw.Container(
+                    width: 52,
+                    height: 52,
+                    decoration: pw.BoxDecoration(
+                      borderRadius: pw.BorderRadius.circular(12),
+                      color: PdfColors.white,
+                      boxShadow: [
+                        pw.BoxShadow(
+                          color: PdfColors.grey300,
+                          blurRadius: 4,
+                          offset: const PdfPoint(1, -1),
+                        ),
+                      ],
+                    ),
+                    padding: const pw.EdgeInsets.all(4),
+                    child: pw.ClipRRect(
+                      horizontalRadius: 8,
+                      verticalRadius: 8,
+                      child: pw.Image(logoImage),
+                    ),
+                  ),
+                if (logoImage != null) pw.SizedBox(width: 12),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      'SRI BALAJI PLYWOOD AND HARDWARE',
+                      style: pw.TextStyle(
+                        fontSize: 14,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.brown800,
+                      ),
+                    ),
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      'Opp Union Bank, 150, VCTV Main Road, Erode-638003',
+                      style: const pw.TextStyle(
+                        fontSize: 10,
+                        color: PdfColors.grey700,
+                      ),
+                    ),
+                    pw.Text(
+                      'Phone: 096006 09121   GSTIN: 33DFXPS5949H2ZH',
+                      style: const pw.TextStyle(
+                        fontSize: 10,
+                        color: PdfColors.grey700,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 16),
+            pw.Text(
+              'Carpenter User List',
+              style: pw.TextStyle(
+                fontSize: 16,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.black,
+              ),
+            ),
+            pw.SizedBox(height: 4),
+            pw.Text(
+              generatedStr,
+              style: const pw.TextStyle(
+                fontSize: 9,
+                color: PdfColors.grey600,
+              ),
+            ),
+            pw.SizedBox(height: 12),
+            pw.Container(
+              width: double.infinity,
+              padding: const pw.EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 8,
+              ),
+              decoration: pw.BoxDecoration(
+                color: PdfColors.blue50,
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    'Total carpenters: ${users.length}',
+                    style: const pw.TextStyle(
+                      fontSize: 10,
+                      color: PdfColors.blue900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 12),
+            // Table header
+            pw.Table(
+              border: pw.TableBorder.all(
+                color: PdfColors.grey400,
+                width: 0.5,
+              ),
+              columnWidths: {
+                0: const pw.FlexColumnWidth(0.8), // #
+                1: const pw.FlexColumnWidth(2.4), // Name
+                2: const pw.FlexColumnWidth(2.4), // Mobile
+                3: const pw.FlexColumnWidth(1.6), // Points
+                4: const pw.FlexColumnWidth(1.6), // Tier
+                5: const pw.FlexColumnWidth(2.0), // Joined on
+              },
+              children: [
+                pw.TableRow(
+                  decoration: const pw.BoxDecoration(
+                    color: PdfColors.grey200,
+                  ),
+                  children: [
+                    _userHeaderCell('#'),
+                    _userHeaderCell('Carpenter Name'),
+                    _userHeaderCell('Mobile No.'),
+                    _userHeaderCell('Points'),
+                    _userHeaderCell('Tier'),
+                    _userHeaderCell('Date of Joined'),
+                  ],
+                ),
+                ...List<pw.TableRow>.generate(users.length, (index) {
+                  final data = users[index].data() as Map<String, dynamic>;
+                  final firstName =
+                      (data['firstName'] ?? '').toString().trim();
+                  final lastName =
+                      (data['lastName'] ?? '').toString().trim();
+                  final fullName =
+                      (firstName + ' ' + lastName).trim().isEmpty
+                          ? 'Carpenter'
+                          : (firstName + ' ' + lastName).trim();
+                  final phone =
+                      (data['phone'] ?? '').toString().trim();
+                  final points =
+                      (data['totalPoints'] ?? 0).toString();
+                  final tier =
+                      (data['tier'] ?? 'Bronze').toString();
+                  DateTime? joinedDate;
+                  if (data['createdAt'] is Timestamp) {
+                    joinedDate =
+                        (data['createdAt'] as Timestamp).toDate();
+                  } else if (data['createdAt'] is DateTime) {
+                    joinedDate = data['createdAt'] as DateTime;
+                  }
+                  final joinedStr = joinedDate != null
+                      ? DateFormat('dd-MMM-yyyy').format(joinedDate)
+                      : '—';
+
+                  return pw.TableRow(
+                    children: [
+                      _userCell('${index + 1}'),
+                      _userCell(fullName),
+                      _userCell(phone),
+                      _userCell(points, alignRight: true),
+                      _userCell(tier),
+                      _userCell(joinedStr),
+                    ],
+                  );
+                }),
+              ],
+            ),
+          ],
+        ),
+      );
+
+      await Printing.layoutPdf(
+        onLayout: (format) async => pdf.save(),
+      );
+
+      setState(() => _isExporting = false);
+    } catch (e) {
+      setState(() => _isExporting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to export carpenter list: $e'),
+          backgroundColor: DesignToken.error,
+        ),
+      );
+    }
+  }
+
+  pw.Widget _userHeaderCell(String text) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(
+        horizontal: 6,
+        vertical: 6,
+      ),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          fontSize: 9,
+          fontWeight: pw.FontWeight.bold,
+          color: PdfColors.black,
+        ),
+      ),
+    );
+  }
+
+  pw.Widget _userCell(String text, {bool alignRight = false}) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(
+        horizontal: 6,
+        vertical: 6,
+      ),
+      child: pw.Align(
+        alignment:
+            alignRight ? pw.Alignment.centerRight : pw.Alignment.centerLeft,
+        child: pw.Text(
+          text,
+          style: const pw.TextStyle(
+            fontSize: 9,
+            color: PdfColors.grey800,
+          ),
+        ),
+      ),
+    );
+  }
 
   void _showUserDetails(Map<String, dynamic> user) {
     Navigator.push(
@@ -245,17 +559,54 @@ class _UsersListState extends State<UsersList> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  ElevatedButton.icon(
-                    onPressed: _showAddCarpenterDialog,
-                    icon: const Icon(Icons.add),
-                    label: Text(l10n.add),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: DesignToken.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  // Actions: Add + Export
+                  Row(
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: _showAddCarpenterDialog,
+                        icon: const Icon(Icons.add),
+                        label: Text(l10n.add),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: DesignToken.primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
+                      const SizedBox(width: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: _isExporting
+                              ? Colors.grey.withValues(alpha: 0.1)
+                              : DesignToken.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: IconButton(
+                          icon: _isExporting
+                              ? SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: DesignToken.primary,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.picture_as_pdf,
+                                  color: DesignToken.primary,
+                                  size: 22,
+                                ),
+                          onPressed: _isExporting ? null : _exportUsersToPdf,
+                          padding: const EdgeInsets.all(8),
+                          constraints: const BoxConstraints(
+                            minWidth: 36,
+                            minHeight: 36,
+                          ),
+                          tooltip: 'Export carpenter list to PDF',
+                        ),
+                      ),
+                    ],
+                  )
                 ],
               ),
               const SizedBox(height: 12),

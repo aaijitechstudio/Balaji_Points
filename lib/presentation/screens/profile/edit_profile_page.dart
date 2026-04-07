@@ -10,6 +10,8 @@ import 'package:balaji_points/services/user_service.dart';
 import 'package:balaji_points/services/storage_service.dart';
 import 'package:balaji_points/services/session_service.dart';
 import 'package:balaji_points/core/utils/back_button_handler.dart';
+import 'package:balaji_points/l10n/app_localizations.dart';
+import 'package:balaji_points/presentation/widgets/home_nav_bar.dart';
 
 class EditProfilePage extends ConsumerStatefulWidget {
   final bool isFirstTime;
@@ -120,12 +122,15 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       final firstName = _firstNameController.text.trim();
       final lastName = _lastNameController.text.trim();
 
-      // Validate data before proceeding
+      // Validate data before proceeding (all fields mandatory)
       if (firstName.isEmpty || firstName.length < 2) {
         throw Exception('First name must be at least 2 characters');
       }
       if (firstName.length > 50) {
         throw Exception('First name is too long (max 50 characters)');
+      }
+      if (lastName.isEmpty || lastName.length < 2) {
+        throw Exception('Last name must be at least 2 characters');
       }
       if (lastName.length > 50) {
         throw Exception('Last name is too long (max 50 characters)');
@@ -139,7 +144,23 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
       String? profileImageUrl = _existingImageUrl;
       String?
-      oldImageUrlToDelete; // Store old image URL for deletion after successful save
+          oldImageUrlToDelete; // Store old image URL for deletion after successful save
+
+      // Require that user has either an existing image or has selected a new one
+      final hasProfileImage = _imageFile != null ||
+          (profileImageUrl != null && profileImageUrl.isNotEmpty);
+      if (!hasProfileImage) {
+        setState(() {
+          _isSaving = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please add a profile photo'),
+            backgroundColor: DesignToken.error,
+          ),
+        );
+        return;
+      }
 
       // Upload new image if user selected one
       if (_imageFile != null) {
@@ -214,19 +235,31 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       debugPrint('  Update Data: $updateData');
 
       // ✅ DATA SAFETY FIX: Get current data as backup before update
-      final userRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(phoneNumber);
-      final currentDataSnapshot = await userRef.get();
-      final currentData = currentDataSnapshot.data();
+      // Primary source of truth: document keyed by phone number.
+      final sessionUserId = await _sessionService.getUserId();
+      final usersCollection = FirebaseFirestore.instance.collection('users');
 
-      // Save to Firestore
-      await userRef.set(updateData, SetOptions(merge: true));
+      final primaryRef = usersCollection.doc(phoneNumber);
+      final primarySnapshot = await primaryRef.get();
+      final currentData = primarySnapshot.data();
+
+      // Save to Firestore: always update phone-based doc
+      await primaryRef.set(updateData, SetOptions(merge: true));
+
+      // Also update legacy UID-based doc if it exists and is different
+      if (sessionUserId != null && sessionUserId != phoneNumber) {
+        final legacyRef = usersCollection.doc(sessionUserId);
+        final legacySnap = await legacyRef.get();
+        if (legacySnap.exists) {
+          await legacyRef.set(updateData, SetOptions(merge: true));
+        }
+      }
 
       debugPrint('EditProfilePage: ✅ Data saved successfully to Firestore!');
 
       // ✅ DATA SAFETY FIX: Verify the save by reading back and comparing
-      final verifyDoc = await userRef.get(GetOptions(source: Source.server));
+      final verifyDoc =
+          await primaryRef.get(GetOptions(source: Source.server));
       final savedData = verifyDoc.data();
 
       debugPrint('EditProfilePage: Verified saved data:');
@@ -240,12 +273,12 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       }
 
       if (savedData['firstName'] != sanitizedFirstName) {
-        // Attempt to restore from backup
+        // Attempt to restore from backup on the primary (phone-based) document
         if (currentData != null) {
           debugPrint(
             'EditProfilePage: ⚠️ Data mismatch detected, attempting restore...',
           );
-          await userRef.set(currentData, SetOptions(merge: true));
+          await primaryRef.set(currentData, SetOptions(merge: true));
         }
         throw Exception('Data verification failed - firstName mismatch');
       }
@@ -368,39 +401,31 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   }
 
   Widget _buildContent() {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.12)
+        : Colors.black.withValues(alpha: 0.08);
+
     return Column(
       children: [
-        // Top Safe Area with Primary Color
-        SafeArea(
-          bottom: false,
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                if (!widget.isFirstTime)
-                  IconButton(
-                    icon: const Icon(
-                      Icons.arrow_back,
-                      color: DesignToken.white,
-                    ),
-                    onPressed: () => context.pop(),
-                  ),
-                const SizedBox(width: 8),
-                Text(
-                  widget.isFirstTime ? 'Complete Your Profile' : 'Edit Profile',
-                  style: AppTextStyles.nunitoBold.copyWith(
-                    fontSize: 22,
-                    color: DesignToken.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
+        // Top navigation bar – match Profile screen style
+        HomeNavBar(
+          title: widget.isFirstTime ? l10n.completeProfile : l10n.editProfile,
+          showLogo: false,
+          showProfileButton: false,
+          showBackButton: !widget.isFirstTime,
+        ),
+        // Light divider under nav bar
+        Container(
+          height: 1,
+          color: borderColor,
         ),
         // Content
         Expanded(
           child: Container(
-            color: DesignToken.woodenBackground,
+            color: theme.colorScheme.surface,
             child: _isLoading
                 ? const Center(
                     child: CircularProgressIndicator(
@@ -540,7 +565,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
+                                  color: DesignToken.black
+                                      .withValues(alpha: 0.05),
                                   blurRadius: 10,
                                   offset: const Offset(0, 2),
                                 ),
@@ -559,7 +585,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                 ),
                                 hintText: 'Enter your first name',
                                 hintStyle: AppTextStyles.nunitoRegular.copyWith(
-                                  color: Colors.grey[400],
+                                  color: DesignToken.grey400,
                                 ),
                                 prefixIcon: Icon(
                                   Icons.person_outline,
@@ -597,7 +623,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
+                                  color: DesignToken.black
+                                      .withValues(alpha: 0.05),
                                   blurRadius: 10,
                                   offset: const Offset(0, 2),
                                 ),
@@ -610,13 +637,13 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                 color: DesignToken.textDark,
                               ),
                               decoration: InputDecoration(
-                                labelText: 'Last Name',
+                                labelText: 'Last Name *',
                                 labelStyle: AppTextStyles.nunitoMedium.copyWith(
                                   color: DesignToken.primary,
                                 ),
                                 hintText: 'Enter your last name',
                                 hintStyle: AppTextStyles.nunitoRegular.copyWith(
-                                  color: Colors.grey[400],
+                                  color: DesignToken.grey400,
                                 ),
                                 prefixIcon: Icon(
                                   Icons.person_outline,
@@ -633,6 +660,15 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                   vertical: 18,
                                 ),
                               ),
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Please enter your last name';
+                                }
+                                if (value.trim().length < 2) {
+                                  return 'Last name must be at least 2 characters';
+                                }
+                                return null;
+                              },
                             ),
                           ),
 
@@ -703,7 +739,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                         strokeWidth: 2,
                                         valueColor:
                                             AlwaysStoppedAnimation<Color>(
-                                              Colors.white,
+                                              DesignToken.white,
                                             ),
                                       ),
                                     )
@@ -744,20 +780,6 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     );
   }
 
-  void _onBottomNavTapped(int index) {
-    switch (index) {
-      case 0:
-        context.go('/');
-        break;
-      case 1:
-        context.go('/');
-        break;
-      case 2:
-        context.go('/profile');
-        break;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -790,41 +812,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
           }
         }
       },
-      child: _buildScaffold(context),
-    );
-  }
-
-  Widget _buildScaffold(BuildContext context) {
-    // Don't show bottom nav when it's first time profile completion
-    if (widget.isFirstTime) {
-      return Scaffold(
-        backgroundColor: DesignToken.primary,
+      child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: _buildContent(),
-      );
-    }
-
-    // Show bottom navigation for edit profile
-    return Scaffold(
-      backgroundColor: DesignToken.primary,
-      body: _buildContent(),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 2, // Profile tab selected
-        onTap: _onBottomNavTapped,
-        selectedItemColor: DesignToken.secondary,
-        unselectedItemColor: Colors.white,
-        backgroundColor: DesignToken.primary,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.monetization_on_outlined),
-            label: "Earn",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: "Profile",
-          ),
-        ],
       ),
     );
   }

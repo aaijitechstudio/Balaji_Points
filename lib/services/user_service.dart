@@ -102,8 +102,11 @@ class UserService {
     String verifiedBy = 'system',
   }) async {
     try {
-      await _firestore.collection('users').doc(uid).set({
-        'uid': uid,
+      // For new carpenters we want docId == phone for easier lookups
+      final docId = phone;
+
+      await _firestore.collection('users').doc(docId).set({
+        'uid': uid, // keep original uid for reference
         'firstName': firstName,
         'lastName': lastName,
         'phone': phone,
@@ -120,8 +123,8 @@ class UserService {
       });
 
       // Points initialization
-      await _firestore.collection('user_points').doc(uid).set({
-        'userId': uid,
+      await _firestore.collection('user_points').doc(docId).set({
+        'userId': docId,
         'totalPoints': 0,
         'tier': 'Bronze',
         'lastUpdated': FieldValue.serverTimestamp(),
@@ -135,7 +138,7 @@ class UserService {
         await notificationService.notifyAdminsNewUserRegistered(
           userName: userName.isNotEmpty ? userName : phone,
           userPhone: phone,
-          userId: uid,
+          userId: docId,
         );
         AppLogger.info('✅ Admin notification sent for new user registration');
       } catch (e) {
@@ -199,32 +202,54 @@ class UserService {
     }
   }
 
-  /// Strict fresh user data (no cache)
-  /// Uses phone number from session (PIN-based auth)
+  /// User doc ID from session (userId and phone are same for PIN auth; prefer userId).
+  Future<String?> _getUserDocId() async {
+    final userId = await _sessionService.getUserId();
+    if (userId != null && userId.isNotEmpty) return userId;
+    return _sessionService.getPhoneNumber();
+  }
+
+  /// Fresh user data from Firestore (server) with session profile merged for instant display.
   Future<Map<String, dynamic>?> getCurrentUserData({
     bool forceRefresh = false,
   }) async {
     try {
-      // Get phone number from session (PIN-based auth)
-      final phoneNumber = await _sessionService.getPhoneNumber();
-      if (phoneNumber == null) {
-        AppLogger.warning('No phone number in session');
+      final docId = await _getUserDocId();
+      if (docId == null) {
+        AppLogger.warning('No user id / phone in session');
         return null;
       }
 
-      // Query user by phone number as document ID
       final doc = await _firestore
           .collection('users')
-          .doc(phoneNumber)
-          .get(GetOptions(source: Source.server)); // Always fresh
+          .doc(docId)
+          .get(const GetOptions(source: Source.server));
 
-      if (doc.exists) {
-        AppLogger.info('User data loaded for phone: $phoneNumber');
-        return doc.data();
+      Map<String, dynamic>? data = doc.exists ? doc.data() : null;
+      if (data == null) {
+        AppLogger.warning('No user document found for id: $docId');
+        return null;
       }
 
-      AppLogger.warning('No user document found for phone: $phoneNumber');
-      return null;
+      // Merge session profile so name/image are never stale (session updated on save)
+      final sessionFirst = await _sessionService.getFirstName();
+      final sessionLast = await _sessionService.getLastName();
+      final sessionImage = await _sessionService.getProfileImage();
+      if ((sessionFirst != null && sessionFirst.isNotEmpty) &&
+          ((data['firstName'] as String? ?? '').isEmpty)) {
+        data = Map<String, dynamic>.from(data)..['firstName'] = sessionFirst;
+      }
+      if ((sessionLast != null && sessionLast.isNotEmpty) &&
+          ((data['lastName'] as String? ?? '').isEmpty)) {
+        data = Map<String, dynamic>.from(data)..['lastName'] = sessionLast;
+      }
+      if ((sessionImage != null && sessionImage.isNotEmpty) &&
+          ((data['profileImage'] as String? ?? '').isEmpty)) {
+        data = Map<String, dynamic>.from(data)..['profileImage'] = sessionImage;
+      }
+
+      AppLogger.info('User data loaded for id: $docId');
+      return data;
     } catch (e) {
       AppLogger.error('Error getting current user data', e);
       return null;
@@ -235,7 +260,8 @@ class UserService {
   Future<bool> isAdmin() async {
     try {
       final data = await getCurrentUserData(forceRefresh: true);
-      return data?['role'] == 'admin';
+      final role = (data?['role'] as String?)?.trim().toLowerCase();
+      return role == 'admin' || role == 'super-admin';
     } catch (e) {
       AppLogger.error('Error checking admin status', e);
       return false;

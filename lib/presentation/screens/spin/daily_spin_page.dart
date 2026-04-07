@@ -87,7 +87,7 @@ class _DailySpinPageState extends ConsumerState<DailySpinPage>
           children: [
             Text(
               'You won',
-              style: TextStyle(fontSize: 18, color: Colors.grey[700]),
+              style: TextStyle(fontSize: 18, color: DesignToken.grey700),
             ),
             const SizedBox(height: 10),
             Text(
@@ -101,7 +101,7 @@ class _DailySpinPageState extends ConsumerState<DailySpinPage>
             const SizedBox(height: 20),
             Text(
               'Points have been added to your account.',
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              style: TextStyle(fontSize: 14, color: DesignToken.grey600),
               textAlign: TextAlign.center,
             ),
           ],
@@ -134,6 +134,12 @@ class _DailySpinPageState extends ConsumerState<DailySpinPage>
   @override
   Widget build(BuildContext context) {
     final spinState = ref.watch(dailySpinProvider);
+    final theme = Theme.of(context);
+    final light = theme.brightness == Brightness.light;
+    final carpenterBg = light ? DesignToken.carpenterAppBackground : theme.scaffoldBackgroundColor;
+    final appBarBg = light
+        ? DesignToken.carpenterAppBackground
+        : (theme.appBarTheme.backgroundColor ?? theme.scaffoldBackgroundColor);
 
     return PopScope(
       canPop: !_isSpinning,
@@ -158,10 +164,17 @@ class _DailySpinPageState extends ConsumerState<DailySpinPage>
         }
       },
       child: Scaffold(
-        backgroundColor: DesignToken.background,
+        backgroundColor: carpenterBg,
         appBar: AppBar(
+          backgroundColor: appBarBg,
+          foregroundColor: DesignToken.textDark,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
           title: const Text('Daily Spin'),
-          backgroundColor: DesignToken.background,
+          centerTitle: true,
         ),
         body: SafeArea(
           child: SingleChildScrollView(
@@ -183,7 +196,7 @@ class _DailySpinPageState extends ConsumerState<DailySpinPage>
                   const SizedBox(height: 10),
                   Text(
                     'Get your daily spin and win exciting points',
-                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                    style: TextStyle(fontSize: 16, color: DesignToken.grey600),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 60),
@@ -201,8 +214,8 @@ class _DailySpinPageState extends ConsumerState<DailySpinPage>
                             shape: BoxShape.circle,
                             gradient: LinearGradient(
                               colors: [
-                                Colors.pink.shade400,
-                                Colors.pink.shade600,
+                                DesignToken.pinkShade300,
+                                DesignToken.pinkShade500,
                                 DesignToken.secondary,
                               ],
                               begin: Alignment.topLeft,
@@ -210,7 +223,8 @@ class _DailySpinPageState extends ConsumerState<DailySpinPage>
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.pink.withOpacity(0.3),
+                                color: DesignToken.secondary
+                                    .withValues(alpha: 0.3),
                                 blurRadius: 20,
                                 offset: const Offset(0, 10),
                               ),
@@ -233,7 +247,7 @@ class _DailySpinPageState extends ConsumerState<DailySpinPage>
                                   color: DesignToken.white,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: DesignToken.black.withOpacity(0.1),
+                                      color: DesignToken.black.withValues(alpha: 0.1),
                                       blurRadius: 10,
                                     ),
                                   ],
@@ -261,7 +275,7 @@ class _DailySpinPageState extends ConsumerState<DailySpinPage>
                           : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: DesignToken.secondary,
-                        disabledBackgroundColor: Colors.grey[300],
+                        disabledBackgroundColor: DesignToken.grey300,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 60,
                           vertical: 18,
@@ -336,8 +350,8 @@ class SpinWheelPainter extends CustomPainter {
       DesignToken.greenShade300,
       DesignToken.blueShade300,
       DesignToken.indigoShade300,
-      Colors.purple.shade300,
-      Colors.pink.shade300,
+      DesignToken.purpleShade300,
+      DesignToken.pinkShade300,
     ];
 
     for (int i = 0; i < segments; i++) {

@@ -22,12 +22,9 @@ class PINLoginPage extends StatefulWidget {
 }
 
 class _PINLoginPageState extends State<PINLoginPage>
-    with SingleTickerProviderStateMixin {
+    {
   final _pinController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-
-  late AnimationController _animationController;
-  late List<FloatingElement> _floatingElements;
 
   bool _isLoggingIn = false;
   bool _rememberMe = true; // Remember me is checked by default
@@ -37,27 +34,10 @@ class _PINLoginPageState extends State<PINLoginPage>
   @override
   void initState() {
     super.initState();
-
-    // Initialize animation controller
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 8),
-    )..repeat();
-
-    // Initialize floating animated elements
-    _floatingElements = List.generate(25, (index) {
-      return FloatingElement(
-        x: math.Random().nextDouble(),
-        y: math.Random().nextDouble(),
-        speed: 0.2 + math.Random().nextDouble() * 0.8,
-        type: FloatingType.values[index % FloatingType.values.length],
-      );
-    });
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
     _pinController.dispose();
     super.dispose();
   }
@@ -78,7 +58,10 @@ class _PINLoginPageState extends State<PINLoginPage>
     if (userData == null) {
       final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.invalidPin), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text(l10n.invalidPin),
+          backgroundColor: DesignToken.error,
+        ),
       );
       return;
     }
@@ -91,6 +74,7 @@ class _PINLoginPageState extends State<PINLoginPage>
         role: userData['role'] as String? ?? 'carpenter',
         firstName: userData['firstName'] as String?,
         lastName: userData['lastName'] as String?,
+        profileImage: userData['profileImage'] as String?,
       );
     }
 
@@ -136,7 +120,7 @@ class _PINLoginPageState extends State<PINLoginPage>
     return PopScope(
       canPop: true, // Allow direct back navigation
       child: Scaffold(
-        backgroundColor: DesignToken.woodenBackground,
+        backgroundColor: Colors.transparent,
 
         appBar: AppBar(
           backgroundColor: DesignToken.transparent,
@@ -149,21 +133,10 @@ class _PINLoginPageState extends State<PINLoginPage>
 
         body: Stack(
           children: [
-            // Animated Background Elements
-            IgnorePointer(
-              child: RepaintBoundary(
-                child: ListenableBuilder(
-                  listenable: _animationController,
-                  builder: (context, child) {
-                    return CustomPaint(
-                      size: Size.infinite,
-                      painter: CelebrationPainter(
-                        animationValue: _animationController.value,
-                        elements: _floatingElements,
-                      ),
-                    );
-                  },
-                ),
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/background_image.png',
+                fit: BoxFit.cover,
               ),
             ),
 
@@ -529,19 +502,19 @@ class CelebrationPainter extends CustomPainter {
   Color _getColorForType(FloatingType type) {
     switch (type) {
       case FloatingType.coin:
-        return Colors.amber;
+        return DesignToken.amber;
       case FloatingType.star:
         return DesignToken.secondary;
       case FloatingType.sparkle:
         return DesignToken.primary;
       case FloatingType.points:
-        return Colors.green;
+        return DesignToken.success;
     }
   }
 
   void _drawCoin(Canvas canvas, Paint paint) {
     canvas.drawCircle(Offset.zero, 8, paint);
-    paint.color = Colors.white.withOpacity(0.6);
+    paint.color = DesignToken.white.withValues(alpha: 0.6);
     canvas.drawCircle(Offset(-3, -3), 2, paint);
   }
 
@@ -588,7 +561,7 @@ class CelebrationPainter extends CustomPainter {
     );
     canvas.drawPath(path, paint);
 
-    paint.color = Colors.white.withOpacity(0.8);
+    paint.color = DesignToken.white.withValues(alpha: 0.8);
     canvas.drawCircle(Offset(-4, 0), 2, paint);
     canvas.drawCircle(Offset(4, 0), 2, paint);
   }

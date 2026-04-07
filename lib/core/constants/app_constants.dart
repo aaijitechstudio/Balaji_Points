@@ -110,6 +110,10 @@ class AppConstants {
   static const String permissionDenied = 'Permission denied';
   static const String sessionExpired = 'Session expired. Please login again.';
 
+  // Shop / App bar display
+  static const String shopNameShort = 'Sri Balaji Plywood & Hardware';
+  static const String shopAddressShort = '150 VCTV Main Road, Erode';
+
   // Assets Paths
   static const String logoPath = 'assets/images/balaji_point_logo.png';
   static const String placeholderImagePath = 'assets/images/placeholder.png';
