@@ -391,10 +391,13 @@ class NotificationService {
       // Filter to exclude admins and users without FCM tokens
       final validUsers = usersQuery.docs.where((doc) {
         final userData = doc.data();
-        final role = userData['role'] as String?;
+        final role = (userData['role'] as String?)?.trim().toLowerCase();
         final fcmToken = userData['fcmToken'] as String?;
         // Include carpenters and users without role (assumed to be carpenters)
-        return role != 'admin' && fcmToken != null && fcmToken.isNotEmpty;
+        return role != 'admin' &&
+            role != 'super-admin' &&
+            fcmToken != null &&
+            fcmToken.isNotEmpty;
       }).toList();
 
       int successCount = 0;
@@ -528,10 +531,13 @@ class NotificationService {
       // Filter to exclude admins and users without FCM tokens
       final validUsers = usersQuery.docs.where((doc) {
         final userData = doc.data();
-        final role = userData['role'] as String?;
+        final role = (userData['role'] as String?)?.trim().toLowerCase();
         final fcmToken = userData['fcmToken'] as String?;
         // Include carpenters and users without role (assumed to be carpenters)
-        return role != 'admin' && fcmToken != null && fcmToken.isNotEmpty;
+        return role != 'admin' &&
+            role != 'super-admin' &&
+            fcmToken != null &&
+            fcmToken.isNotEmpty;
       }).toList();
 
       int successCount = 0;
@@ -704,9 +710,13 @@ class NotificationService {
         }
       }
       await _firestore.collection('notification_logs').add(logData);
-      AppLogger.info('Admin broadcast logged to notification_logs: ${type.name}');
+      AppLogger.info(
+        'Admin broadcast logged to notification_logs: ${type.name}',
+      );
     } catch (e) {
-      AppLogger.warning('Failed to log admin broadcast to notification_logs: $e');
+      AppLogger.warning(
+        'Failed to log admin broadcast to notification_logs: $e',
+      );
     }
   }
 
@@ -726,9 +736,11 @@ class NotificationService {
       // Filter to only include admins with FCM tokens
       final adminUsers = usersQuery.docs.where((doc) {
         final userData = doc.data();
-        final role = userData['role'] as String?;
+        final role = (userData['role'] as String?)?.trim().toLowerCase();
         final fcmToken = userData['fcmToken'] as String?;
-        return role == 'admin' && fcmToken != null && fcmToken.isNotEmpty;
+        return (role == 'admin' || role == 'super-admin') &&
+            fcmToken != null &&
+            fcmToken.isNotEmpty;
       }).toList();
 
       if (adminUsers.isEmpty) {

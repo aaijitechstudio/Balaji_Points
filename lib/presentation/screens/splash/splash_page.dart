@@ -56,7 +56,9 @@ class _SplashPageState extends State<SplashPage> {
         if (!mounted) return;
 
         final normalizedRole = role?.trim().toLowerCase();
-        if (normalizedRole == 'admin') {
+        if (normalizedRole == 'super-admin') {
+          context.go('/super-admin');
+        } else if (normalizedRole == 'admin') {
           context.go('/admin');
         } else {
           context.go('/');

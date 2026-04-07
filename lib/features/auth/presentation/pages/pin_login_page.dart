@@ -20,8 +20,7 @@ class PINLoginPage extends StatefulWidget {
   State<PINLoginPage> createState() => _PINLoginPageState();
 }
 
-class _PINLoginPageState extends State<PINLoginPage>
-{
+class _PINLoginPageState extends State<PINLoginPage> {
   final _pinController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
@@ -45,11 +44,7 @@ class _PINLoginPageState extends State<PINLoginPage>
     final phone = widget.phoneNumber;
 
     context.read<AuthBloc>().add(
-      LoginWithPinEvent(
-        phoneNumber: phone,
-        pin: pin,
-        rememberMe: _rememberMe,
-      ),
+      LoginWithPinEvent(phoneNumber: phone, pin: pin, rememberMe: _rememberMe),
     );
   }
 
@@ -74,7 +69,9 @@ class _PINLoginPageState extends State<PINLoginPage>
           if (state is AuthAuthenticatedState) {
             // Navigate based on role
             final role = (state.role ?? "carpenter").toLowerCase();
-            if (role == 'admin') {
+            if (role == 'super-admin') {
+              context.go('/super-admin');
+            } else if (role == 'admin') {
               context.go('/admin');
             } else {
               context.go('/');
@@ -152,10 +149,11 @@ class _PINLoginPageState extends State<PINLoginPage>
                         SizedBox(height: DesignToken.heightXS),
                         Text(
                           l10n.enter4DigitPin,
-                          style: LegacyTheme.AppTextStyles.nunitoSemiBold.copyWith(
-                            fontSize: DesignToken.fontSizeXL,
-                            color: DesignToken.primary,
-                          ),
+                          style: LegacyTheme.AppTextStyles.nunitoSemiBold
+                              .copyWith(
+                                fontSize: DesignToken.fontSizeXL,
+                                color: DesignToken.primary,
+                              ),
                         ),
 
                         SizedBox(height: DesignToken.heightXS),
@@ -190,9 +188,15 @@ class _PINLoginPageState extends State<PINLoginPage>
                                   color: DesignToken.white.withOpacity(0.5),
                                   width: 1.5,
                                 ),
-                                boxShadow: DesignToken.shadowLG.map((shadow) => shadow.copyWith(
-                                  color: DesignToken.primary.withOpacity(0.1),
-                                )).toList(),
+                                boxShadow: DesignToken.shadowLG
+                                    .map(
+                                      (shadow) => shadow.copyWith(
+                                        color: DesignToken.primary.withOpacity(
+                                          0.1,
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
                               ),
                               child: Column(
                                 children: [
@@ -213,32 +217,34 @@ class _PINLoginPageState extends State<PINLoginPage>
                                       labelStyle: LegacyTheme
                                           .AppTextStyles
                                           .nunitoMedium
-                                          .copyWith(fontSize: DesignToken.fontSizeLG),
+                                          .copyWith(
+                                            fontSize: DesignToken.fontSizeLG,
+                                          ),
                                       counterText: '',
                                       filled: true,
-                                      fillColor: DesignToken.primary.withOpacity(
-                                        0.05,
-                                      ),
+                                      fillColor: DesignToken.primary
+                                          .withOpacity(0.05),
                                       border: OutlineInputBorder(
-                                        borderRadius: DesignToken.borderRadiusLG,
+                                        borderRadius:
+                                            DesignToken.borderRadiusLG,
                                         borderSide: BorderSide(
-                                          color: DesignToken.primary.withOpacity(
-                                            0.3,
-                                          ),
+                                          color: DesignToken.primary
+                                              .withOpacity(0.3),
                                           width: 1.5,
                                         ),
                                       ),
                                       enabledBorder: OutlineInputBorder(
-                                        borderRadius: DesignToken.borderRadiusLG,
+                                        borderRadius:
+                                            DesignToken.borderRadiusLG,
                                         borderSide: BorderSide(
-                                          color: DesignToken.primary.withOpacity(
-                                            0.2,
-                                          ),
+                                          color: DesignToken.primary
+                                              .withOpacity(0.2),
                                           width: 1.5,
                                         ),
                                       ),
                                       focusedBorder: OutlineInputBorder(
-                                        borderRadius: DesignToken.borderRadiusLG,
+                                        borderRadius:
+                                            DesignToken.borderRadiusLG,
                                         borderSide: const BorderSide(
                                           color: DesignToken.primary,
                                           width: 2,
@@ -280,7 +286,8 @@ class _PINLoginPageState extends State<PINLoginPage>
                                                 .AppTextStyles
                                                 .nunitoRegular
                                                 .copyWith(
-                                                  fontSize: DesignToken.fontSizeMD,
+                                                  fontSize:
+                                                      DesignToken.fontSizeMD,
                                                   color: DesignToken.textDark
                                                       .withOpacity(0.8),
                                                 ),
@@ -300,36 +307,47 @@ class _PINLoginPageState extends State<PINLoginPage>
                                         gradient: LinearGradient(
                                           colors: [
                                             DesignToken.secondary,
-                                            DesignToken.secondary.withOpacity(0.8),
+                                            DesignToken.secondary.withOpacity(
+                                              0.8,
+                                            ),
                                           ],
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
                                         ),
-                                        borderRadius: DesignToken.borderRadiusLG,
-                                        boxShadow: DesignToken.shadowMD.map((shadow) => shadow.copyWith(
-                                          color: DesignToken.secondary.withOpacity(0.4),
-                                        )).toList(),
+                                        borderRadius:
+                                            DesignToken.borderRadiusLG,
+                                        boxShadow: DesignToken.shadowMD
+                                            .map(
+                                              (shadow) => shadow.copyWith(
+                                                color: DesignToken.secondary
+                                                    .withOpacity(0.4),
+                                              ),
+                                            )
+                                            .toList(),
                                       ),
                                       child: ElevatedButton(
                                         onPressed: isLoggingIn ? null : _login,
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: DesignToken.transparent,
+                                          backgroundColor:
+                                              DesignToken.transparent,
                                           shadowColor: DesignToken.transparent,
                                           padding: const EdgeInsets.symmetric(
                                             vertical: 18,
                                           ),
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: DesignToken.borderRadiusLG,
+                                            borderRadius:
+                                                DesignToken.borderRadiusLG,
                                           ),
                                         ),
                                         child: isLoggingIn
                                             ? const SizedBox(
                                                 width: 24,
                                                 height: 24,
-                                                child: CircularProgressIndicator(
-                                                  color: DesignToken.white,
-                                                  strokeWidth: 2.5,
-                                                ),
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      color: DesignToken.white,
+                                                      strokeWidth: 2.5,
+                                                    ),
                                               )
                                             : Text(
                                                 l10n.login,
@@ -337,7 +355,8 @@ class _PINLoginPageState extends State<PINLoginPage>
                                                     .AppTextStyles
                                                     .nunitoBold
                                                     .copyWith(
-                                                      fontSize: DesignToken.fontSizeXL,
+                                                      fontSize: DesignToken
+                                                          .fontSizeXL,
                                                       color: DesignToken.white,
                                                       letterSpacing: 0.5,
                                                     ),
@@ -372,11 +391,12 @@ class _PINLoginPageState extends State<PINLoginPage>
                                     ),
                                     child: Text(
                                       l10n.newUserSetPin,
-                                      style: LegacyTheme.AppTextStyles.nunitoMedium
+                                      style: LegacyTheme
+                                          .AppTextStyles
+                                          .nunitoMedium
                                           .copyWith(
-                                            color: DesignToken.textDark.withOpacity(
-                                              0.7,
-                                            ),
+                                            color: DesignToken.textDark
+                                                .withOpacity(0.7),
                                             fontSize: DesignToken.fontSizeMD,
                                           ),
                                     ),

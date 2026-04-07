@@ -38,7 +38,8 @@ class _DashboardPageState extends State<DashboardPage> with DoubleTapExitMixin {
     if (!mounted) return;
     setState(() {
       _roleLoaded = true;
-      _isAdmin = role == 'admin';
+      final normalizedRole = role?.trim().toLowerCase();
+      _isAdmin = normalizedRole == 'admin' || normalizedRole == 'super-admin';
     });
   }
 

@@ -11,6 +11,20 @@ service cloud.firestore {
     // These rules provide data validation and basic security.
 
     // ============================================
+    // STORES COLLECTION
+    // ============================================
+    match /stores/{storeId} {
+      allow read: if true;
+
+      allow create, update: if request.resource.data.storeId == storeId
+                            && request.resource.data.name != null
+                            && request.resource.data.code != null
+                            && request.resource.data.isActive != null;
+
+      allow delete: if true;
+    }
+
+    // ============================================
     // USERS COLLECTION
     // ============================================
     match /users/{userId} {

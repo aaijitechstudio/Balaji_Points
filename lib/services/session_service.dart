@@ -9,12 +9,8 @@ class SessionService {
   SessionService._internal();
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-    ),
-    iOptions: IOSOptions(
-      accessibility: KeychainAccessibility.first_unlock,
-    ),
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
   );
 
   // Storage keys
@@ -35,10 +31,11 @@ class SessionService {
     String? lastName,
     String? profileImage,
   }) async {
+    final normalizedRole = role.trim().toLowerCase();
     await _storage.write(key: _keyIsLoggedIn, value: 'true');
     await _storage.write(key: _keyPhoneNumber, value: phoneNumber);
     await _storage.write(key: _keyUserId, value: userId);
-    await _storage.write(key: _keyUserRole, value: role);
+    await _storage.write(key: _keyUserRole, value: normalizedRole);
 
     if (firstName != null) {
       await _storage.write(key: _keyFirstName, value: firstName);

@@ -1,5 +1,5 @@
 /// User entity for authentication
-/// 
+///
 /// This is a plain Dart class with no dependencies on external packages.
 /// It represents the authenticated user in the business logic.
 class User {
@@ -8,11 +8,11 @@ class User {
   final String? phoneNumber;
   final String? displayName;
   final String? photoUrl;
-  final String role; // 'admin' or 'carpenter'
+  final String role; // 'super-admin', 'admin', or 'carpenter'
   final bool isEmailVerified;
   final DateTime? createdAt;
   final DateTime? lastLoginAt;
-  
+
   User({
     required this.id,
     required this.email,
@@ -24,16 +24,16 @@ class User {
     this.createdAt,
     this.lastLoginAt,
   });
-  
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is User && other.id == id;
   }
-  
+
   @override
   int get hashCode => id.hashCode;
-  
+
   User copyWith({
     String? id,
     String? email,

@@ -260,7 +260,8 @@ class UserService {
   Future<bool> isAdmin() async {
     try {
       final data = await getCurrentUserData(forceRefresh: true);
-      return data?['role'] == 'admin';
+      final role = (data?['role'] as String?)?.trim().toLowerCase();
+      return role == 'admin' || role == 'super-admin';
     } catch (e) {
       AppLogger.error('Error checking admin status', e);
       return false;

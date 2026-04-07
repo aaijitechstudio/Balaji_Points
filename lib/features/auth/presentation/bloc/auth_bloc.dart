@@ -23,16 +23,14 @@ import 'package:balaji_points/core/logger.dart';
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final PinAuthService _pinAuthService;
   final SessionService _sessionService;
-  final FCMService _fcmService;
 
   AuthBloc({
     required PinAuthService pinAuthService,
     required SessionService sessionService,
     required FCMService fcmService,
-  })  : _pinAuthService = pinAuthService,
-        _sessionService = sessionService,
-        _fcmService = fcmService,
-        super(const AuthInitial()) {
+  }) : _pinAuthService = pinAuthService,
+       _sessionService = sessionService,
+       super(const AuthInitial()) {
     on<CheckUserExistsEvent>(_onCheckUserExists);
     on<LoginWithPinEvent>(_onLoginWithPin);
     on<SetupPinEvent>(_onSetupPin);
@@ -82,10 +80,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
       // Save session if remember me is checked
       if (event.rememberMe) {
+        final normalizedRole = (userData['role'] as String? ?? 'carpenter')
+            .trim()
+            .toLowerCase();
         await _sessionService.saveSession(
           phoneNumber: event.phoneNumber,
           userId: userData['id'] as String? ?? event.phoneNumber,
-          role: userData['role'] as String? ?? 'carpenter',
+          role: normalizedRole,
           firstName: userData['firstName'] as String?,
           lastName: userData['lastName'] as String?,
         );
@@ -94,15 +95,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       // Refresh FCM token after successful login
       try {
         // FCM token refresh handled in datasource
-      // await _fcmService.initialize(event.phoneNumber);
+        // await _fcmService.initialize(event.phoneNumber);
       } catch (e) {
         // Don't fail login if FCM fails
       }
 
       // Create User entity from Firebase data
       final user = User(
-        id: userData['id'] as String? ?? 
-            userData['userId'] as String? ?? 
+        id:
+            userData['id'] as String? ??
+            userData['userId'] as String? ??
             event.phoneNumber,
         email: userData['email'] as String? ?? '',
         phoneNumber: event.phoneNumber,
@@ -111,7 +113,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           userData['lastName'] as String?,
         ),
         photoUrl: userData['profileImage'] as String?,
-        role: userData['role'] as String? ?? 'carpenter',
+        role: (userData['role'] as String? ?? 'carpenter').trim().toLowerCase(),
         isEmailVerified: true, // Phone-verified user
         createdAt: DateTime.now(), // Will be replaced with Firestore timestamp
       );
@@ -124,10 +126,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   /// Setup PIN for new user
-  Future<void> _onSetupPin(
-    SetupPinEvent event,
-    Emitter<AuthState> emit,
-  ) async {
+  Future<void> _onSetupPin(SetupPinEvent event, Emitter<AuthState> emit) async {
     emit(const PinSetupLoadingState());
 
     try {
@@ -159,7 +158,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       await _sessionService.saveSession(
         phoneNumber: event.phoneNumber,
         userId: userData['id'] as String? ?? event.phoneNumber,
-        role: userData['role'] as String? ?? 'carpenter',
+        role: (userData['role'] as String? ?? 'carpenter').trim().toLowerCase(),
         firstName: userData['firstName'] as String?,
         lastName: userData['lastName'] as String?,
       );
@@ -167,22 +166,20 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       // Refresh FCM token
       try {
         // FCM token refresh handled in datasource
-      // await _fcmService.initialize(event.phoneNumber);
+        // await _fcmService.initialize(event.phoneNumber);
       } catch (e) {
         // Don't fail setup if FCM fails
       }
 
       // Create User entity
       final user = User(
-        id: userData['id'] as String? ?? 
-            userData['userId'] as String? ?? 
+        id:
+            userData['id'] as String? ??
+            userData['userId'] as String? ??
             event.phoneNumber,
         email: userData['email'] as String? ?? '',
         phoneNumber: event.phoneNumber,
-        displayName: _buildDisplayName(
-          event.firstName,
-          event.lastName,
-        ),
+        displayName: _buildDisplayName(event.firstName, event.lastName),
         photoUrl: event.profileImageUrl,
         role: userData['role'] as String? ?? 'carpenter',
         isEmailVerified: true,
@@ -197,10 +194,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   /// Reset PIN (requires old PIN verification)
-  Future<void> _onResetPin(
-    ResetPinEvent event,
-    Emitter<AuthState> emit,
-  ) async {
+  Future<void> _onResetPin(ResetPinEvent event, Emitter<AuthState> emit) async {
     emit(const ResetPinLoadingState());
 
     try {
@@ -254,17 +248,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       final session = await _sessionService.getSessionData();
 
-      if (session != null && session.isNotEmpty) {
+      if (session.isNotEmpty) {
         // Session exists, create User entity
         final user = User(
-          id: session['userId'] as String? ?? '',
+          id: session['userId'] ?? '',
           email: '',
-          phoneNumber: session['phoneNumber'] as String? ?? '',
+          phoneNumber: session['phoneNumber'] ?? '',
           displayName: _buildDisplayName(
-            session['firstName'] as String?,
-            session['lastName'] as String?,
+            session['firstName'],
+            session['lastName'],
           ),
-          role: session['role'] as String? ?? 'carpenter',
+          role: (session['role'] ?? 'carpenter').trim().toLowerCase(),
           isEmailVerified: true,
           createdAt: DateTime.now(),
         );

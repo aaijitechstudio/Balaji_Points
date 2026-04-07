@@ -200,10 +200,26 @@ class PinAuthService {
 
       print('🔍 [DEBUG] ❌ User does not exist');
       return false;
-    } catch (e) {
+    } on FirebaseException catch (e, st) {
       print('🔍 [DEBUG] ❌ Error checking user existence: $e');
-      AppLogger.error('Error checking user existence for phone $phone', e);
-      return false;
+      AppLogger.error('Error checking user existence for phone $phone', e, st);
+
+      final isTransientNetworkError =
+          e.code == 'unavailable' ||
+          e.code == 'deadline-exceeded' ||
+          (e.message?.contains('Unable to resolve host') ?? false);
+
+      if (isTransientNetworkError) {
+        throw Exception(
+          'Unable to reach server. Please check your internet connection and try again.',
+        );
+      }
+
+      throw Exception('Unable to check user right now. Please try again.');
+    } catch (e, st) {
+      print('🔍 [DEBUG] ❌ Error checking user existence: $e');
+      AppLogger.error('Error checking user existence for phone $phone', e, st);
+      throw Exception('Unable to check user right now. Please try again.');
     }
   }
 

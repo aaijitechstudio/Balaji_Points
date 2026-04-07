@@ -24,6 +24,7 @@ import 'package:balaji_points/presentation/screens/admin/admin_home_page.dart';
 import 'package:balaji_points/presentation/screens/admin/admin_add_bill_page.dart';
 import 'package:balaji_points/presentation/screens/admin/diagnostic_page.dart';
 import 'package:balaji_points/presentation/screens/admin/admin_notifications_page.dart';
+import 'package:balaji_points/presentation/screens/super_admin/super_admin_home_page.dart';
 import 'package:balaji_points/presentation/screens/bills/add_bill_page.dart';
 import 'package:balaji_points/presentation/screens/notifications/notifications_page.dart';
 import 'package:balaji_points/services/session_service.dart';
@@ -35,6 +36,7 @@ import 'package:balaji_points/presentation/screens/orders/order_detail_page.dart
 import 'package:balaji_points/presentation/screens/info/about_us_page.dart';
 import 'package:balaji_points/presentation/screens/onboarding/onboarding_page.dart';
 import 'package:balaji_points/l10n/app_localizations.dart';
+
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -43,11 +45,28 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/splash',
 
     redirect: (context, state) async {
+      final normalizedRole = (await SessionService().getUserRole())
+          ?.trim()
+          .toLowerCase();
+
+      if (state.uri.path.startsWith('/super-admin')) {
+        if (normalizedRole == 'super-admin') return null;
+        if (normalizedRole == 'admin') return '/admin';
+        if (normalizedRole == 'carpenter') return '/';
+        return '/login';
+      }
+
+      if (state.uri.path.startsWith('/admin')) {
+        if (normalizedRole == 'super-admin') return '/super-admin';
+        if (normalizedRole == 'admin') return null;
+        if (normalizedRole == 'carpenter') return '/';
+        return '/login';
+      }
+
       // Prevent admin from entering carpenter notifications route.
       if (state.uri.path == '/notifications') {
-        final role =
-            (await SessionService().getUserRole())?.trim().toLowerCase();
-        if (role == 'admin') return '/admin/notifications';
+        if (normalizedRole == 'admin') return '/admin/notifications';
+        if (normalizedRole == 'super-admin') return '/super-admin';
       }
 
       // Robust fallback: if anything weird is appended to the admin notifications
@@ -104,10 +123,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                 const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: () async {
-                    final role =
-                        (await SessionService().getUserRole())?.trim().toLowerCase();
+                    final role = (await SessionService().getUserRole())
+                        ?.trim()
+                        .toLowerCase();
                     if (!context.mounted) return;
-                    if (role == 'admin') {
+                    if (role == 'super-admin') {
+                      context.go('/super-admin');
+                    } else if (role == 'admin') {
                       context.go('/admin');
                     } else {
                       context.go('/');
@@ -256,9 +278,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/daily-spin',
         builder: (context, _) => const DailySpinPage(),
       ),
+      GoRoute(path: '/admin', builder: (context, _) => const AdminHomePage()),
       GoRoute(
-        path: '/admin',
-        builder: (context, _) => const AdminHomePage(),
+        path: '/super-admin',
+        builder: (context, _) => const SuperAdminHomePage(),
       ),
       GoRoute(
         path: '/admin/add-bill',
